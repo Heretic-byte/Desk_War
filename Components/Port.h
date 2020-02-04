@@ -54,7 +54,7 @@ public:
 	bool IsConnected();
 	UFUNCTION(BlueprintCallable, Category = "Overlap")
 	void OverlapBlock(USceneComponent* collider, USceneComponent* portMesh);
-protected:
+public:
 	UPROPERTY(VisibleAnywhere)
 	UConnector* m_ConnectedConnector;
 	UPROPERTY(VisibleAnywhere)

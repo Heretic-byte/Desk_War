@@ -4,14 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "Components/SphereComponent.h"
 #include "Components/CapsuleComponent.h"
-#include "Camera/CameraComponent.h"
-#include "GameFramework/SpringArmComponent.h"
+#include "Components/SphereComponent.h"
 #include "Datas/USB_Macros.h"
 #include "Datas/USB_Enum.h"
 #include "Kismet/KismetMathLibrary.h"
 
+#include "Camera/CameraComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "Components/SplineComponent.h"
 #include "Components/SplineMeshComponent.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
