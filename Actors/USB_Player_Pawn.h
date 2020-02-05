@@ -57,13 +57,20 @@ protected:
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "USB_Player")
 	float m_fLimitLinearVelocity;
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "USB_Player")
-	float m_fLimitAngularVelocity;
+	float m_fAngularDamping;
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "USB_Player")
+	float m_fTorqueSpeedWeight;
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "USB_Player")
+	float m_fAirControlWeight;
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "USB_Player")
+	float m_fJumpZVelocity;
 protected:
 	UPrimitiveComponent* m_PrimHead;
 	float m_fOrientRotSpeed;
 	float m_fVertical;
 	float m_fHorizontal;
 	float m_fMaxLinearSpeedSqr;
+	bool m_bIsGround;
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -76,6 +83,8 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	UPrimitiveComponent* GetHead() const;
+
+	bool GetIsGround() const;
 private:
 	void SetHead(UPrimitiveComponent* headWantPhysics);
 	FVector GetHeadVelocityDir();
@@ -84,8 +93,12 @@ private:
 	void RotateYaw(float v);
 	void RotatePitch(float v);
 	void TickForceMove(float delta);
-	void TickHeadYawRotate(float delta);
-	void TickHeadRollRotate(float delta);
-	void TickHeadPitchRotate(float delta);
+	void TickHeadYawTorque(const FVector& velocity,const FVector headMeshDir);
+	void TickHeadRollTorque(const FVector& velocity);
+	void TickHeadPitchTorque(const FVector& velocity);
 	void TickLimitVelocity();
+	void CastGround(FHitResult& hitResult);
+protected:
+	UFUNCTION(Category="USB_Player",BlueprintCallable)
+	void DoJump();
 };

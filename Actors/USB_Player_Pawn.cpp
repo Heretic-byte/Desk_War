@@ -52,10 +52,12 @@ AUSB_Player_Pawn::AUSB_Player_Pawn(const FObjectInitializer& obj)
 
 	
 	m_fLimitLinearVelocity = 500.f;
-	m_fLimitAngularVelocity = 100.f;
 
-	
-	
+	m_fAngularDamping = .1f;
+	m_fTorqueSpeedWeight = .1f;
+	m_fJumpZVelocity = 540.f;
+	m_fAirControlWeight = 1.f;
+	m_bIsGround = true;
 }
 
 // Called when the game starts or when spawned
@@ -64,19 +66,25 @@ void AUSB_Player_Pawn::BeginPlay()
 	Super::BeginPlay();
 	SetHead(m_MeshUsb);
 	m_fMaxLinearSpeedSqr = FMath::Square<float>(m_fLimitLinearVelocity);
-	m_MeshUsb->SetPhysicsMaxAngularVelocityInDegrees(m_fLimitAngularVelocity);
+	PRINTF("1 The AngularDamp %f , LinearDamp %f", GetHead()->GetAngularDamping(), GetHead()->GetLinearDamping());
+	GetHead()->SetAngularDamping(m_fAngularDamping);
+	GetHead()->GetBodyInstance()->UpdateDampingProperties();
+	PRINTF("2 The AngularDamp %f , LinearDamp %f", GetHead()->GetAngularDamping(), GetHead()->GetLinearDamping());
 }
 
 // Called every frame
 void AUSB_Player_Pawn::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	FHitResult ASD;
+	CastGround(ASD);
 	TickForceMove(DeltaTime);
+	FVector VeloDir = GetHeadVelocityDir();
+	TickHeadYawTorque(VeloDir, GetHead()->GetForwardVector());
+	TickHeadPitchTorque(VeloDir);
+	TickHeadRollTorque(VeloDir);
+
 	TickLimitVelocity();
-	TickHeadYawRotate(DeltaTime);
-	TickHeadRollRotate(DeltaTime);
-	TickHeadPitch(DeltaTime);
-	//
 }
 
 // Called to bind functionality to input
@@ -97,6 +105,11 @@ UPrimitiveComponent * AUSB_Player_Pawn::GetHead() const
 	return m_PrimHead;
 }
 
+bool AUSB_Player_Pawn::GetIsGround() const
+{
+	return m_bIsGround;
+}
+
 void AUSB_Player_Pawn::SetHead(UPrimitiveComponent * headWantPhysics)
 {
 	m_PrimHead = headWantPhysics;
@@ -104,14 +117,19 @@ void AUSB_Player_Pawn::SetHead(UPrimitiveComponent * headWantPhysics)
 
 FVector AUSB_Player_Pawn::GetHeadVelocityDir()
 {
-	FVector Velo = GetHead()->GetPhysicsAngularVelocity();
+	FVector Velo = GetHead()->GetComponentVelocity();
 	
-	if (Velo.Normalize())
-	{
-		return Velo;
-	}
 
-	return FVector(0,0,0);
+		DrawDebugLine(
+			GetWorld(),
+			GetHead()->GetComponentLocation(),
+			GetHead()->GetComponentLocation()+  50.f * Velo,
+			FColor(255, 0, 0),
+			false, -1, 0,
+			4.333
+		);
+
+		return Velo;
 }
 
 
@@ -142,78 +160,124 @@ void AUSB_Player_Pawn::TickForceMove(float delta)
 	{
 		if (m_fHorizontal != 0 || m_fVertical != 0)
 		{
+
 			const FRotator Rotation = Controller->GetControlRotation();
 			const FRotator YawRotation(0, Rotation.Yaw, 0);
 
 			const FVector XDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X) * m_fVertical;
 			const FVector YDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y) * m_fHorizontal;
 
-			FVector ForceDir = XDirection + YDirection;
+			FVector ForceDir = XDirection +YDirection;
 			if (!ForceDir.Normalize())
 			{
 				return;
 			}
 
 			ForceDir *= m_fMovingForce;
+
+			/*if (!GetIsGround())
+			{
+				ForceDir /= m_fAirControlWeight;
+			}*/
+
 			GetHead()->AddForce(ForceDir);
 
-			
 		}
+		
 	}
 }
 
-void AUSB_Player_Pawn::TickHeadYawRotate(float delta)
+void AUSB_Player_Pawn::TickHeadYawTorque(const FVector& velocity, const FVector headMeshDir)
 {
-	FVector wantDirection = GetHeadVelocityDir();
-
-	if (wantDirection.IsNearlyZero(0.1f))
+	if (velocity.IsNearlyZero(0.1f))
 	{
 		return;
 	}
-	FRotator VelocityRot = wantDirection.Rotation();
-	FRotator HeadRot = GetHead()->GetComponentRotation();
+	FVector Target = velocity.GetSafeNormal2D();
 
-	float YawDist = VelocityRot.Yaw - HeadRot.Yaw;
-	PRINTF("DD %.1f", YawDist);//언리얼 특유의 각도 보정때문에
-	//360나왔다가 작은수가 나왔다가 한다.
+	float Dot = FVector::DotProduct(Target, headMeshDir);
 
-	//-300도 와 60도는 같다.
-	//가장 큰 갭은 180도이다.
-	//절대값이 180보다 클때만
-	//360 - 절대값
+	float RadiAngle = FMath::Acos(Dot);
 
-	YawDist = FMath::Abs(YawDist);
+	FVector InversedVector = UKismetMathLibrary::InverseTransformDirection(GetHead()->GetComponentTransform(),Target);
 
-	if (YawDist > 180)
+	float DirPlusMinus;
+
+	if (InversedVector.Y < 0.f)
 	{
-		YawDist = 360 - YawDist;
+		DirPlusMinus = -1.f;
 	}
-
-	PRINTF("Now Yaw Gap %.1f", YawDist);
-
-	FRotator SlerpRotation = UKismetMathLibrary::RInterpTo(HeadRot, VelocityRot,delta,m_fOrientRotSpeed *(180.f /  YawDist));
-
-	GetHead()->SetWorldRotation(SlerpRotation,true,nullptr,ETeleportType::TeleportPhysics);
-
+	else
+	{
+		DirPlusMinus = 1.f;
+	}
+	GetHead()->AddTorqueInRadians(FVector(0,0, RadiAngle*m_fMovingForce * DirPlusMinus * m_fTorqueSpeedWeight));
 }
 
-void AUSB_Player_Pawn::TickHeadRollRotate(float delta)
+void AUSB_Player_Pawn::TickHeadRollTorque(const FVector& velocity)
 {
+	if (velocity.IsNearlyZero(0.1f))
+	{
+		return;
+	}
 }
 
-void AUSB_Player_Pawn::TickHeadPitchRotate(float delta)
+void AUSB_Player_Pawn::TickHeadPitchTorque(const FVector& velocity)
 {
+	if (velocity.IsNearlyZero(0.1f))
+	{
+		return;
+	}
+	//위아래 방향에 맞춰서
+	//GetHead()->AddTorque(FVector(0, velocityDir.Z*m_fMovingForce, 0));
 }
 
 void AUSB_Player_Pawn::TickLimitVelocity()
 {
+
 	FVector Velo = GetHead()->GetPhysicsLinearVelocity();
 
 	if (Velo.SizeSquared() > m_fMaxLinearSpeedSqr)
 	{
-		GetHead()->SetPhysicsLinearVelocity(Velo.GetClampedToMaxSize(m_fLimitLinearVelocity));
+		FVector ClampedGroundSpeed = Velo.GetClampedToMaxSize(m_fLimitLinearVelocity);
+		GetHead()->SetPhysicsLinearVelocity(FVector(ClampedGroundSpeed.X,ClampedGroundSpeed.Y,Velo.Z));
 	}
 
-	GetHead()->SetPhysicsAngularVelocity(FVector());//벽에 닿을때 회전이 멈추질 않아서 이럼
+}
+
+void AUSB_Player_Pawn::CastGround(FHitResult & hitResult)
+{
+
+	FVector TraceStart = GetHead()->GetComponentLocation();
+	PRINTF("Body Size: %s", *GetHead()->BodyInstance.GetBodyBounds().GetSize().ToString());
+	float Offset = (GetHead()->BodyInstance.GetBodyBounds().GetSize().Y) + 30.f;
+	Offset *= -1;
+	PRINTF("Size Y L %f",Offset);
+
+	FVector TraceEnd = TraceStart;
+	TraceEnd.Z += Offset;
+
+	
+	FCollisionQueryParams QueryParam;
+	QueryParam.AddIgnoredActor(this);
+
+
+	if (GetWorld()->LineTraceSingleByChannel(hitResult, TraceStart, TraceEnd, ECollisionChannel::ECC_Visibility, QueryParam))
+	{
+		m_bIsGround = true;
+		PRINTF("Ground");
+	}
+	else
+	{
+		m_bIsGround = false;
+		PRINTF("Air");
+	}
+}
+
+void AUSB_Player_Pawn::DoJump()
+{
+	FVector HeadLinearVelo = GetHead()->GetPhysicsLinearVelocity();
+	HeadLinearVelo.Z = FMath::Max(HeadLinearVelo.Z, m_fJumpZVelocity);
+	GetHead()->SetPhysicsLinearVelocity(HeadLinearVelo);
 }
 
