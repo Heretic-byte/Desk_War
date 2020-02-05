@@ -22,7 +22,6 @@
 #include "Components/SphereComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/Port.h"
-#include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
 
 #include "Components/Port.h"
@@ -44,6 +43,8 @@ public:
 	AUSB_Player_Pawn(const FObjectInitializer& obj);
 
 protected:
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "USB_Player")
+	USphereComponent* m_CollUsb;
 	UPROPERTY(BlueprintReadOnly,VisibleAnywhere,Category="USB_Player")
 	USkeletalMeshComponent* m_MeshUsb;
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "USB_Player")
@@ -71,6 +72,7 @@ protected:
 	float m_fHorizontal;
 	float m_fMaxLinearSpeedSqr;
 	bool m_bIsGround;
+	FVector m_CurrentGroundNormal;
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -78,6 +80,7 @@ protected:
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -95,7 +98,7 @@ private:
 	void TickForceMove(float delta);
 	void TickHeadYawTorque(const FVector& velocity,const FVector headMeshDir);
 	void TickHeadRollTorque(const FVector& velocity);
-	void TickHeadPitchTorque(const FVector& velocity);
+	void TickHeadPitchRotate(float deltaTime);
 	void TickLimitVelocity();
 	void CastGround(FHitResult& hitResult);
 protected:
