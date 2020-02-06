@@ -15,23 +15,40 @@ AUSB_Player_Pawn::AUSB_Player_Pawn(const FObjectInitializer& obj)
 	m_fOrientRotSpeed = 1.f;
 	//
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root00"));
-
-
-	m_CollUsb = CreateDefaultSubobject<USphereComponent>(TEXT("USBColl"));
+	//
+	m_CollUsb = CreateDefaultSubobject<USphereComponent>(TEXT("CollUsb01"));
 	m_CollUsb->SetupAttachment(RootComponent);
-
+	m_CollUsb->SetSimulatePhysics(true);
+	m_CollUsb->SetCollisionProfileName(TEXT("USBMovement"));
+	m_CollUsb->SetSphereRadius(12.8f);
+	//
 	m_MeshUsb = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkelMesh01"));
-	m_MeshUsb->SetupAttachment(RootComponent);
+	m_MeshUsb->SetupAttachment(m_CollUsb);
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FoundMeshPortUSB(TEXT("SkeletalMesh'/Game/01_FinalUSB/Mesh/Head/NewHead0120/USB_Head_Mesh_06.USB_Head_Mesh_06'"));
 	check(FoundMeshPortUSB.Object);
 	m_MeshUsb->SkeletalMesh = FoundMeshPortUSB.Object;
 	m_MeshUsb->SetCollisionProfileName(FName(TEXT("USBMesh")));
 	m_MeshUsb->RelativeScale3D = FVector(3.000000, 3.000000, 3.000000);
-	m_MeshUsb->SetSimulatePhysics(true);
+	m_MeshUsb->SetSimulatePhysics(false);
+	//
+	m_Mesh4Pin = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkelMesh02"));
+	m_Mesh4Pin->SetupAttachment(RootComponent);
+
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FoundMeshPort4Pin(TEXT("SkeletalMesh'/Game/01_FinalUSB/Mesh/Tail/Tail_03.Tail_03'"));
+	check(FoundMeshPort4Pin.Object);
+	m_Mesh4Pin->SkeletalMesh = FoundMeshPort4Pin.Object;
+
+	m_Mesh4Pin->SetCollisionProfileName(FName(TEXT("USBMesh")));
+	m_Mesh4Pin->SetSimulatePhysics(false);
+	m_Mesh4Pin->BodyInstance.bLockXRotation = true;
+	m_Mesh4Pin->RelativeLocation = FVector(-83.560440, 0.000000, 0.000000);
+	m_Mesh4Pin->RelativeRotation = FRotator(0.f, 180.f, 0.f);
+	m_Mesh4Pin->RelativeScale3D = FVector(3.000000, 3.000000, 3.000000);
 
 
+	//
 	m_SceneCamRoot = CreateDefaultSubobject<USceneComponent>(TEXT("Scene02"));
-	m_SceneCamRoot->SetupAttachment(m_MeshUsb);
+	m_SceneCamRoot->SetupAttachment(m_CollUsb);
 
 	m_SpringMain = CreateDefaultSubobject<USpringArmComponent>(TEXT("Spring03"));
 	m_SpringMain->SetupAttachment(m_SceneCamRoot);
@@ -58,6 +75,7 @@ AUSB_Player_Pawn::AUSB_Player_Pawn(const FObjectInitializer& obj)
 	m_fTorqueSpeedWeight = .1f;
 	m_fJumpZVelocity = 540.f;
 	m_fAirControlWeight = 1.f;
+	m_fTorquePitchSpeedWeight = 1.f;
 	m_bIsGround = true;
 }
 
@@ -65,7 +83,7 @@ AUSB_Player_Pawn::AUSB_Player_Pawn(const FObjectInitializer& obj)
 void AUSB_Player_Pawn::BeginPlay()
 {
 	Super::BeginPlay();
-	SetHead(m_MeshUsb);
+	SetHead(m_CollUsb);
 	m_fMaxLinearSpeedSqr = FMath::Square<float>(m_fLimitLinearVelocity);
 	GetHead()->SetAngularDamping(m_fAngularDamping);
 	GetHead()->GetBodyInstance()->UpdateDampingProperties();
@@ -92,7 +110,7 @@ void AUSB_Player_Pawn::Tick(float DeltaTime)
 	}
 
 	TickHeadYawTorque(VeloDir, GetHead()->GetForwardVector());
-
+	
 	TickLimitVelocity();
 }
 
@@ -128,7 +146,6 @@ void AUSB_Player_Pawn::SetHead(UPrimitiveComponent * headWantPhysics)
 FVector AUSB_Player_Pawn::GetHeadVelocityDir()
 {
 	FVector Velo = GetHead()->GetComponentVelocity();
-	
 
 		DrawDebugLine(
 			GetWorld(),
@@ -234,23 +251,19 @@ void AUSB_Player_Pawn::TickHeadRollTorque(const FVector& velocity)
 
 }
 
-void AUSB_Player_Pawn::TickHeadPitchRotate(float deltaTime)
+void AUSB_Player_Pawn::TickHeadPitchRotate(const FVector& velocity, float deltaTime)
 {
-
+	FVector ImpactNormal = m_CurrentGroundNormal;
 	FVector ForwardVector = GetHead()->GetForwardVector();
 	FVector RightVector = GetHead()->GetRightVector();
 
-
-
-	float PitchWant = UKismetMathLibrary::MakeRotFromYZ(RightVector, m_CurrentGroundNormal).Pitch;
-
+	float RollWant = UKismetMathLibrary::MakeRotFromXZ(ForwardVector, ImpactNormal).Roll;
+	float PitchWant = UKismetMathLibrary::MakeRotFromYZ(RightVector, ImpactNormal).Pitch;
 	float YawWant = GetHead()->GetComponentRotation().Yaw;
-
-	float RollWant = UKismetMathLibrary::MakeRotFromXZ(ForwardVector, m_CurrentGroundNormal).Roll;
 	FRotator CurrentHeadRot = GetHead()->GetComponentRotation();
-
-
-	GetHead()->SetWorldRotation(FMath::RInterpTo(CurrentHeadRot, FRotator(PitchWant,YawWant,RollWant), deltaTime, 1.f),false,nullptr,ETeleportType::TeleportPhysics);
+	FRotator DD = FRotator(PitchWant, YawWant, RollWant);
+	PRINTF("Target Rot : %s", *DD.ToString());
+	GetHead()->SetWorldRotation(FMath::RInterpTo(CurrentHeadRot,DD, deltaTime, 3.f),true,nullptr,ETeleportType::ResetPhysics);
 }
 
 void AUSB_Player_Pawn::TickLimitVelocity()
@@ -301,5 +314,11 @@ void AUSB_Player_Pawn::DoJump()
 	FVector HeadLinearVelo = GetHead()->GetPhysicsLinearVelocity();
 	HeadLinearVelo.Z = FMath::Max(HeadLinearVelo.Z, m_fJumpZVelocity);
 	GetHead()->SetPhysicsLinearVelocity(HeadLinearVelo);
+}
+
+void AUSB_Player_Pawn::SetTailLocation()
+{
+
+
 }
 
