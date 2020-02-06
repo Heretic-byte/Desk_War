@@ -10,15 +10,10 @@ AUSB_Player_Pawn::AUSB_Player_Pawn(const FObjectInitializer& obj)
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	//
-
 	m_fMovingForce = 4000.f;
 	m_fOrientRotSpeed = 1.f;
 	//
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root00"));
-
-
-	m_CollUsb = CreateDefaultSubobject<USphereComponent>(TEXT("USBColl"));
-	m_CollUsb->SetupAttachment(RootComponent);
 
 	m_MeshUsb = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkelMesh01"));
 	m_MeshUsb->SetupAttachment(RootComponent);
@@ -59,6 +54,9 @@ AUSB_Player_Pawn::AUSB_Player_Pawn(const FObjectInitializer& obj)
 	m_fJumpZVelocity = 540.f;
 	m_fAirControlWeight = 1.f;
 	m_bIsGround = true;
+
+
+	
 }
 
 // Called when the game starts or when spawned
@@ -91,7 +89,7 @@ void AUSB_Player_Pawn::Tick(float DeltaTime)
 		return;
 	}
 
-	TickHeadYawTorque(VeloDir, GetHead()->GetForwardVector());
+	//TickHeadYawTorque(VeloDir, GetHead()->GetForwardVector());
 
 	TickLimitVelocity();
 }
@@ -177,22 +175,30 @@ void AUSB_Player_Pawn::TickForceMove(float delta)
 
 			FVector Impact = UKismetMathLibrary::InverseTransformDirection(GetHead()->GetComponentTransform(),m_CurrentGroundNormal);
 		
-			FVector ForceDir = XDirection +YDirection;
+			FVector ForceDir = XDirection + YDirection;
 
-			if(m_CurrentGroundNormal.Z<1.f)
-				ForceDir.Z = m_CurrentGroundNormal.Z;
+			/*if(m_CurrentGroundNormal.Z<1.f)
+				ForceDir.Z = m_CurrentGroundNormal.Z;*/
 
 			ForceDir.Normalize();
 
+			float AirW = (GetIsGround() ?  1.f : m_fAirControlWeight);
 
-			if (!GetIsGround())
-			{
-				ForceDir *= m_fAirControlWeight;
-			}
+			//GetHead()->AddForce(ForceDir*m_fMovingForce * AirW);
 
-			ForceDir *= m_fMovingForce;
+			float DotYaw = FVector::DotProduct(ForceDir, GetHead()->GetRightVector());
 
-			GetHead()->AddForce(ForceDir);
+
+
+			auto VYaw = UKismetMathLibrary::GetUpVector(GetHead()->GetComponentRotation());
+
+			GetHead()->SetPhysicsAngularVelocity(delta*VYaw * DotYaw *m_YawW, true);
+			GetHead()->SetPhysicsAngularVelocity(FVector(0,0, GetHead()->GetPhysicsAngularVelocity().Z), false);
+			PRINTF("DotYaw : %f", DotYaw);
+			/*if (FMath::IsNearlyZero( FMath::Abs( DotYaw),0.4f))
+			{*/
+			GetHead()->SetPhysicsLinearVelocity(delta*ForceDir*m_fMovingForce * AirW,true);
+			//}
 
 			DrawDebugLine(
 				GetWorld(),

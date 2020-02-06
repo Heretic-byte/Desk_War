@@ -43,8 +43,6 @@ public:
 	AUSB_Player_Pawn(const FObjectInitializer& obj);
 
 protected:
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "USB_Player")
-	USphereComponent* m_CollUsb;
 	UPROPERTY(BlueprintReadOnly,VisibleAnywhere,Category="USB_Player")
 	USkeletalMeshComponent* m_MeshUsb;
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "USB_Player")
@@ -65,6 +63,10 @@ protected:
 	float m_fAirControlWeight;
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "USB_Player")
 	float m_fJumpZVelocity;
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "USB_Player")
+	float m_YawW =1.f;
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "USB_Player")
+	float m_PitchW = 1.f;
 protected:
 	UPrimitiveComponent* m_PrimHead;
 	float m_fOrientRotSpeed;
