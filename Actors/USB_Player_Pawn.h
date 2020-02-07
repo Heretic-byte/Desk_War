@@ -68,6 +68,8 @@ protected:
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "USB_Player")
 	float m_PitchW = 1.f;
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "USB_Player")
+	float m_LerpRotateTime = 1.f;
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "USB_Player")
 	FName m_ForwardBoneName;
 protected:
 	UPrimitiveComponent* m_PrimHead;
@@ -76,7 +78,7 @@ protected:
 	float m_fHorizontal;
 	float m_fMaxLinearSpeedSqr;
 	bool m_bIsGround;
-	FVector m_CurrentGroundNormal;
+	FVector m_ForceDir;
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -84,6 +86,8 @@ protected:
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+	void SetInputForceDir();
 
 
 	// Called to bind functionality to input
@@ -94,15 +98,14 @@ public:
 	bool GetIsGround() const;
 private:
 	void SetHead(UPrimitiveComponent* headWantPhysics);
-	FVector GetHeadVelocityDir();
+	FVector GetHeadVelocity();
 	void ForceForward(float v);
 	void ForceRight(float v);
 	void RotateYaw(float v);
 	void RotatePitch(float v);
 	void TickForceMove(float delta);
-	void TickHeadYawTorque(const FVector& velocity,const FVector headMeshDir);
-	void TickHeadRollTorque(const FVector& velocity);
-	void TickHeadPitchRotate(float deltaTime);
+	void TickYawRotate(FVector &ForceDir, float delta);
+	void TickPitchRollRotate(float delta);
 	void TickLimitVelocity();
 	void CastGround(FHitResult& hitResult);
 protected:

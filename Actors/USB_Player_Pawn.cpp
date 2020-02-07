@@ -77,24 +77,52 @@ void AUSB_Player_Pawn::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	FHitResult GroundHit;
-	CastGround(GroundHit);
-
-	TickForceMove(DeltaTime);
-
-	FVector VeloDir = GetHeadVelocityDir();
-
-	if (VeloDir.IsNearlyZero(0.1f))
+	if (Controller == NULL)
 	{
 		return;
 	}
 
-	//TickHeadYawTorque(VeloDir, GetHead()->GetForwardVector());
+	SetInputForceDir();
+
+	TickForceMove(DeltaTime);
+
+	TickYawRotate(m_ForceDir, DeltaTime);
+
+	TickPitchRollRotate(DeltaTime);
 
 	TickLimitVelocity();
 }
 
+void AUSB_Player_Pawn::SetInputForceDir()
+{
+	if (m_fHorizontal != 0 || m_fVertical != 0)
+	{
+		const FRotator Rotation = Controller->GetControlRotation();
+		const FRotator YawRotation(0, Rotation.Yaw, 0);
 
+		const FVector XDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X) * m_fVertical;
+		const FVector YDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y) * m_fHorizontal;
+
+		m_ForceDir = XDirection + YDirection;
+
+
+		m_ForceDir.Normalize(0.01f);
+
+
+		DrawDebugLine(
+			GetWorld(),
+			GetHead()->GetComponentLocation(),
+			GetHead()->GetComponentLocation() + 50.f * m_ForceDir,
+			FColor(0, 0, 255),
+			false, -1, 0,
+			4.333
+		);
+	}
+	else
+	{
+		m_ForceDir = FVector::ZeroVector;
+	}
+}
 // Called to bind functionality to input
 void AUSB_Player_Pawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
@@ -123,7 +151,7 @@ void AUSB_Player_Pawn::SetHead(UPrimitiveComponent * headWantPhysics)
 	m_PrimHead = headWantPhysics;
 }
 
-FVector AUSB_Player_Pawn::GetHeadVelocityDir()
+FVector AUSB_Player_Pawn::GetHeadVelocity()
 {
 	FVector Velo = GetHead()->GetComponentVelocity();
 	
@@ -131,7 +159,7 @@ FVector AUSB_Player_Pawn::GetHeadVelocityDir()
 		DrawDebugLine(
 			GetWorld(),
 			GetHead()->GetComponentLocation(),
-			GetHead()->GetComponentLocation()+  50.f * Velo,
+			GetHead()->GetComponentLocation()+  40.f * Velo,
 			FColor(255, 0, 0),
 			false, -1, 0,
 			4.333
@@ -143,7 +171,6 @@ FVector AUSB_Player_Pawn::GetHeadVelocityDir()
 void AUSB_Player_Pawn::ForceForward(float v)
 {
 	m_fVertical = v;
-
 }
 
 void AUSB_Player_Pawn::ForceRight(float v)
@@ -163,96 +190,48 @@ void AUSB_Player_Pawn::RotatePitch(float v)
 
 void AUSB_Player_Pawn::TickForceMove(float delta)
 {
-	if (Controller != NULL)
+	float AirW = (GetIsGround() ? 1.f : m_fAirControlWeight);
+
+	FVector TargetInputDir = m_ForceDir;
+	FVector MeshVector = GetHead()->GetForwardVector();
+
+
+	GetHead()->SetPhysicsLinearVelocity(delta*m_ForceDir*m_fMovingForce * AirW, true, m_ForwardBoneName);
+}
+
+void AUSB_Player_Pawn::TickYawRotate(FVector &ForceDir, float delta)
+{
+	float DotYaw = FVector::DotProduct(ForceDir, GetHead()->GetRightVector());
+
+	auto VYaw = UKismetMathLibrary::GetUpVector(GetHead()->GetComponentRotation());
+
+	FVector VeloDir = GetHeadVelocity();
+
+	if (!VeloDir.IsNearlyZero(0.1f))
 	{
-		if (m_fHorizontal != 0 || m_fVertical != 0)
-		{
-			const FRotator Rotation = Controller->GetControlRotation();
-			const FRotator YawRotation(0, Rotation.Yaw, 0);
-
-			const FVector XDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X) * m_fVertical;
-			const FVector YDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y) * m_fHorizontal;
-
-			FVector Impact = UKismetMathLibrary::InverseTransformDirection(GetHead()->GetComponentTransform(),m_CurrentGroundNormal);
-		
-			FVector ForceDir = XDirection + YDirection;
-
-			/*if(m_CurrentGroundNormal.Z<1.f)
-				ForceDir.Z = m_CurrentGroundNormal.Z;*/
-
-			ForceDir.Normalize();
-
-			float AirW = (GetIsGround() ?  1.f : m_fAirControlWeight);
-
-			//GetHead()->AddForce(ForceDir*m_fMovingForce * AirW);
-
-			float DotYaw = FVector::DotProduct(ForceDir, GetHead()->GetRightVector());
-
-			auto VYaw = UKismetMathLibrary::GetUpVector(GetHead()->GetComponentRotation());
-
-			GetHead()->SetPhysicsAngularVelocity(delta*VYaw * DotYaw *m_YawW, true, m_ForwardBoneName);
-			//GetHead()->SetPhysicsAngularVelocity(FVector(0,0, GetHead()->GetPhysicsAngularVelocity().Z), false);
-			PRINTF("DotYaw : %f", DotYaw);
-
-			GetHead()->SetPhysicsLinearVelocity(delta*ForceDir*m_fMovingForce * AirW,true, m_ForwardBoneName);
-
-			DrawDebugLine(
-				GetWorld(),
-				GetHead()->GetComponentLocation(),
-				GetHead()->GetComponentLocation() + 50.f * ForceDir,
-				FColor(0, 0, 255),
-				false, -1, 0,
-				4.333
-			);
-		}
+		GetHead()->SetPhysicsAngularVelocity(delta*VYaw * DotYaw *m_YawW, true, m_ForwardBoneName);
 	}
 }
 
-void AUSB_Player_Pawn::TickHeadYawTorque(const FVector& velocity, const FVector headMeshDir)
+void AUSB_Player_Pawn::TickPitchRollRotate(float delta)
 {
-	FVector Target = velocity.GetSafeNormal2D();
+	FHitResult HitResult;
+	//피직스 각도로 해보자
+	CastGround(HitResult);
 
-	float Dot = FVector::DotProduct(Target, headMeshDir);
-
-	float RadiAngle = FMath::Acos(Dot);
-
-	FVector InversedVector = UKismetMathLibrary::InverseTransformDirection(GetHead()->GetComponentTransform(),Target);
-
-	float DirPlusMinus;
-
-	if (InversedVector.Y < 0.f)
-	{
-		DirPlusMinus = -1.f;
-	}
-	else
-	{
-		DirPlusMinus = 1.f;
-	}
-	GetHead()->AddTorqueInRadians(FVector(0,0, RadiAngle*m_fMovingForce * DirPlusMinus * m_fTorqueSpeedWeight));
-}
-
-void AUSB_Player_Pawn::TickHeadRollTorque(const FVector& velocity)
-{
-
-}
-
-void AUSB_Player_Pawn::TickHeadPitchRotate(float deltaTime)
-{
-
-	FVector ForwardVector = GetHead()->GetForwardVector();
-	FVector RightVector = GetHead()->GetRightVector();
-
-
-
-	float PitchWant = UKismetMathLibrary::MakeRotFromYZ(RightVector, m_CurrentGroundNormal).Pitch;
+	float PitchWant = UKismetMathLibrary::MakeRotFromYZ(GetHead()->GetRightVector(), HitResult.ImpactNormal).Pitch;
 
 	float YawWant = GetHead()->GetComponentRotation().Yaw;
 
-	float RollWant = UKismetMathLibrary::MakeRotFromXZ(ForwardVector, m_CurrentGroundNormal).Roll;
+	float RollWant = UKismetMathLibrary::MakeRotFromXZ(GetHead()->GetForwardVector(), HitResult.ImpactNormal).Roll;
+
 	FRotator CurrentHeadRot = GetHead()->GetComponentRotation();
 
+	FRotator LerpedRotation = FMath::RInterpTo(CurrentHeadRot, FRotator(PitchWant, YawWant, RollWant), delta, m_LerpRotateTime);
 
-	GetHead()->SetWorldRotation(FMath::RInterpTo(CurrentHeadRot, FRotator(PitchWant,YawWant,RollWant), deltaTime, 1.f),false,nullptr,ETeleportType::TeleportPhysics);
+	//GetHead()->SetWorldRotation(LerpedRotation,true,nullptr,ETeleportType::TeleportPhysics);
+
+	//GetHead()->SetPhysicsAngularVelocity(delta*VYaw * DotYaw *m_YawW, true);
 }
 
 void AUSB_Player_Pawn::TickLimitVelocity()
@@ -286,15 +265,10 @@ void AUSB_Player_Pawn::CastGround(FHitResult & hitResult)
 	if (GetWorld()->LineTraceSingleByChannel(hitResult, TraceStart, TraceEnd, ECollisionChannel::ECC_Visibility, QueryParam))
 	{
 		m_bIsGround = true;
-		m_CurrentGroundNormal = hitResult.ImpactNormal;
-
-		PRINTF("Ground");
 	}
 	else
 	{
 		m_bIsGround = false;
-		m_CurrentGroundNormal = FVector(0, 0, 0);
-		PRINTF("Air");
 	}
 }
 
