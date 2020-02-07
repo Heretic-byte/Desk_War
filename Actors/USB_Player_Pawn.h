@@ -67,6 +67,8 @@ protected:
 	float m_YawW =1.f;
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "USB_Player")
 	float m_PitchW = 1.f;
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "USB_Player")
+	FName m_ForwardBoneName;
 protected:
 	UPrimitiveComponent* m_PrimHead;
 	float m_fOrientRotSpeed;

@@ -56,7 +56,7 @@ AUSB_Player_Pawn::AUSB_Player_Pawn(const FObjectInitializer& obj)
 	m_bIsGround = true;
 
 
-	
+	m_ForwardBoneName = FName(TEXT("joint2"));
 }
 
 // Called when the game starts or when spawned
@@ -188,17 +188,13 @@ void AUSB_Player_Pawn::TickForceMove(float delta)
 
 			float DotYaw = FVector::DotProduct(ForceDir, GetHead()->GetRightVector());
 
-
-
 			auto VYaw = UKismetMathLibrary::GetUpVector(GetHead()->GetComponentRotation());
 
-			GetHead()->SetPhysicsAngularVelocity(delta*VYaw * DotYaw *m_YawW, true);
-			GetHead()->SetPhysicsAngularVelocity(FVector(0,0, GetHead()->GetPhysicsAngularVelocity().Z), false);
+			GetHead()->SetPhysicsAngularVelocity(delta*VYaw * DotYaw *m_YawW, true, m_ForwardBoneName);
+			//GetHead()->SetPhysicsAngularVelocity(FVector(0,0, GetHead()->GetPhysicsAngularVelocity().Z), false);
 			PRINTF("DotYaw : %f", DotYaw);
-			/*if (FMath::IsNearlyZero( FMath::Abs( DotYaw),0.4f))
-			{*/
-			GetHead()->SetPhysicsLinearVelocity(delta*ForceDir*m_fMovingForce * AirW,true);
-			//}
+
+			GetHead()->SetPhysicsLinearVelocity(delta*ForceDir*m_fMovingForce * AirW,true, m_ForwardBoneName);
 
 			DrawDebugLine(
 				GetWorld(),
