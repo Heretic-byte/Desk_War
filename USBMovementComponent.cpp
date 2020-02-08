@@ -674,7 +674,7 @@ void UUSBMovementComponent::SetUpdatedComponent(USceneComponent* NewUpdatedCompo
 	UPrimitiveComponent* OldPrimitive = Cast<UPrimitiveComponent>(UpdatedComponent);
 	if (IsValid(OldPrimitive) && OldPrimitive->OnComponentBeginOverlap.IsBound())
 	{
-		// 이거 뭔지 모르겠음;
+		// 이거 뭔지 모르겠음;//아마 용도가 통과 안되게 힘주는거였을듯
 		OldPrimitive->OnComponentBeginOverlap.RemoveDynamic(this, &UUSBMovementComponent::CapsuleTouched);
 	}
 
@@ -1076,66 +1076,8 @@ void UUSBMovementComponent::SimulateMovement(float DeltaSeconds)
 		return;
 	}
 
-	/**********************빼고 읽자**********************/
-	//const bool bIsSimulatedProxy = (PawnOwner->Role == ROLE_SimulatedProxy);
-
-	// Workaround for replication not being updated initially
-	//if (bIsSimulatedProxy &&
-	//	PawnOwner->ReplicatedMovement.Location.IsZero() &&
-	//	PawnOwner->ReplicatedMovement.Rotation.IsZero() &&
-	//	PawnOwner->ReplicatedMovement.LinearVelocity.IsZero())
-	//{
-	//	return;
-	//}
-
-	// If base is not resolved on the client, we should not try to simulate at all
-	//if (PawnOwner->GetReplicatedBasedMovement().IsBaseUnresolved())
-	//{
-		// UE_LOG(LogCharacterMovement, Verbose, TEXT("Base for simulated character '%s' is not resolved on client, skipping SimulateMovement"), *PawnOwner->GetName());
-	//	return;
-	//}
-	/**********************빼고 읽자**********************/
-
 	FVector OldVelocity;
 	FVector OldLocation;
-
-	// Scoped updates can improve performance of multiple MoveComponent calls.
-	{					/**********************빼고 읽자**********************/
-		//			FScopedMovementUpdate ScopedMovementUpdate(UpdatedComponent, bEnableScopedMovementUpdates ? EScopedUpdate::DeferredUpdates : EScopedUpdate::ImmediateUpdates);
-					/**********************빼고 읽자**********************/
-
-
-		//bool bHandledNetUpdate = false;
-		//if (bIsSimulatedProxy)
-		//{
-						/**********************빼고 읽자**********************/
-						// Handle network changes
-		//				if (bNetworkUpdateReceived)
-		//				{
-		//					bNetworkUpdateReceived = false;
-		//					bHandledNetUpdate = true;
-							// UE_LOG(LogCharacterMovement, Verbose, TEXT("Proxy %s received net update"), *PawnOwner->GetName());
-		//					if (bNetworkMovementModeChanged)
-		//					{
-		//						ApplyNetworkMovementMode(PawnOwner->GetReplicatedMovementMode());
-		//						bNetworkMovementModeChanged = false;
-		//					}
-		//					else if (bJustTeleported || bForceNextFloorCheck)
-		//					{
-								// Make sure floor is current. We will continue using the replicated base, if there was one.
-		//						bJustTeleported = false;
-		//						UpdateFloorFromAdjustment();
-		//					}
-		//				}
-
-						/**********************빼고 읽자**********************/
-
-
-		//				else if (bForceNextFloorCheck)
-		//				{
-		//					UpdateFloorFromAdjustment();	// 다른 조건이 없다면 항상 포함해야 할듯
-		//				}
-		//}
 
 		if (bForceNextFloorCheck)
 		{
@@ -1144,7 +1086,6 @@ void UUSBMovementComponent::SimulateMovement(float DeltaSeconds)
 
 		if (MovementMode != MOVE_None)
 		{
-			//TODO: Also ApplyAccumulatedForces()?
 			HandlePendingLaunch();
 		}
 		ClearAccumulatedForces();
@@ -1154,37 +1095,21 @@ void UUSBMovementComponent::SimulateMovement(float DeltaSeconds)
 		{
 			return;
 		}
-
-
-
-		// 애초에 bIsSimulatedProxy 이게 false였으면 이 구간까지 못왔음
 		const bool bSimGravityDisabled = false;//(bIsSimulatedProxy && PawnOwner->bSimGravityDisabled);		// Pawn엔 없다...
 		const bool bZeroReplicatedGroundVelocity = (/*bIsSimulatedProxy && */IsMovingOnGround() && PawnOwner->ReplicatedMovement.LinearVelocity.IsZero());
-
-		/**********************빼고 읽자**********************/
-		// bSimGravityDisabled means velocity was zero when replicated and we were stuck in something. Avoid external changes in velocity as well.
-		// Being in ground movement with zero velocity, we cannot simulate proxy velocities safely because we might not get any further updates from the server.
 		if (bSimGravityDisabled || bZeroReplicatedGroundVelocity)
 		{
 			Velocity = FVector::ZeroVector;
 		}
-		/**********************빼고 읽자**********************/
 
 		// Base 관련
 		MaybeUpdateBasedMovement(DeltaSeconds);
 
-		// simulated pawns predict location
 		OldVelocity = Velocity;
 		OldLocation = UpdatedComponent->GetComponentLocation();
 
 		UpdateProxyAcceleration();
 
-		/**********************빼고 읽자**********************/
-		// May only need to simulate forward on frames where we haven't just received a new position update.
-		//if (!bHandledNetUpdate || !bNetworkSkipProxyPredictionOnNetUpdate || !CharacterMovementCVars::NetEnableSkipProxyPredictionOnNetUpdate)
-		//{
-		/**********************빼고 읽자**********************/
-			//UE_LOG(LogCharacterMovement, Verbose, TEXT("Proxy %s simulating movement"), *GetNameSafe(PawnOwner));
 		FStepDownResult StepDownResult;
 		MoveSmooth(Velocity, DeltaSeconds, &StepDownResult);
 
@@ -1278,7 +1203,6 @@ void UUSBMovementComponent::SimulateMovement(float DeltaSeconds)
 
 
 		OnMovementUpdated(DeltaSeconds, OldLocation, OldVelocity);
-	} // End scoped movement update
 
 	// Call custom post-movement events. These happen after the scoped movement completes in case the events want to use the current state of overlaps etc.
 	CallMovementUpdateDelegate(DeltaSeconds, OldLocation, OldVelocity);
@@ -4823,6 +4747,29 @@ bool UUSBMovementComponent::CanJump() const
 	return CanJumpInternal();
 }
 
+void UUSBMovementComponent::ResetJumpState()
+{
+	bPressedJump = false;
+	bWasJumping = false;
+	JumpKeyHoldTime = 0.0f;
+	JumpForceTimeRemaining = 0.0f;
+
+	if (!IsFalling())
+	{
+		JumpCurrentCount = 0;
+	}
+}
+
+bool UUSBMovementComponent::IsJumpProvidingForce() const
+{
+	if (JumpForceTimeRemaining > 0.0f)
+	{
+		return true;
+	}
+
+	return false;
+}
+
 bool UUSBMovementComponent::CanJumpInternal_Implementation() const
 {
 	// Ensure the character isn't currently crouched.
@@ -4860,29 +4807,6 @@ bool UUSBMovementComponent::CanJumpInternal_Implementation() const
 	}
 
 	return bCanJump;
-}
-
-void UUSBMovementComponent::ResetJumpState()
-{
-	bPressedJump = false;
-	bWasJumping = false;
-	JumpKeyHoldTime = 0.0f;
-	JumpForceTimeRemaining = 0.0f;
-
-	if (!IsFalling())
-	{
-		JumpCurrentCount = 0;
-	}
-}
-
-bool UUSBMovementComponent::IsJumpProvidingForce() const
-{
-	if (JumpForceTimeRemaining > 0.0f)
-	{
-		return true;
-	}
-
-	return false;
 }
 
 /******************************

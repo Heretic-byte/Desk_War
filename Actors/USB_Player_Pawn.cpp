@@ -209,7 +209,7 @@ void AUSB_Player_Pawn::TickYawRotate(FVector &ForceDir, float delta)
 
 	if (!VeloDir.IsNearlyZero(0.1f))
 	{
-		GetHead()->SetPhysicsAngularVelocity(delta*VYaw * DotYaw *m_YawW, true, m_ForwardBoneName);
+		GetHead()->SetPhysicsAngularVelocityInDegrees(delta*VYaw * DotYaw *m_YawW, true, m_ForwardBoneName);
 	}
 }
 

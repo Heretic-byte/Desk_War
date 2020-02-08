@@ -15,44 +15,53 @@
 class UPort;
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
-class DESK_WAR_API UConnector : public UActorComponent
+class DESK_WAR_API UConnector : public USceneComponent
 {
 	GENERATED_BODY()
+public:
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnConnectPortOwner, UObject*, portOwner);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnConnectPort, UPort*, port);
 public:	
-	UConnector();
+	UConnector(const FObjectInitializer& objInit);
 protected:
-	virtual void BeginPlay() override;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Body_Mesh")
+	USkeletalMeshComponent* m_MeshPin;
 protected:
-	UPROPERTY()
-	UCapsuleComponent* m_CollConnector;
-	UPROPERTY()
-	USkeletalMeshComponent* m_MeshConnector;
+	UPROPERTY(EditDefaultsOnly, Category = "Body_Bones")
+	FName m_NameNeckBone;
+	UPROPERTY(EditDefaultsOnly,  Category = "Body_Bones")
+	FName m_NameConnectSocket;
+	UPROPERTY(EditDefaultsOnly,  Category = "Body_Bones")
+	FName m_NameConnectStartSocket;
+	UPROPERTY(EditDefaultsOnly,  Category = "Body_Bones")
+	FName m_NameConnectPushPointSocket;
+protected:
 	UPROPERTY()
 	UPort* m_PortConnected;
 	UPROPERTY()
 	UObject* m_PortOwner;
+
 public:
-	FORCEINLINE UCapsuleComponent* GetColl()
+	FOnConnectPortOwner m_OnConnectedPortOwner;
+	FOnConnectPort m_OnConnectedPort;
+public:
+	FVector GetNeckLoc() const;
+	void SetSimulatePhysics(bool v);
+	void Connect(UPort* port);
+private:
+	void CreateHeadMesh();
+public:
+	FORCEINLINE FName GetBoneNeck()
 	{
-		return m_CollConnector;
+		return m_NameNeckBone;
 	}
-	FORCEINLINE void SetColl(UCapsuleComponent* coll)
+	FORCEINLINE USkeletalMeshComponent* GetPin()
 	{
-		m_CollConnector = coll;
+		return m_MeshPin;
 	}
-
-	FORCEINLINE USkeletalMeshComponent* GetMesh()
-	{
-		return m_MeshConnector;
-	}
-	FORCEINLINE void SetMesh(USkeletalMeshComponent* mesh)
-	{
-		m_MeshConnector = mesh;
-	}
-
 	FORCEINLINE UPort* GetPortConnected()
 	{
 		return m_PortConnected;
 	}
-	void Connect(UPort* port);
+	
 };

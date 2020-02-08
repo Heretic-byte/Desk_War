@@ -53,14 +53,6 @@ AUSB_PlayerCharacter::AUSB_PlayerCharacter(const FObjectInitializer& ObjectIniti
 	m_NameConnectStartSocket = FName(TEXT("ConnectStart"));
 	m_NameConnectPushPointSocket = FName(TEXT("PushPoint"));
 	//
-	m_fInteractRange = 300.f;
-	m_fLineRadius = 5.3f;
-	m_fLineExtraSpacing = 2.f;
-	m_fCollMass = 100.f;
-	m_fLinearDamping = 12.f;
-	m_fAngularDamping = 18.f;
-	m_fWorldScaleX = 0.f;
-	m_nSpineCount = 0;
 	m_ArySpineColls.Empty();
 	m_ArySpineColls.Reserve(10);
 	m_ArySplineMeshCompos.Empty();
@@ -187,12 +179,12 @@ void AUSB_PlayerCharacter::CreateComponent()
 	m_SpineMesh = FoundMeshSpine.Object;
 	//
 	m_ActionManager = CreateDefaultSubobject<UActionManagerComponent>(TEXT("Action00"));
-	m_ConnectorHead = CreateDefaultSubobject<UConnector>(TEXT("ConnectorUSB"));
-	m_ConnectorHead->SetColl(m_CollUSB);
-	m_ConnectorHead->SetMesh(m_MeshUSB);
-	m_ConnectorTail = CreateDefaultSubobject<UConnector>(TEXT("ConnectorPin4"));
-	m_ConnectorTail->SetColl(m_Coll4Pin);
-	m_ConnectorTail->SetMesh(m_Mesh4Pin);
+	//m_ConnectorHead = CreateDefaultSubobject<UConnector>(TEXT("ConnectorUSB"));
+	//m_ConnectorHead->SetColl(m_CollUSB);
+	//m_ConnectorHead->SetMesh(m_MeshUSB);
+	//m_ConnectorTail = CreateDefaultSubobject<UConnector>(TEXT("ConnectorPin4"));
+	//m_ConnectorTail->SetColl(m_Coll4Pin);
+	//m_ConnectorTail->SetMesh(m_Mesh4Pin);
 }
 
 void AUSB_PlayerCharacter::BeginPlay()
@@ -220,21 +212,21 @@ void AUSB_PlayerCharacter::SetHeadTail(UConnector* head, UConnector* tail)
 	m_ConnectorHead = head;
 	m_ConnectorTail = tail;
 	//
-	m_ConnectorHead->GetMesh()->SetSimulatePhysics(false);
-	m_ConnectorHead->GetColl()->SetWorldLocation(m_ConnectorHead->GetMesh()->GetComponentLocation(),false,nullptr,ETeleportType::ResetPhysics);
-	FRotator Rot(0,0,0);
-	Rot .Yaw= m_ConnectorHead->GetMesh()->GetComponentRotation().Yaw;
+	//m_ConnectorHead->GetMesh()->SetSimulatePhysics(false);
+	//m_ConnectorHead->GetColl()->SetWorldLocation(m_ConnectorHead->GetMesh()->GetComponentLocation(),false,nullptr,ETeleportType::ResetPhysics);
+	//FRotator Rot(0,0,0);
+	//Rot .Yaw= m_ConnectorHead->GetMesh()->GetComponentRotation().Yaw;
 
-	m_ConnectorHead->GetColl()->SetWorldRotation(Rot);
-	m_ConnectorHead->GetMesh()->AttachToComponent(m_ConnectorHead->GetColl(), FAttachmentTransformRules(EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, false));
-	//
-	m_ConnectorHead->GetColl()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	m_ConnectorTail->GetColl()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	m_ConnectorTail->GetMesh()->SetSimulatePhysics(true);
-	//
-	m_MainSpringArm->AttachToComponent(m_ConnectorHead->GetColl(), FAttachmentTransformRules::KeepRelativeTransform);
-	CapsuleComponent = m_ConnectorHead->GetColl();
-	GetCharacterMovement()->SetUpdatedComponent(m_ConnectorHead->GetColl());
+	//m_ConnectorHead->GetColl()->SetWorldRotation(Rot);
+	//m_ConnectorHead->GetMesh()->AttachToComponent(m_ConnectorHead->GetColl(), FAttachmentTransformRules(EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, false));
+	////
+	//m_ConnectorHead->GetColl()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	//m_ConnectorTail->GetColl()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	//m_ConnectorTail->GetMesh()->SetSimulatePhysics(true);
+	////
+	//m_MainSpringArm->AttachToComponent(m_ConnectorHead->GetColl(), FAttachmentTransformRules::KeepRelativeTransform);
+	//CapsuleComponent = m_ConnectorHead->GetColl();
+	//GetCharacterMovement()->SetUpdatedComponent(m_ConnectorHead->GetColl());
 }
 
 void AUSB_PlayerCharacter::SetTailLocation()
@@ -885,32 +877,38 @@ void AUSB_PlayerCharacter::SetHeadTailDefault()
 
  UCapsuleComponent* AUSB_PlayerCharacter::GetHeadCollision() const
 {
-	return m_ConnectorHead->GetColl();
+	//return m_ConnectorHead->GetColl();
+	return nullptr;
 }
 
  UCapsuleComponent* AUSB_PlayerCharacter::GetTailCollision() const
 {
-	return m_ConnectorTail->GetColl();
+	 return nullptr;
+	//return m_ConnectorTail->GetColl();
 }
 
  USkeletalMeshComponent* AUSB_PlayerCharacter::GetHeadMesh() const
 {
-	return m_ConnectorHead->GetMesh();
+	 return nullptr;
+	//return m_ConnectorHead->GetMesh();
 }
 
  USkeletalMeshComponent* AUSB_PlayerCharacter::GetTailMesh() const
 {
-	 return m_ConnectorTail->GetMesh();
+	 //return m_ConnectorTail->GetMesh();
+	 return nullptr;
 }
 
  FVector AUSB_PlayerCharacter::GetConnectorRightSocLoc() const
  {
-	 return m_ConnectorHead->GetMesh()->GetSocketLocation(m_NameConnectRightSide);
+	 //return m_ConnectorHead->GetMesh()->GetSocketLocation(m_NameConnectRightSide);
+	 return FVector();
  }
 
  FVector AUSB_PlayerCharacter::GetConnectorLeftSocLoc() const
  {
-	 return m_ConnectorHead->GetMesh()->GetSocketLocation(m_NameConnectLeftSide);
+	 //return m_ConnectorHead->GetMesh()->GetSocketLocation(m_NameConnectLeftSide);
+	 return FVector();
  }
 
 void AUSB_PlayerCharacter::MoveForward(float v)

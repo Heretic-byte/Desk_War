@@ -56,7 +56,7 @@ void UPort::Connect(UConnector * connector)
 	m_ConnectedConnector = connector;
 	m_OnConnected.Broadcast(m_ConnectedConnector);
 	EnableCollider();
-	BindConstraintConnector(connector->GetMesh());
+	//BindConstraintConnector(connector->GetMesh());
 	m_PrmiMeshConnector->SetMassOverrideInKg(NAME_None, 50);
 }
 
