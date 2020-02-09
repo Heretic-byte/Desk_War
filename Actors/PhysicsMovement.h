@@ -52,6 +52,8 @@ protected:
 	int32 m_nJumpCurrentCount;
 	UPROPERTY(EditAnywhere, Category = "PhysicsMovement_Slope",meta = (ClampMin = "0.0", ClampMax = "90.0", UIMin = "0.0", UIMax = "90.0"))
 	float m_fWalkableFloorAngle;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement_Rotate")
+	FRotator RotationRate;
 public:
 	UPROPERTY(BlueprintAssignable, Category = "PhysicsMovement_Jump")
 	FVoidVoidBP m_OnJumpBP;
@@ -61,7 +63,6 @@ public:
 	void Jump();
 	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement_Jump")
 	void StopJumping();
-	
 	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
 	bool IsGround() const;
 	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
@@ -79,6 +80,10 @@ private:
 	FVector ScaleInputAccel(const FVector inputPure) const;
 	void ApplyAccumulatedForces(float DeltaSeconds);
 	void PerformMovement(float delta);
+	bool Rotate(float delta);
+	float GetAxisDeltaRotation(float InAxisRotationRate, float DeltaTime) const;
+	FRotator GetDeltaRotation(float DeltaTime) const;
+	FRotator ComputeOrientToMovementRotation(const FRotator& CurrentRotation, float DeltaTime, FRotator& DeltaRotation) const;
 private://slopeWalkable
 	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement_Slope")
 	void SetWalkableFloorAngle(float InWalkableFloorAngle);

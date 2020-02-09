@@ -74,22 +74,101 @@ void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 	{
 		return;
 	}
+	CheckJumpInput(DeltaTime);
 
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	CheckJumpInput(DeltaTime);
 
 	const FVector InputVector = ConsumeInputVector();
-	PRINTF("InputVector : %s", *InputVector.ToString());
 	m_Acceleration = ScaleInputAccel(InputVector);
-	Velocity = m_Acceleration;
+	
 	PerformMovement(DeltaTime);
 }
 void UPhysicsMovement::PerformMovement(float delta)
 {
+	bool CanRotate= Rotate(delta);
+
+
 	ApplyAccumulatedForces(delta);
+	HandlePendingLaunch();
+	if (CanRotate)
+	{
+	Velocity += m_Acceleration * delta;
+
+	}
 	UpdateComponentVelocity();
+	ClearJumpInput(delta);
 }
+bool UPhysicsMovement::Rotate(float delta)
+{
+	FRotator CurrentRotation = UpdatedComponent->GetComponentRotation(); // Normalized
+	CurrentRotation.DiagnosticCheckNaN(TEXT("UPhysicsMovement::Rotate(): CurrentRotation"));
+
+	FRotator DeltaRot = GetDeltaRotation(delta);
+	DeltaRot.DiagnosticCheckNaN(TEXT("UPhysicsMovement::Rotate(): GetDeltaRotation"));
+
+	FRotator DesiredRotation = CurrentRotation;
+
+	DesiredRotation = ComputeOrientToMovementRotation(CurrentRotation, delta, DeltaRot);
+
+	DesiredRotation.Normalize();
+
+	const float AngleTolerance = 1e-1f;
+
+
+	if (!CurrentRotation.Equals(DesiredRotation, AngleTolerance))
+	{
+		// PITCH
+		if (!FMath::IsNearlyEqual(CurrentRotation.Pitch, DesiredRotation.Pitch, AngleTolerance))
+		{
+			DesiredRotation.Pitch = FMath::FixedTurn(CurrentRotation.Pitch, DesiredRotation.Pitch, DeltaRot.Pitch);
+		}
+
+		//float AngleDiff =  FMath::Abs( DesiredRotation.Yaw )-FMath::Abs(CurrentRotation.Yaw);
+		//PRINTF("AngleDiff Yaw : %f", AngleDiff);
+		//
+		// YAW
+		if (!FMath::IsNearlyEqual(CurrentRotation.Yaw, DesiredRotation.Yaw, AngleTolerance))
+		{
+			DesiredRotation.Yaw = FMath::FixedTurn(CurrentRotation.Yaw, DesiredRotation.Yaw, DeltaRot.Yaw);
+		}
+
+		PRINTF("CurrentRotation Yaw : %f", CurrentRotation.Yaw);
+		PRINTF("DesiredRotation Yaw : %f", DesiredRotation.Yaw);
+		// ROLL
+		if (!FMath::IsNearlyEqual(CurrentRotation.Roll, DesiredRotation.Roll, AngleTolerance))
+		{
+			DesiredRotation.Roll = FMath::FixedTurn(CurrentRotation.Roll, DesiredRotation.Roll, DeltaRot.Roll);
+		}
+		// Set the new rotation.
+		DesiredRotation.DiagnosticCheckNaN(TEXT("UPhysicsMovement::Rotate(): DesiredRotation"));
+		//MoveUpdatedComponent(FVector::ZeroVector, DesiredRotation, /*bSweep*/ false,nullptr,ETeleportType::TeleportPhysics);
+		m_MovingTarget->SetPhysicsAngularVelocityInDegrees(DesiredRotation.UnrotateVector(m_MovingTarget->GetForwardVector()));
+
+	}
+		return true;
+
+}
+
+FRotator UPhysicsMovement::GetDeltaRotation(float DeltaTime) const
+{
+	return FRotator(GetAxisDeltaRotation(RotationRate.Pitch, DeltaTime), GetAxisDeltaRotation(RotationRate.Yaw, DeltaTime), GetAxisDeltaRotation(RotationRate.Roll, DeltaTime));
+}
+
+float UPhysicsMovement::GetAxisDeltaRotation(float InAxisRotationRate, float DeltaTime) const
+{
+	return (InAxisRotationRate >= 0.f) ? (InAxisRotationRate * DeltaTime) : 360.f;
+}
+
+FRotator UPhysicsMovement::ComputeOrientToMovementRotation(const FRotator& CurrentRotation, float DeltaTime, FRotator& DeltaRotation) const
+{
+	if (m_Acceleration.SizeSquared() < KINDA_SMALL_NUMBER)
+	{
+		return CurrentRotation;
+	}
+	return m_Acceleration.GetSafeNormal().Rotation();
+}
+
 void UPhysicsMovement::ApplyAccumulatedForces(float DeltaSeconds)
 {
 	Velocity += m_PendingImpulseToApply + (m_PendingForceToApply * DeltaSeconds);
@@ -101,10 +180,14 @@ void UPhysicsMovement::ApplyAccumulatedForces(float DeltaSeconds)
 
 void UPhysicsMovement::UpdateComponentVelocity()
 {
-	FVector FinalVelocity = Velocity;
-	FinalVelocity.Z = m_MovingTarget->GetPhysicsLinearVelocity().Z;
+	if (!m_MovingTarget)
+	{
+		return;
+	}
 
-	m_MovingTarget->SetPhysicsLinearVelocity(Velocity, false, m_NameLinearVelocityBone);
+	m_MovingTarget->SetPhysicsLinearVelocity(Velocity, true, m_NameLinearVelocityBone);
+
+	Velocity= FVector::ZeroVector;
 }
 
 void UPhysicsMovement::ClearAccumulatedForces()
@@ -333,14 +416,7 @@ void UPhysicsMovement::AddForce(FVector forceWant)
 		return;
 	}
 
-	float Mass = m_MovingTarget->GetMass();
-	FVector FinalForce = forceWant;
-
-	if (Mass > SMALL_NUMBER)
-	{
-		FinalForce += FinalForce / Mass;
-	}
-	m_PendingForceToApply += FinalForce;
+	m_MovingTarget->AddForce(forceWant);
 }
 
 void UPhysicsMovement::AddImpulse(FVector impulseWant)
@@ -350,12 +426,5 @@ void UPhysicsMovement::AddImpulse(FVector impulseWant)
 		return;
 	}
 
-	float Mass = m_MovingTarget->GetMass();
-	FVector FinalImpulse = impulseWant;
-
-	if (Mass > SMALL_NUMBER)
-	{
-		FinalImpulse = FinalImpulse / Mass;
-	}
-	m_PendingImpulseToApply += FinalImpulse;
+	m_MovingTarget->AddImpulse(impulseWant);
 }

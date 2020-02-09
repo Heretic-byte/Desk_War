@@ -192,8 +192,6 @@ void AUSB_Player_Pawn::TickForceMove(float delta)
 {
 	float AirW = (GetIsGround() ? 1.f : m_fAirControlWeight);
 
-	FVector TargetInputDir = m_ForceDir;
-	FVector MeshVector = GetHead()->GetForwardVector();
 
 
 	GetHead()->SetPhysicsLinearVelocity(delta*m_ForceDir*m_fMovingForce * AirW, true, m_ForwardBoneName);

@@ -568,16 +568,7 @@ void OnLandedGround(const FHitResult& Hit) {
 *
 **********************************/
 void UUSBMovementComponent::MyTickMoving(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) {
-	/*
-	if (MovementMode == MOVE_Walking) {
-		GEngine->AddOnScreenDebugMessage(-1, 0.02f, FColor::Yellow, TEXT("MOVE_Walking"));
-	}
-	else if (MovementMode == MOVE_Falling) {
-		GEngine->AddOnScreenDebugMessage(-1, 0.02f, FColor::Yellow, TEXT("MOVE_Falling"));
-	}
-	*/
-
-	//CharacterMovementComponent Tick 이벤트 1248번째 줄
+	
 	CheckJumpInput(DeltaTime);
 
 	const FVector InputVector = ConsumeInputVector();
