@@ -52,6 +52,8 @@ private:
 	float m_fSpineLinearDamping;
 	UPROPERTY(EditDefaultsOnly,  Category = "Spine_Physics")
 	float m_fCollMass;
+	UPROPERTY(EditDefaultsOnly, Category = "Spine_Physics")
+	float m_fMaxAngularVelocity;
 public:	
 	virtual void Tick(float DeltaTime) override;
 private:

@@ -14,7 +14,7 @@ AUSB_PhysicsPawn::AUSB_PhysicsPawn(const FObjectInitializer& objInit):Super(objI
 	m_fCollMass = 0.5;
 	m_fSpineLinearDamping = 1.f;
 	m_fSpineAngularDamping = 1.f;
-
+	m_fMaxAngularVelocity = 500.f;
 	m_ArySpineColls.Empty();
 	m_ArySplineMeshCompos.Empty();
 
@@ -115,6 +115,7 @@ void AUSB_PhysicsPawn::SpawnSpineColls(int nSpineCount)
 		SphereSpawned->SetPhysMaterialOverride(m_SpineFriction);
 		SphereSpawned->SetGenerateOverlapEvents(false);
 		SphereSpawned->SetRelativeLocation(SphereLocation,false,nullptr,ETeleportType::ResetPhysics);
+		SphereSpawned->SetPhysicsMaxAngularVelocity(m_fMaxAngularVelocity);
 		SphereSpawned->SetSimulatePhysics(true);
 		m_ArySpineColls.Emplace(SphereSpawned);
 		Offset -= (m_fLineRadius * 2) + m_fLineExtraSpacing;
@@ -209,8 +210,10 @@ void AUSB_PhysicsPawn::UpdateSplineMesh()
 void AUSB_PhysicsPawn::InitPhysicsConstraints()
 {
 	m_PinUSB->SetSimulatePhysics(true);
+	m_PinUSB->SetPhysicsMaxAngularVelocity(m_fMaxAngularVelocity);
 	m_ArySpineColls[0]->SetSimulatePhysics(true);
 	m_Pin5Pin->SetSimulatePhysics(true);
+	m_Pin5Pin->SetPhysicsMaxAngularVelocity(m_fMaxAngularVelocity);
 	m_ArySpineColls[m_ArySpineColls.Num() - 1]->SetSimulatePhysics(true);
 
 	UPhysicsConstraintComponent* UsbPhyCon = AddPhysicsConstraint(FTransform());
