@@ -20,7 +20,6 @@
 #include "Components/StaticMeshComponent.h"
 
 #include "Components/Port.h"
-#include "Components/Connector.h"
 
 #include "Actors/USB_PlayerController.h"
 
@@ -209,8 +208,6 @@ void AUSB_PlayerCharacter::InitUSB()
 
 void AUSB_PlayerCharacter::SetHeadTail(UConnector* head, UConnector* tail)
 {
-	m_ConnectorHead = head;
-	m_ConnectorTail = tail;
 	//
 	//m_ConnectorHead->GetMesh()->SetSimulatePhysics(false);
 	//m_ConnectorHead->GetColl()->SetWorldLocation(m_ConnectorHead->GetMesh()->GetComponentLocation(),false,nullptr,ETeleportType::ResetPhysics);
@@ -453,6 +450,7 @@ void AUSB_PlayerCharacter::SetHeadRotInterp(FRotator targetRot, float deltaTime,
 void AUSB_PlayerCharacter::InitPhysicsConstraints()
 {
 	UPhysicsConstraintComponent* UsbPhyCon = AddPhysicsConstraint(m_MeshUSB->GetComponentTransform());
+	
 	m_AryPhysicsCompos.Reset();
 	m_AryPhysicsCompos.Emplace(UsbPhyCon);
 	UsbPhyCon->SetWorldLocation(GetUsbNeckSocLoc());//GetUsbSocLoc
@@ -720,13 +718,13 @@ void AUSB_PlayerCharacter::ConnectShotSuccess(UPort * portToAdd)
 
 	Sequence->AddAction(PushAction);
 
-	PushAction->m_OnActionComplete.BindLambda( 
+	/*PushAction->m_OnActionComplete.BindLambda( 
 		[=]()
 		{
 	
 		m_ConnectorHead->Connect(portToAdd);
 		EnablePlayerInput();
-		});
+		});*/
 
 	m_ActionManager->RunAction(Sequence);
 }
@@ -864,15 +862,10 @@ void AUSB_PlayerCharacter::ChangeHead()
 	}
 	m_fHeadChangeCDTimer = 0.f;
 
-	auto CurrentHead = m_ConnectorHead;
-	auto CurrentTail = m_ConnectorTail;
-
-	SetHeadTail(m_ConnectorTail, m_ConnectorHead);
 }
 
 void AUSB_PlayerCharacter::SetHeadTailDefault()
 {
-	SetHeadTail(m_ConnectorHead, m_ConnectorTail);
 }
 
  UCapsuleComponent* AUSB_PlayerCharacter::GetHeadCollision() const

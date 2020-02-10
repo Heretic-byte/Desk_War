@@ -14,9 +14,10 @@
 #include "Components/SplineMeshComponent.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 
+#include "Components/PinSkMeshComponent.h"
+
 #include "USB_PhysicsPawn.generated.h"
 
-class UConnector;
 UCLASS()
 class DESK_WAR_API AUSB_PhysicsPawn : public APawn
 {
@@ -25,10 +26,10 @@ class DESK_WAR_API AUSB_PhysicsPawn : public APawn
 public:
 	AUSB_PhysicsPawn(const FObjectInitializer& objInit);
 protected://components
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "USB_Body")
-	UConnector* m_USB_Pin;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "USB_Body")
-	UConnector* m_4Pin_Pin;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "USB_Body_Mesh")
+	UPinSkMeshComponent* m_PinUSB;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "USB_Body_Mesh")
+	UPinSkMeshComponent* m_Pin5Pin;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Spine_Physics")
 	USplineComponent* m_SpineSpline;
 protected:
@@ -40,12 +41,6 @@ protected:
 	TArray<USphereComponent*> m_ArySpineColls;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TArray<USplineMeshComponent*> m_ArySplineMeshCompos;
-	UPROPERTY(VisibleAnywhere)
-	APlayerController* m_PlayerController;
-	UPROPERTY(VisibleAnywhere)
-	UConnector* m_ConnectorHead;
-	UPROPERTY(VisibleAnywhere)
-	UConnector* m_ConnectorTail;
 private:
 	UPROPERTY(EditDefaultsOnly, Category = "Spine_Physics")
 	float m_fLineExtraSpacing;
@@ -59,10 +54,9 @@ private:
 	float m_fCollMass;
 public:	
 	virtual void Tick(float DeltaTime) override;
-
 private:
-	void CreateConnectorUSB();
-	void CreateConnector4Pin();
+	void CreatePinUSB();
+	void CreatePin4Pin();
 	void CreateSpline();
 	void UpdateSplinePoint();
 	void UpdateSplineMesh();
@@ -79,11 +73,6 @@ public:
 	void InitSplineMesh();
 	UFUNCTION(BlueprintCallable, Category = "Init")
 	void InitPhysicsConstraints();
-public:
-	UFUNCTION(BlueprintCallable, Category = "GamePlay")
-	USkeletalMeshComponent* GetHead() const;
-	UFUNCTION(BlueprintCallable, Category = "GamePlay")
-	USkeletalMeshComponent* GetTail() const;
 private:
 	void SetUpSceneComponent(USceneComponent * compo, USceneComponent* parent, FTransform trans);
 	void SetUpActorComponent(UActorComponent * compo);

@@ -2,38 +2,25 @@
 
 
 #include "Port.h"
-#include "Components/Connector.h"
+#include "Components/PinSkMeshComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 
 
-// Sets default values for this component's properties
 UPort::UPort()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
-	PrimaryComponentTick.bCanEverTick = true;
-
-	// ...
+	PrimaryComponentTick.bCanEverTick = false;
+	m_PortType = E_PinPortType::ENoneType;
 }
 
-
-// Called when the game starts
 void UPort::BeginPlay()
 {
 	Super::BeginPlay();
-
-	// ...
-	
 }
 
-
-// Called every frame
 void UPort::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	// ...
 }
 
 void UPort::SetCollider(UShapeComponent * coll)
@@ -51,7 +38,7 @@ void UPort::SetConstraint(UPhysicsConstraintComponent * constraint)
 	m_Constraint = constraint;
 }
 
-void UPort::Connect(UConnector * connector)
+void UPort::Connect(UPinSkMeshComponent * connector)
 {
 	m_ConnectedConnector = connector;
 	m_OnConnected.Broadcast(m_ConnectedConnector);
@@ -83,12 +70,9 @@ bool UPort::IsConnected()
 	return m_ConnectedConnector;
 }
 
-void UPort::OverlapBlock(USceneComponent * collider, USceneComponent * portMesh)
+E_PinPortType UPort::GetPortType() const
 {
-	FVector NormalWant = collider->GetComponentLocation() - portMesh->GetComponentLocation();
-	NormalWant = NormalWant.GetSafeNormal2D();
-
-	//UKismetMathLibrary::InverseTransformDirection()
+	return m_PortType;
 }
 
 void UPort::BindConstraintConnector(USkeletalMeshComponent * meshWant)

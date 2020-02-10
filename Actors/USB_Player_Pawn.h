@@ -25,7 +25,6 @@
 #include "Components/StaticMeshComponent.h"
 
 #include "Components/Port.h"
-#include "Components/Connector.h"
 
 #include "Actors/USB_PlayerController.h"
 

@@ -3,65 +3,73 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/ActorComponent.h"
-
-#include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
-#include "Components/StaticMeshComponent.h"
+#include "PinSkMeshComponent.generated.h"
 
-#include "Connector.generated.h"
-
+/**
+ * 
+ */
+UENUM(BlueprintType)
+enum class E_PinPortType :uint8
+{
+	ENoneType,
+	EUSB,
+	E5Pin,
+	EHDMI,
+	ELength
+};
 
 class UPort;
-
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
-class DESK_WAR_API UConnector : public USceneComponent
+UCLASS()
+class DESK_WAR_API UPinSkMeshComponent : public USkeletalMeshComponent
 {
 	GENERATED_BODY()
 public:
+
+	
+
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnConnectPortOwner, UObject*, portOwner);
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnConnectPort, UPort*, port);
-public:	
-	UConnector(const FObjectInitializer& objInit);
-protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Body_Mesh")
-	USkeletalMeshComponent* m_MeshPin;
+
+public:
+	UPinSkMeshComponent(const FObjectInitializer& objInit);
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Body_Bones")
 	FName m_NameNeckBone;
-	UPROPERTY(EditDefaultsOnly,  Category = "Body_Bones")
+	UPROPERTY(EditDefaultsOnly, Category = "Body_Bones")
 	FName m_NameConnectSocket;
-	UPROPERTY(EditDefaultsOnly,  Category = "Body_Bones")
+	UPROPERTY(EditDefaultsOnly, Category = "Body_Bones")
 	FName m_NameConnectStartSocket;
-	UPROPERTY(EditDefaultsOnly,  Category = "Body_Bones")
+	UPROPERTY(EditDefaultsOnly, Category = "Body_Bones")
 	FName m_NameConnectPushPointSocket;
+	UPROPERTY(EditDefaultsOnly, Category = "Body_Bones")
+	E_PinPortType m_Pintype;
 protected:
 	UPROPERTY()
 	UPort* m_PortConnected;
 	UPROPERTY()
 	UObject* m_PortOwner;
-
+private:
+	bool m_AryTypeMatch[(int)E_PinPortType::ELength];
 public:
 	FOnConnectPortOwner m_OnConnectedPortOwner;
 	FOnConnectPort m_OnConnectedPort;
 public:
 	FVector GetNeckLoc() const;
-	void SetSimulatePhysics(bool v);
-	void Connect(UPort* port);
+	virtual void Connect(UPort* port);
+	virtual bool CheckTypeMatch(E_PinPortType portsType);
+	void SetNeckName(FName nameWant);
 private:
-	void CreateHeadMesh();
+	virtual void BeginPlay() override;
+	void SetTypeMatch();
 public:
 	FORCEINLINE FName GetBoneNeck()
 	{
 		return m_NameNeckBone;
 	}
-	FORCEINLINE USkeletalMeshComponent* GetPin()
-	{
-		return m_MeshPin;
-	}
 	FORCEINLINE UPort* GetPortConnected()
 	{
 		return m_PortConnected;
 	}
-	
+
 };

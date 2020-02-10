@@ -137,10 +137,6 @@ protected://components
 	UCapsuleComponent* m_Coll4Pin;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "GamePlay")
 	USkeletalMeshComponent* m_Mesh4Pin;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "GamePlay")
-	UConnector* m_USB;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "GamePlay")
-	UConnector* m_Pin4;
 	//misc
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Spine_Physics")
 	USplineComponent* m_SpineSpline;
@@ -182,10 +178,6 @@ protected:
 	UInteractableComponent* m_InteractObj;
 	UPROPERTY(VisibleAnywhere)
 	APlayerController* m_PlayerController;
-	UPROPERTY(VisibleAnywhere)
-	UConnector* m_ConnectorHead;
-	UPROPERTY(VisibleAnywhere)
-	UConnector* m_ConnectorTail;
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Interaction")
 	float m_fInteractRange;

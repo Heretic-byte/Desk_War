@@ -54,6 +54,10 @@ protected:
 	float m_fWalkableFloorAngle;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement_Rotate")
 	FRotator RotationRate;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement")
+	float m_fAngularDampingForPhysicsAsset;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement")
+	float m_fLinearDampingForPhysicsAsset;
 public:
 	UPROPERTY(BlueprintAssignable, Category = "PhysicsMovement_Jump")
 	FVoidVoidBP m_OnJumpBP;

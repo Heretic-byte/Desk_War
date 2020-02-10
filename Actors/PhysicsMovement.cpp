@@ -22,6 +22,8 @@ UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 	m_fJumpMaxHoldTime = 0.f;
 	m_nJumpMaxCount = 1;
 	m_nJumpCurrentCount = 0;
+	m_fAngularDampingForPhysicsAsset = 1.f;
+	m_fLinearDampingForPhysicsAsset = 1.f;
 }
 
 void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent)
@@ -32,7 +34,7 @@ void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent
 		if (NewPawnOwner == NULL)
 		{
 			PRINTF("Owner is not Pawn")
-			return;
+				return;
 		}
 
 		m_MovingTarget = Cast<UPrimitiveComponent>(NewUpdatedComponent);
@@ -42,7 +44,7 @@ void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent
 			return;
 		}
 	}
-	
+
 	if (m_bMovementInProgress)
 	{
 		m_bDeferUpdateMoveComponent = true;
@@ -66,6 +68,13 @@ void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent
 
 	m_MovingTarget->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	m_MovingTarget->SetSimulatePhysics(true);
+
+	if (m_MovingTarget->GetBodyInstance())
+	{
+		m_MovingTarget->SetAngularDamping(m_fAngularDampingForPhysicsAsset);
+		m_MovingTarget->SetLinearDamping(m_fLinearDampingForPhysicsAsset);
+		m_MovingTarget->GetBodyInstance()->UpdateDampingProperties();
+	}
 }
 
 void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction)
@@ -88,12 +97,12 @@ void UPhysicsMovement::PerformMovement(float delta)
 {
 	bool CanRotate= Rotate(delta);
 
-
 	ApplyAccumulatedForces(delta);
 	HandlePendingLaunch();
+
 	if (CanRotate)
 	{
-	Velocity += m_Acceleration * delta;
+		Velocity += m_Acceleration * delta;
 
 	}
 	UpdateComponentVelocity();
@@ -133,8 +142,6 @@ bool UPhysicsMovement::Rotate(float delta)
 			DesiredRotation.Yaw = FMath::FixedTurn(CurrentRotation.Yaw, DesiredRotation.Yaw, DeltaRot.Yaw);
 		}
 
-		PRINTF("CurrentRotation Yaw : %f", CurrentRotation.Yaw);
-		PRINTF("DesiredRotation Yaw : %f", DesiredRotation.Yaw);
 		// ROLL
 		if (!FMath::IsNearlyEqual(CurrentRotation.Roll, DesiredRotation.Roll, AngleTolerance))
 		{
