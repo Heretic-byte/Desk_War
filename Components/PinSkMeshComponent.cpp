@@ -15,6 +15,7 @@ UPinSkMeshComponent::UPinSkMeshComponent(const FObjectInitializer& objInit) :Sup
 	m_NameConnectSocket = FName(TEXT("ConnectPoint"));
 	m_NameConnectStartSocket = FName(TEXT("ConnectStart"));
 	m_NameConnectPushPointSocket = FName(TEXT("PushPoint"));
+	m_NameVelocityPivotBone = FName(TEXT("joint8"));
 	m_Pintype = E_PinPortType::ENoneType;
 
 	for (auto& b : m_AryTypeMatch)
@@ -63,6 +64,11 @@ bool UPinSkMeshComponent::CheckTypeMatch(E_PinPortType portsType)
 void UPinSkMeshComponent::SetNeckName(FName nameWant)
 {
 	m_NameNeckBone = FName(nameWant);
+}
+
+void UPinSkMeshComponent::SetVelocityPivotName(FName nameWant)
+{
+	m_NameVelocityPivotBone = nameWant;
 }
 
 

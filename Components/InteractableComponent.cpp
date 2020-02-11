@@ -2,7 +2,9 @@
 
 
 #include "InteractableComponent.h"
-#include "Actors/USB_PlayerCharacter.h"
+
+#include "Actors/USB_PhysicsPawn.h"
+
 
 UInteractableComponent::UInteractableComponent(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
@@ -38,7 +40,7 @@ void UInteractableComponent::SetFocusOut()
 	m_OnFocusOut.Broadcast();
 }
 
-void UInteractableComponent::Interact(AUSB_PlayerCharacter* interMan)
+void UInteractableComponent::Interact(AUSB_PhysicsPawn* interMan)
 {
 	if (!m_bUnlocked)
 	{

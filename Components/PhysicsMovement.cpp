@@ -74,7 +74,34 @@ void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent
 		m_MovingTarget->SetAngularDamping(m_fAngularDampingForPhysicsAsset);
 		m_MovingTarget->SetLinearDamping(m_fLinearDampingForPhysicsAsset);
 		m_MovingTarget->GetBodyInstance()->UpdateDampingProperties();
+		PRINTF("Ang %f", m_MovingTarget->GetAngularDamping());
+		PRINTF("Lin %f", m_MovingTarget->GetLinearDamping());
 	}
+}
+
+void UPhysicsMovement::SetVelocityBone(FName boneName)
+{
+	m_NameLinearVelocityBone = boneName;
+}
+
+void UPhysicsMovement::SetMovingForce(float fForce)
+{
+	m_fMovingForce = fForce;
+}
+
+void UPhysicsMovement::SetJumpZVelocity(float zVelo)
+{
+	m_fJumpZVelocity = zVelo;
+}
+
+void UPhysicsMovement::SetAngularDamping(float fAngDamp)
+{
+	m_fAngularDampingForPhysicsAsset = fAngDamp;
+}
+
+void UPhysicsMovement::SetLinearDamping(float fLinDamp)
+{
+	m_fLinearDampingForPhysicsAsset = fLinDamp;
 }
 
 void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction)

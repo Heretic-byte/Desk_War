@@ -13,14 +13,14 @@
  * 
  */
 
-class AUSB_PlayerCharacter;
+class AUSB_PhysicsPawn;
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class DESK_WAR_API UInteractableComponent : public UActorComponent
 {
 	GENERATED_BODY()
 public:
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnInteractBP, AUSB_PlayerCharacter*, player);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnInteractBP, AUSB_PhysicsPawn*, player);
 public:
 	UInteractableComponent(const FObjectInitializer& ObjectInitializer);
 public:
@@ -42,7 +42,7 @@ public:
 	void SetUnlock();
 	void SetFocusIn();
 	void SetFocusOut();
-	virtual void Interact(AUSB_PlayerCharacter* interMan);
+	virtual void Interact(AUSB_PhysicsPawn* interMan);
 protected:
 	UPROPERTY(EditDefaultsOnly,BlueprintReadOnly, Category = "Interact")
 	bool m_bUnlocked;

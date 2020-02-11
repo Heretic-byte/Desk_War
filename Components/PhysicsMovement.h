@@ -93,6 +93,7 @@ private://slopeWalkable
 	void SetWalkableFloorAngle(float InWalkableFloorAngle);
 	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement_Slope")
 	void SetWalkableFloorZ(float InWalkableFloorZ);
+	
 
 	FORCEINLINE float GetWalkableFloorAngle() const
 	{
@@ -115,4 +116,16 @@ public:
 	virtual bool IsFalling() const override;
 	virtual void SetUpdatedComponent(USceneComponent* NewUpdatedComponent) override;
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+public:
+	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
+	void SetVelocityBone(FName boneName);
+	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
+	void SetMovingForce(float fForce);
+	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
+	void SetJumpZVelocity(float zVelo);
+	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
+	void SetAngularDamping(float fAngDamp);
+	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
+	void SetLinearDamping(float fLinDamp);
+
 };

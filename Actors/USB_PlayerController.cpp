@@ -2,7 +2,6 @@
 
 
 #include "USB_PlayerController.h"
-#include "USB_PlayerCharacter.h"
 
 AUSB_PlayerController::AUSB_PlayerController()
 {

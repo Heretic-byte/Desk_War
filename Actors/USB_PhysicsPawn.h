@@ -37,11 +37,13 @@ protected:
 	UStaticMesh* m_SpineMesh;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Spine_Physics")
 	UPhysicalMaterial* m_SpineFriction;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Spine_Physics")
+	UPhysicalMaterial* m_PinFriction;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TArray<USphereComponent*> m_ArySpineColls;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TArray<USplineMeshComponent*> m_ArySplineMeshCompos;
-private:
+protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Spine_Physics")
 	float m_fLineExtraSpacing;
 	UPROPERTY(EditDefaultsOnly,  Category = "Spine_Physics")
@@ -54,14 +56,7 @@ private:
 	float m_fCollMass;
 	UPROPERTY(EditDefaultsOnly, Category = "Spine_Physics")
 	float m_fMaxAngularVelocity;
-public:	
-	virtual void Tick(float DeltaTime) override;
-private:
-	void CreatePinUSB();
-	void CreatePin4Pin();
-	void CreateSpline();
-	void UpdateSplinePoint();
-	void UpdateSplineMesh();
+
 public:
 	UFUNCTION(BlueprintCallable, Category = "Init")
 	virtual void InitUSB() ;
@@ -75,6 +70,16 @@ public:
 	void InitSplineMesh();
 	UFUNCTION(BlueprintCallable, Category = "Init")
 	void InitPhysicsConstraints();
+protected:
+	virtual void BeginPlay() override;
+public:
+	virtual void Tick(float DeltaTime) override;
+private:
+	void CreatePinUSB();
+	void CreatePin4Pin();
+	void CreateSpline();
+	void UpdateSplinePoint();
+	void UpdateSplineMesh();
 private:
 	void SetUpSceneComponent(USceneComponent * compo, USceneComponent* parent, FTransform trans);
 	void SetUpActorComponent(UActorComponent * compo);

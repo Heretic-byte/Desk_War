@@ -42,7 +42,9 @@ protected:
 	FName m_NameConnectStartSocket;
 	UPROPERTY(EditDefaultsOnly, Category = "Body_Bones")
 	FName m_NameConnectPushPointSocket;
-	UPROPERTY(EditDefaultsOnly, Category = "Body_Bones")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Body_Bones")
+	FName m_NameVelocityPivotBone;
+	UPROPERTY(EditDefaultsOnly, Category = "PinType")
 	E_PinPortType m_Pintype;
 protected:
 	UPROPERTY()
@@ -59,6 +61,7 @@ public:
 	virtual void Connect(UPort* port);
 	virtual bool CheckTypeMatch(E_PinPortType portsType);
 	void SetNeckName(FName nameWant);
+	void SetVelocityPivotName(FName nameWant);
 private:
 	virtual void BeginPlay() override;
 	void SetTypeMatch();
@@ -66,6 +69,10 @@ public:
 	FORCEINLINE FName GetBoneNeck()
 	{
 		return m_NameNeckBone;
+	}
+	FORCEINLINE FName GetBoneVelo()
+	{
+		return m_NameVelocityPivotBone;
 	}
 	FORCEINLINE UPort* GetPortConnected()
 	{
