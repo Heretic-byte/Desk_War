@@ -245,7 +245,6 @@ void AUSB_PhysicsPawn::InitPhysicsConstraints()
 	UsbPhyCon->SetLinearYLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 	UsbPhyCon->SetLinearZLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 
-
 	UsbPhyCon->SetConstrainedComponents(m_PinUSB, m_PinUSB->GetBoneNeck(), m_ArySpineColls[0], NAME_None);//Mesh
 
 	FVector CollLocTemp = m_ArySpineColls[0]->GetComponentLocation();

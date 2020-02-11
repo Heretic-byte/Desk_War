@@ -28,7 +28,7 @@ protected://component
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Action")
 	UActionManagerComponent* m_ActionManager;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "USB_Body")
-	USkeletalMeshComponent* m_FaceSkMesh;
+	USkeletalMeshComponent* m_MeshFaceSk;
 private:
 	UPinSkMeshComponent* m_CurrentHead;
 	UPinSkMeshComponent* m_CurrentTail;
@@ -50,6 +50,7 @@ private:
 	void RotatePitch(float v);
 protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	virtual void BeginPlay() override;
 private:
 	FORCEINLINE UPinSkMeshComponent* _inline_GetHead()
 	{

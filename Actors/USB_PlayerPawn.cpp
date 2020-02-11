@@ -17,15 +17,14 @@ AUSB_PlayerPawn::AUSB_PlayerPawn(const FObjectInitializer& objInit):Super(objIni
 	CreatePhysicMovement();
 	CreateCameraFamily();
 	CreateSkFaceMesh();
-
-	SetHeadTail(m_PinUSB, m_Pin5Pin);
+	m_CurrentHead = m_PinUSB;
+	m_CurrentTail = m_Pin5Pin;
+	//SetHeadTail(m_PinUSB, m_Pin5Pin);
 }
 
 
 void AUSB_PlayerPawn::InitPlayerPawn()
 {
-
-
 	m_fSpineAngularDamping = 20.f;
 	m_fSpineLinearDamping = 10.f;
 	m_fCollMass = 0.1f;
@@ -33,8 +32,6 @@ void AUSB_PlayerPawn::InitPlayerPawn()
 
 	AutoPossessPlayer = EAutoReceiveInput::Player0;
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
-
-	
 }
 
 void AUSB_PlayerPawn::CreatePhysicMovement()
@@ -74,18 +71,17 @@ void AUSB_PlayerPawn::CreateCameraFamily()
 
 void AUSB_PlayerPawn::CreateSkFaceMesh()
 {
-	m_FaceSkMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FaceSkMesh00"));
-	m_FaceSkMesh->SetupAttachment(m_PinUSB);
+	m_MeshFaceSk = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FaceSkMesh00"));
+	m_MeshFaceSk->SetupAttachment(m_PinUSB);
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FoundSkMesh(TEXT("SkeletalMesh'/Game/01_FinalUSB/Mesh/Head/NewFace/Face_idle.Face_idle'"));
 
 	if (FoundSkMesh.Succeeded())
 	{
-		PRINTF("Found Mesh");
-		m_FaceSkMesh->SetSkeletalMesh(FoundSkMesh.Object);
+		m_MeshFaceSk->SetSkeletalMesh(FoundSkMesh.Object);
 	}
 
-	m_FaceSkMesh->SetRelativeLocation(FVector(-0.165f,0,0.825f));
-	m_FaceSkMesh->SetRelativeScale3D(FVector(0.88f, 0.88f, 0.88f ));
+	m_MeshFaceSk->SetRelativeLocation(FVector(-0.165f,0,0.825f));
+	m_MeshFaceSk->SetRelativeScale3D(FVector(0.88f, 0.88f, 0.88f ));
 }
 
 void AUSB_PlayerPawn::SetHeadTail(UPinSkMeshComponent * headWant, UPinSkMeshComponent * tailWant)
@@ -95,6 +91,8 @@ void AUSB_PlayerPawn::SetHeadTail(UPinSkMeshComponent * headWant, UPinSkMeshComp
 
 	m_Movement->SetVelocityBone(m_CurrentHead->GetBoneVelo());
 	m_Movement->SetUpdatedComponent(m_CurrentHead);
+
+	m_CamRoot->AttachToComponent(m_CurrentHead,FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 }
 
 void AUSB_PlayerPawn::SetupPlayerInputComponent(UInputComponent * PlayerInputComponent)
@@ -108,6 +106,11 @@ void AUSB_PlayerPawn::SetupPlayerInputComponent(UInputComponent * PlayerInputCom
 	PlayerInputComponent->BindAxis("Turn", this, &AUSB_PlayerPawn::RotateYaw);
 	PlayerInputComponent->BindAxis("LookUp", this, &AUSB_PlayerPawn::RotatePitch);
 
+}
+void AUSB_PlayerPawn::BeginPlay()
+{
+	Super::BeginPlay();
+	SetHeadTail(m_PinUSB,m_Pin5Pin);
 }
 void AUSB_PlayerPawn::MoveForward(float v)
 {

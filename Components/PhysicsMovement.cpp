@@ -10,9 +10,6 @@
 UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 {
 	m_MovingTarget = nullptr;
-	m_DeferredUpdatedMoveComponent = nullptr;
-	m_bMovementInProgress = false;
-	m_bDeferUpdateMoveComponent = false;
 	m_fJumpZVelocity = 540.f;
 	m_fMovingForce = 5000.f;
 	m_bOnGround = false;
@@ -20,7 +17,7 @@ UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 	m_fAngularDampingForPhysicsAsset = 1.f;
 	m_fLinearDampingForPhysicsAsset = 1.f;
 	m_fGroundCastOffset = -45.f;
-	m_RotationRate = FRotator(500.f,180.f,180.f);
+	m_RotationRate = FRotator(180.f,180.f,500.f);
 }
 
 void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent)
@@ -35,14 +32,6 @@ void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent
 		}
 	}
 
-	if (m_bMovementInProgress)
-	{
-		m_bDeferUpdateMoveComponent = true;
-		m_DeferredUpdatedMoveComponent = NewUpdatedComponent;
-		return;
-	}
-	m_bDeferUpdateMoveComponent = false;
-	m_DeferredUpdatedMoveComponent = nullptr;
 	USceneComponent* OldUpdatedComponent = UpdatedComponent;
 
 	Super::SetUpdatedComponent(NewUpdatedComponent);
@@ -105,17 +94,19 @@ void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 }
 void UPhysicsMovement::TickMovement(float delta)
 {
-	TickRotate(delta);
-	Velocity += m_Acceleration * delta;
-	UpdateComponentVelocity();
-}
-void UPhysicsMovement::TickRotate(float delta)
-{
 	if (m_Acceleration.IsNearlyZero(0.1f))
 	{
 		return;
 	}
+	TickRotate(delta);
 
+	Velocity += m_Acceleration * delta;
+	Velocity.Z = m_MovingTarget->GetPhysicsLinearVelocity().Z;
+
+	UpdateComponentVelocity();
+}
+void UPhysicsMovement::TickRotate(float delta)
+{
 	FRotator CurrentRotation = UpdatedComponent->GetComponentRotation(); // Normalized
 	CurrentRotation.DiagnosticCheckNaN(TEXT("UPhysicsMovement::Rotate(): CurrentRotation"));
 
@@ -150,9 +141,7 @@ void UPhysicsMovement::TickRotate(float delta)
 
 		DesiredRotation.DiagnosticCheckNaN(TEXT("UPhysicsMovement::Rotate(): DesiredRotation"));
 
-		FVector WantDegree = DesiredRotation.UnrotateVector(m_MovingTarget->GetForwardVector());
-
-		//m_MovingTarget->SetPhysicsAngularVelocityInDegrees(DesiredRotation.Euler());
+		//m_MovingTarget->SetPhysicsAngularVelocityInDegrees(DesiredRotation.Euler(),false);
 		MoveUpdatedComponent(FVector::ZeroVector, DesiredRotation, true, nullptr, ETeleportType::TeleportPhysics);
 	}
 }
@@ -198,7 +187,6 @@ void UPhysicsMovement::TickCastGround()
 	{
 		m_bOnGround = true;
 
-		PRINTF("Ground : %s", *m_GroundHitResult.ImpactNormal.Rotation().ToString());
 	}
 	else
 	{
@@ -213,63 +201,15 @@ void UPhysicsMovement::UpdateComponentVelocity()
 		return;
 	}
 
-	m_MovingTarget->SetPhysicsLinearVelocity(Velocity, true, m_NameLinearVelocityBone);
 
+	m_MovingTarget->SetPhysicsLinearVelocity(Velocity, false, m_NameLinearVelocityBone);
 	Velocity= FVector::ZeroVector;
 }
-
-
-bool UPhysicsMovement::DoJump()
-{
-	if (PawnOwner)
-	{
-		// Don't jump if we can't move up/down.
-		if (!bConstrainToPlane || FMath::Abs(PlaneConstraintNormal.Z) != 1.f)
-		{
-			PRINTF("JumpDID");
-			Velocity.Z = FMath::Max(Velocity.Z, m_fJumpZVelocity);
-			return true;
-		}
-	}
-
-	return false;
-}
-
 
 bool UPhysicsMovement::IsGround() const
 {
 	return m_bOnGround;
 }
-
-bool UPhysicsMovement::IsWalkable(const FHitResult & Hit) const
-{
-	if (!Hit.IsValidBlockingHit())
-	{
-		return false;
-	}
-
-	if (Hit.ImpactNormal.Z < KINDA_SMALL_NUMBER)
-	{
-		return false;
-	}
-
-	float TestWalkableZ = m_fWalkableFloorZ;
-
-	const UPrimitiveComponent* HitComponent = Hit.Component.Get();
-	if (HitComponent)
-	{
-		const FWalkableSlopeOverride& SlopeOverride = HitComponent->GetWalkableSlopeOverride();
-		TestWalkableZ = SlopeOverride.ModifyWalkableFloorZ(TestWalkableZ);
-	}
-
-	if (Hit.ImpactNormal.Z < TestWalkableZ)
-	{
-		return false;
-	}
-
-	return true;
-}
-
 
 FVector UPhysicsMovement::ScaleInputAccel(const FVector inputPure) const
 {

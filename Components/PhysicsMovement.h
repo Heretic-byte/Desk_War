@@ -24,17 +24,9 @@ public:
 	UPhysicsMovement(const FObjectInitializer& objInit);
 private:
 	UPrimitiveComponent* m_MovingTarget;
-	USceneComponent* m_DeferredUpdatedMoveComponent;
-	bool m_bMovementInProgress;
-	bool m_bDeferUpdateMoveComponent;
-	FVector m_LastUpdateVelocity;
-	FVector m_PendingImpulseToApply;
-	FVector m_PendingForceToApply;
-	FVector m_PendingLaunchVelocity;
 	FVector m_Acceleration;
 	bool m_bOnGround;
 	bool m_bPressedJump;
-	float m_fWalkableFloorZ;
 	FHitResult m_GroundHitResult;
 	FName m_NameLinearVelocityBone;
 protected:
@@ -68,13 +60,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
 	void AddImpulse(FVector impulseWant);
 private:
-	bool IsWalkable(const FHitResult& Hit) const;
 	virtual void UpdateComponentVelocity() override;
 	FVector ScaleInputAccel(const FVector inputPure) const;
 	float GetAxisDeltaRotation(float InAxisRotationRate, float DeltaTime) const;
 	FRotator GetDeltaRotation(float DeltaTime) const;
 	FRotator ComputeOrientToMovementRotation(const FRotator& CurrentRotation, FRotator& DeltaRotation) const;
-	bool DoJump();
 private:
 	void TickCastGround();
 	void TickRotate(float delta);
