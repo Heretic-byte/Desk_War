@@ -18,8 +18,7 @@ AUSB_PhysicsPawn::AUSB_PhysicsPawn(const FObjectInitializer& objInit):Super(objI
 	m_fMaxAngularVelocity = 500.f;
 	m_ArySpineColls.Empty();
 	m_ArySplineMeshCompos.Empty();
-	//PhysicalMaterial'/Game/01_FinalUSB/PhysicsMaterial/PM_LowFriction1.PM_LowFriction1'
-	///Game/01_FinalUSB/PhysicsMaterial/PM_USB_Main.PM_USB_Main
+
 	static ConstructorHelpers::FObjectFinder<UPhysicalMaterial> FoundPhyMat(TEXT("PhysicalMaterial'/Game/01_FinalUSB/PhysicsMaterial/PM_LowFriction1.PM_LowFriction1'"));
 	if (FoundPhyMat.Succeeded())
 	{
@@ -30,6 +29,7 @@ AUSB_PhysicsPawn::AUSB_PhysicsPawn(const FObjectInitializer& objInit):Super(objI
 	CreatePinUSB();
 	CreatePin4Pin();
 	CreateSpline();
+
 	static ConstructorHelpers::FObjectFinder<UPhysicalMaterial> FoundUSBPhyMat(TEXT("/Game/01_FinalUSB/PhysicsMaterial/PM_USB_Main.PM_USB_Main"));
 	if (FoundUSBPhyMat.Succeeded())
 	{
@@ -41,6 +41,7 @@ void AUSB_PhysicsPawn::CreatePinUSB()
 {
 	m_PinUSB = CreateDefaultSubobject<UPinSkMeshComponent>(TEXT("Pin_USB_00"));
 	m_PinUSB->SetupAttachment(RootComponent);
+	m_PinUSB->SetPinType(E_PinPortType::EUSB);
 
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FoundMeshPortUSB(TEXT("SkeletalMesh'/Game/01_FinalUSB/Mesh/Head/NewHead0120/USB_Head_Mesh_06.USB_Head_Mesh_06'"));
 	check(FoundMeshPortUSB.Object);
@@ -53,6 +54,8 @@ void AUSB_PhysicsPawn::CreatePin4Pin()
 {
 	m_Pin5Pin = CreateDefaultSubobject<UPinSkMeshComponent>(TEXT("m_Pin_5Pin_00"));
 	m_Pin5Pin->SetupAttachment(RootComponent);
+	m_Pin5Pin->SetPinType(E_PinPortType::E5Pin);
+
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FoundMeshPort4Pin(TEXT("SkeletalMesh'/Game/01_FinalUSB/Mesh/Tail/Tail_03.Tail_03'"));
 	check(FoundMeshPort4Pin.Object);
 	m_Pin5Pin->SetSkeletalMesh(FoundMeshPort4Pin.Object);
@@ -75,13 +78,13 @@ void AUSB_PhysicsPawn::CreateSpline()
 
 void AUSB_PhysicsPawn::InitUSB()
 {
-	int SpineCount=SetTailLocation();
-	if (SpineCount <= 0)
+	m_nSphereSpineCount =SetTailLocation();
+	if (m_nSphereSpineCount <= 0)
 	{
 		PRINTF("Spine Count 0");
 		return;
 	}
-	SpawnSpineColls(SpineCount);
+	SpawnSpineColls();
 	InitSplineComponent();
 	InitSplineMesh();
 	InitPhysicsConstraints();
@@ -105,14 +108,14 @@ int AUSB_PhysicsPawn::SetTailLocation()
 	return Count;
 }
 
-void AUSB_PhysicsPawn::SpawnSpineColls(int nSpineCount)
+void AUSB_PhysicsPawn::SpawnSpineColls()
 {
 	FVector ActorLoc = GetActorLocation();
 	float Offset = FVector::Distance(m_PinUSB->GetNeckLoc(), ActorLoc) / GetActorScale3D().X;
 	Offset += m_fLineExtraSpacing+ m_fLineRadius;
 	Offset *= -1;
 
-	int SpineCount = nSpineCount;
+	int SpineCount = m_nSphereSpineCount;
 
 	m_ArySpineColls.Empty();
 
@@ -202,7 +205,6 @@ void AUSB_PhysicsPawn::UpdateSplineMesh()
 	for (int i = 0; i < m_ArySplineMeshCompos.Num(); i++)
 	{
 		m_SpineSpline->GetLocationAndTangentAtSplinePoint(i + 1, NextLoc, NextTangent, ESplineCoordinateSpace::Type::Local);
-
 
 		m_ArySplineMeshCompos[i]->SetStartAndEnd(CurrentLoc, CurrentTangent, NextLoc, NextTangent, false);
 

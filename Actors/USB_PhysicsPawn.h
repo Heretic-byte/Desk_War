@@ -56,14 +56,15 @@ protected:
 	float m_fCollMass;
 	UPROPERTY(EditDefaultsOnly, Category = "Spine_Physics")
 	float m_fMaxAngularVelocity;
-
+private:
+	int m_nSphereSpineCount;
 public:
 	UFUNCTION(BlueprintCallable, Category = "Init")
 	virtual void InitUSB() ;
 	UFUNCTION(BlueprintCallable, Category = "Init")
 	int SetTailLocation();
 	UFUNCTION(BlueprintCallable, Category = "Init")
-	void SpawnSpineColls(int nSpineCount);
+	void SpawnSpineColls();
 	UFUNCTION(BlueprintCallable, Category = "Init")
 	void InitSplineComponent();
 	UFUNCTION(BlueprintCallable, Category = "Init")
@@ -101,5 +102,15 @@ public:
 		SetUpActorComponent(Created);
 
 		return Created;
+	}
+
+	FORCEINLINE int GetSphereCount()
+	{
+		return m_nSphereSpineCount;
+	}
+
+	FORCEINLINE float GetSphereMass()
+	{
+		return m_fCollMass;
 	}
 };

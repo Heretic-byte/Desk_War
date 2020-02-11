@@ -24,6 +24,13 @@ UPinSkMeshComponent::UPinSkMeshComponent(const FObjectInitializer& objInit) :Sup
 	}
 }
 
+void UPinSkMeshComponent::SetPinType(E_PinPortType pinType)
+{
+	m_AryTypeMatch[(int)m_Pintype] = false;
+	m_Pintype = pinType;
+	m_AryTypeMatch[(int)m_Pintype] = true;
+}
+
 FVector UPinSkMeshComponent::GetNeckLoc() const
 {
 	return GetSocketLocation(m_NameNeckBone);
@@ -47,14 +54,9 @@ void UPinSkMeshComponent::Connect(UPort * port)
 void UPinSkMeshComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	SetTypeMatch();
-
+	SetPinType(m_Pintype);
 }
 
-void UPinSkMeshComponent::SetTypeMatch()
-{
-	m_AryTypeMatch[(int)m_Pintype] = true;
-}
 
 bool UPinSkMeshComponent::CheckTypeMatch(E_PinPortType portsType)
 {

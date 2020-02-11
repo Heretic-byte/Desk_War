@@ -18,7 +18,6 @@ AUSB_PlayerPawn::AUSB_PlayerPawn(const FObjectInitializer& objInit):Super(objIni
 	CreateCameraFamily();
 	CreateSkFaceMesh();
 
-
 	SetHeadTail(m_PinUSB, m_Pin5Pin);
 }
 

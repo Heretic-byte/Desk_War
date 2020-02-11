@@ -4,6 +4,8 @@
 #include "PhysicsMovement.h"
 #include "Datas/USB_Macros.h"
 #include "Components/PrimitiveComponent.h"
+#include "Kismet/KismetMathLibrary.h"
+
 
 UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 {
@@ -11,32 +13,20 @@ UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 	m_DeferredUpdatedMoveComponent = nullptr;
 	m_bMovementInProgress = false;
 	m_bDeferUpdateMoveComponent = false;
-	m_NameLinearVelocityBone = NAME_None;
 	m_fJumpZVelocity = 540.f;
 	m_fMovingForce = 5000.f;
 	m_bOnGround = false;
 	m_bPressedJump = false;
-	m_bWasJumping = false;
-	m_fJumpKeyHoldTime = 0.f;
-	m_fJumpForceTimeRemaining = 0.f;
-	m_fJumpMaxHoldTime = 0.f;
-	m_nJumpMaxCount = 1;
-	m_nJumpCurrentCount = 0;
 	m_fAngularDampingForPhysicsAsset = 1.f;
 	m_fLinearDampingForPhysicsAsset = 1.f;
+	m_fGroundCastOffset = -45.f;
+	m_RotationRate = FRotator(500.f,180.f,180.f);
 }
 
 void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent)
 {
 	if (NewUpdatedComponent)
 	{
-		const APawn* NewPawnOwner = Cast<APawn>(NewUpdatedComponent->GetOwner());
-		if (NewPawnOwner == NULL)
-		{
-			PRINTF("Owner is not Pawn")
-				return;
-		}
-
 		m_MovingTarget = Cast<UPrimitiveComponent>(NewUpdatedComponent);
 		if (!m_MovingTarget)
 		{
@@ -57,25 +47,22 @@ void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent
 
 	Super::SetUpdatedComponent(NewUpdatedComponent);
 
-	if (UpdatedComponent != OldUpdatedComponent)
-	{
-		ClearAccumulatedForces();
-	}
 	if (UpdatedComponent == NULL)
 	{
 		StopActiveMovement();
 	}
 
-	m_MovingTarget->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	m_MovingTarget->SetSimulatePhysics(true);
+	if (!m_MovingTarget->IsSimulatingPhysics())
+	{
+		m_MovingTarget->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		m_MovingTarget->SetSimulatePhysics(true);
+	}
 
 	if (m_MovingTarget->GetBodyInstance())
 	{
 		m_MovingTarget->SetAngularDamping(m_fAngularDampingForPhysicsAsset);
 		m_MovingTarget->SetLinearDamping(m_fLinearDampingForPhysicsAsset);
 		m_MovingTarget->GetBodyInstance()->UpdateDampingProperties();
-		PRINTF("Ang %f", m_MovingTarget->GetAngularDamping());
-		PRINTF("Lin %f", m_MovingTarget->GetLinearDamping());
 	}
 }
 
@@ -110,33 +97,25 @@ void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 	{
 		return;
 	}
-	CheckJumpInput(DeltaTime);
-
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-
-	const FVector InputVector = ConsumeInputVector();
-	m_Acceleration = ScaleInputAccel(InputVector);
-	
-	PerformMovement(DeltaTime);
+	TickCastGround();
+	FVector InputDir = ConsumeInputVector();
+	m_Acceleration = ScaleInputAccel(InputDir);
+	TickMovement(DeltaTime);
 }
-void UPhysicsMovement::PerformMovement(float delta)
+void UPhysicsMovement::TickMovement(float delta)
 {
-	bool CanRotate= Rotate(delta);
-
-	ApplyAccumulatedForces(delta);
-	HandlePendingLaunch();
-
-	if (CanRotate)
-	{
-		Velocity += m_Acceleration * delta;
-
-	}
+	TickRotate(delta);
+	Velocity += m_Acceleration * delta;
 	UpdateComponentVelocity();
-	ClearJumpInput(delta);
 }
-bool UPhysicsMovement::Rotate(float delta)
+void UPhysicsMovement::TickRotate(float delta)
 {
+	if (m_Acceleration.IsNearlyZero(0.1f))
+	{
+		return;
+	}
+
 	FRotator CurrentRotation = UpdatedComponent->GetComponentRotation(); // Normalized
 	CurrentRotation.DiagnosticCheckNaN(TEXT("UPhysicsMovement::Rotate(): CurrentRotation"));
 
@@ -145,7 +124,7 @@ bool UPhysicsMovement::Rotate(float delta)
 
 	FRotator DesiredRotation = CurrentRotation;
 
-	DesiredRotation = ComputeOrientToMovementRotation(CurrentRotation, delta, DeltaRot);
+	DesiredRotation = ComputeOrientToMovementRotation(CurrentRotation,  DeltaRot);
 
 	DesiredRotation.Normalize();
 
@@ -154,39 +133,33 @@ bool UPhysicsMovement::Rotate(float delta)
 
 	if (!CurrentRotation.Equals(DesiredRotation, AngleTolerance))
 	{
-		// PITCH
 		if (!FMath::IsNearlyEqual(CurrentRotation.Pitch, DesiredRotation.Pitch, AngleTolerance))
 		{
 			DesiredRotation.Pitch = FMath::FixedTurn(CurrentRotation.Pitch, DesiredRotation.Pitch, DeltaRot.Pitch);
 		}
 
-		//float AngleDiff =  FMath::Abs( DesiredRotation.Yaw )-FMath::Abs(CurrentRotation.Yaw);
-		//PRINTF("AngleDiff Yaw : %f", AngleDiff);
-		//
-		// YAW
 		if (!FMath::IsNearlyEqual(CurrentRotation.Yaw, DesiredRotation.Yaw, AngleTolerance))
 		{
 			DesiredRotation.Yaw = FMath::FixedTurn(CurrentRotation.Yaw, DesiredRotation.Yaw, DeltaRot.Yaw);
 		}
 
-		// ROLL
 		if (!FMath::IsNearlyEqual(CurrentRotation.Roll, DesiredRotation.Roll, AngleTolerance))
 		{
 			DesiredRotation.Roll = FMath::FixedTurn(CurrentRotation.Roll, DesiredRotation.Roll, DeltaRot.Roll);
 		}
-		// Set the new rotation.
+
 		DesiredRotation.DiagnosticCheckNaN(TEXT("UPhysicsMovement::Rotate(): DesiredRotation"));
-		//MoveUpdatedComponent(FVector::ZeroVector, DesiredRotation, /*bSweep*/ false,nullptr,ETeleportType::TeleportPhysics);
-		m_MovingTarget->SetPhysicsAngularVelocityInDegrees(DesiredRotation.UnrotateVector(m_MovingTarget->GetForwardVector()));
 
+		FVector WantDegree = DesiredRotation.UnrotateVector(m_MovingTarget->GetForwardVector());
+
+		//m_MovingTarget->SetPhysicsAngularVelocityInDegrees(DesiredRotation.Euler());
+		MoveUpdatedComponent(FVector::ZeroVector, DesiredRotation, true, nullptr, ETeleportType::TeleportPhysics);
 	}
-		return true;
-
 }
 
 FRotator UPhysicsMovement::GetDeltaRotation(float DeltaTime) const
 {
-	return FRotator(GetAxisDeltaRotation(RotationRate.Pitch, DeltaTime), GetAxisDeltaRotation(RotationRate.Yaw, DeltaTime), GetAxisDeltaRotation(RotationRate.Roll, DeltaTime));
+	return FRotator(GetAxisDeltaRotation(m_RotationRate.Pitch, DeltaTime), GetAxisDeltaRotation(m_RotationRate.Yaw, DeltaTime), GetAxisDeltaRotation(m_RotationRate.Roll, DeltaTime));
 }
 
 float UPhysicsMovement::GetAxisDeltaRotation(float InAxisRotationRate, float DeltaTime) const
@@ -194,23 +167,44 @@ float UPhysicsMovement::GetAxisDeltaRotation(float InAxisRotationRate, float Del
 	return (InAxisRotationRate >= 0.f) ? (InAxisRotationRate * DeltaTime) : 360.f;
 }
 
-FRotator UPhysicsMovement::ComputeOrientToMovementRotation(const FRotator& CurrentRotation, float DeltaTime, FRotator& DeltaRotation) const
+FRotator UPhysicsMovement::ComputeOrientToMovementRotation(const FRotator& CurrentRotation, FRotator& DeltaRotation) const
 {
-	if (m_Acceleration.SizeSquared() < KINDA_SMALL_NUMBER)
+	FVector WantRotate = m_Acceleration;
+
+	if (IsGround())
+	{
+		WantRotate += m_GroundHitResult.ImpactNormal;
+	}
+
+	if (WantRotate.SizeSquared() < KINDA_SMALL_NUMBER)
 	{
 		return CurrentRotation;
 	}
-	return m_Acceleration.GetSafeNormal().Rotation();
+	return WantRotate.GetSafeNormal().Rotation();
 }
 
-void UPhysicsMovement::ApplyAccumulatedForces(float DeltaSeconds)
+void UPhysicsMovement::TickCastGround()
 {
-	Velocity += m_PendingImpulseToApply + (m_PendingForceToApply * DeltaSeconds);
+	FVector TraceStart = m_MovingTarget->GetComponentLocation();
+	TraceStart.Z += 12.f;
 
-	m_PendingImpulseToApply = FVector::ZeroVector;
-	m_PendingForceToApply = FVector::ZeroVector;
+	FVector TraceEnd = TraceStart;
+	TraceEnd.Z += m_fGroundCastOffset;
+
+	FCollisionQueryParams QueryParam;
+	QueryParam.AddIgnoredActor(this->GetOwner());
+
+	if (GetWorld()->LineTraceSingleByChannel(m_GroundHitResult, TraceStart, TraceEnd, ECollisionChannel::ECC_Visibility, QueryParam))
+	{
+		m_bOnGround = true;
+
+		PRINTF("Ground : %s", *m_GroundHitResult.ImpactNormal.Rotation().ToString());
+	}
+	else
+	{
+		m_bOnGround = false;
+	}
 }
-
 
 void UPhysicsMovement::UpdateComponentVelocity()
 {
@@ -224,20 +218,15 @@ void UPhysicsMovement::UpdateComponentVelocity()
 	Velocity= FVector::ZeroVector;
 }
 
-void UPhysicsMovement::ClearAccumulatedForces()
-{
-	m_PendingImpulseToApply = FVector::ZeroVector;
-	m_PendingForceToApply = FVector::ZeroVector;
-	m_PendingLaunchVelocity = FVector::ZeroVector;
-}
 
 bool UPhysicsMovement::DoJump()
 {
-	if (PawnOwner && CanJump())
+	if (PawnOwner)
 	{
 		// Don't jump if we can't move up/down.
 		if (!bConstrainToPlane || FMath::Abs(PlaneConstraintNormal.Z) != 1.f)
 		{
+			PRINTF("JumpDID");
 			Velocity.Z = FMath::Max(Velocity.Z, m_fJumpZVelocity);
 			return true;
 		}
@@ -246,41 +235,6 @@ bool UPhysicsMovement::DoJump()
 	return false;
 }
 
-bool UPhysicsMovement::CanJump()
-{
-	bool bCanJump = true;
-
-	bCanJump = IsGround();
-
-	if (bCanJump)
-	{
-		if (!m_bWasJumping || GetJumpMaxHoldTime() <= 0.0f)
-		{
-			if (m_nJumpCurrentCount == 0 && IsFalling())
-			{
-				bCanJump = m_nJumpCurrentCount + 1 < m_nJumpMaxCount;
-			}
-			else
-			{
-				bCanJump = m_nJumpCurrentCount < m_nJumpMaxCount;
-			}
-		}
-		else
-		{
-			const bool bJumpKeyHeld = (m_bPressedJump && m_fJumpKeyHoldTime < GetJumpMaxHoldTime());
-
-			bCanJump = bJumpKeyHeld &&
-				((m_nJumpCurrentCount < m_nJumpMaxCount) || (m_bWasJumping && m_nJumpCurrentCount == m_nJumpMaxCount));
-		}
-	}
-
-	return bCanJump;
-}
-
-bool UPhysicsMovement::IsFalling() const
-{
-	return !IsGround();
-}
 
 bool UPhysicsMovement::IsGround() const
 {
@@ -323,124 +277,19 @@ FVector UPhysicsMovement::ScaleInputAccel(const FVector inputPure) const
 }
 
 
-
-void UPhysicsMovement::SetWalkableFloorAngle(float InWalkableFloorAngle)
-{
-	m_fWalkableFloorAngle = FMath::Clamp(InWalkableFloorAngle, 0.f, 90.0f);
-	m_fWalkableFloorZ = FMath::Cos(FMath::DegreesToRadians(m_fWalkableFloorAngle));
-}
-
-void UPhysicsMovement::SetWalkableFloorZ(float InWalkableFloorZ)
-{
-	m_fWalkableFloorZ = FMath::Clamp(InWalkableFloorZ, 0.f, 1.f);
-	m_fWalkableFloorAngle = FMath::RadiansToDegrees(FMath::Acos(m_fWalkableFloorZ));
-}
-
 void UPhysicsMovement::Jump()
 {
-	m_bPressedJump = true;
-	m_fJumpKeyHoldTime = 0.0f;
 }
 
 void UPhysicsMovement::StopJumping()
 {
 	m_bPressedJump = false;
-	ResetJumpState();
-}
-
-
-void UPhysicsMovement::CheckJumpInput(float DeltaTime)
-{
-	if (m_bPressedJump)
-	{
-		const bool bFirstJump = m_nJumpCurrentCount == 0;
-		if (bFirstJump && IsFalling())
-		{
-			m_nJumpCurrentCount++;
-		}
-		const bool bDidJump = CanJump() && DoJump();
-		if (bDidJump)
-		{
-			if (!m_bWasJumping)
-			{
-				m_nJumpCurrentCount++;
-				m_fJumpForceTimeRemaining = GetJumpMaxHoldTime();
-				m_OnJumpBP.Broadcast();
-				m_OnJump.Broadcast();
-			}
-		}
-		m_bWasJumping = bDidJump;
-	}
-}
-
-void UPhysicsMovement::ClearJumpInput(float delta)
-{
-	if (m_bPressedJump)
-	{
-		m_fJumpKeyHoldTime += delta;
-
-		if (m_fJumpKeyHoldTime >= GetJumpMaxHoldTime())
-		{
-			m_bPressedJump = false;
-		}
-	}
-	else
-	{
-		m_fJumpForceTimeRemaining = 0.0f;
-		m_bWasJumping = false;
-	}
-}
-
-bool UPhysicsMovement::HandlePendingLaunch()
-{
-	if (!m_PendingLaunchVelocity.IsZero())
-	{
-		Velocity = m_PendingLaunchVelocity;
-		m_PendingLaunchVelocity = FVector::ZeroVector;
-		return true;
-	}
-
-	return false;
-}
-
-float UPhysicsMovement::GetJumpMaxHoldTime() const
-{
-	return m_fJumpMaxHoldTime;
-}
-
-
-void UPhysicsMovement::ResetJumpState()
-{
-	m_bPressedJump = false;
-	m_bWasJumping = false;
-	m_fJumpKeyHoldTime = 0.0f;
-	m_fJumpForceTimeRemaining = 0.0f;
-
-	if (!IsFalling())
-	{
-		m_nJumpCurrentCount = 0;
-	}
-}
-
-bool UPhysicsMovement::IsJumpProvidingForce() const
-{
-	if (m_fJumpForceTimeRemaining > 0.0f)
-	{
-		return true;
-	}
-
-	return false;
 }
 
 
 float UPhysicsMovement::GetMaxForce() const
 {
 	return m_fMovingForce;
-}
-
-void UPhysicsMovement::Launch(FVector const & LaunchVel)
-{
-	m_PendingLaunchVelocity = LaunchVel;
 }
 
 void UPhysicsMovement::AddForce(FVector forceWant)

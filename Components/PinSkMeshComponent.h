@@ -57,6 +57,7 @@ public:
 	FOnConnectPortOwner m_OnConnectedPortOwner;
 	FOnConnectPort m_OnConnectedPort;
 public:
+	void SetPinType(E_PinPortType pinType);
 	FVector GetNeckLoc() const;
 	virtual void Connect(UPort* port);
 	virtual bool CheckTypeMatch(E_PinPortType portsType);
@@ -64,7 +65,6 @@ public:
 	void SetVelocityPivotName(FName nameWant);
 private:
 	virtual void BeginPlay() override;
-	void SetTypeMatch();
 public:
 	FORCEINLINE FName GetBoneNeck()
 	{
