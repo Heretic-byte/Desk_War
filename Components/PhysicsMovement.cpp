@@ -5,7 +5,7 @@
 #include "Datas/USB_Macros.h"
 #include "Components/PrimitiveComponent.h"
 #include "Kismet/KismetMathLibrary.h"
-
+#include "DrawDebugHelpers.h"
 
 UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 {
@@ -18,6 +18,11 @@ UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 	m_fLinearDampingForPhysicsAsset = 1.f;
 	m_fGroundCastOffset = -45.f;
 	m_RotationRate = FRotator(180.f,180.f,500.f);
+	m_bDebugShowForwardCast = false;
+	m_fForwardCastOffset = 100.f;
+	m_fAirControl = 0.05f;
+	m_fGroundCastBoxSize = 15.f;
+	m_WalkableSlopeAngle = 65.f;
 }
 
 void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent)
@@ -87,9 +92,16 @@ void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 		return;
 	}
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	CheckJumpInput(DeltaTime);
+
 	TickCastGround();
 	FVector InputDir = ConsumeInputVector();
 	m_Acceleration = ScaleInputAccel(InputDir);
+	if (!TickCheckCanMoveForward())
+	{
+		return;
+	}
 	TickMovement(DeltaTime);
 }
 void UPhysicsMovement::TickMovement(float delta)
@@ -100,10 +112,19 @@ void UPhysicsMovement::TickMovement(float delta)
 	}
 	TickRotate(delta);
 
-	Velocity += m_Acceleration * delta;
+	
+	Velocity = m_Acceleration * delta;
+
+	if(!IsGround())
+	{
+		Velocity *= m_fAirControl;
+	}
 	Velocity.Z = m_MovingTarget->GetPhysicsLinearVelocity().Z;
 
+
 	UpdateComponentVelocity();
+
+	ClearJumpInput(delta);
 }
 void UPhysicsMovement::TickRotate(float delta)
 {
@@ -172,10 +193,61 @@ FRotator UPhysicsMovement::ComputeOrientToMovementRotation(const FRotator& Curre
 	return WantRotate.GetSafeNormal().Rotation();
 }
 
+bool UPhysicsMovement::IsFalling() const
+{
+	return !IsGround();
+}
+
+bool UPhysicsMovement::TickCheckCanMoveForward()
+{
+	FCollisionQueryParams QueryParam;
+	QueryParam.AddIgnoredActor(this->GetOwner());
+
+	FVector InputDirStart = m_MovingTarget->GetComponentLocation();
+	FVector InputDirEnd = InputDirStart;
+	InputDirEnd += m_InputNormal*m_fForwardCastOffset;
+
+	FHitResult InputHit;
+
+
+#if WITH_EDITOR
+	if (m_bDebugShowForwardCast)
+	{
+		DrawDebugLine(
+			GetWorld(),
+			InputDirStart,
+			InputDirEnd,
+			FColor(255, 0, 0),
+			false, -1, 0,
+			12.333
+		);
+	}
+#endif
+
+	bool bCanGoForward = true;
+
+	if (GetWorld()->LineTraceSingleByChannel(InputHit, InputDirStart, InputDirEnd, ECollisionChannel::ECC_Visibility, QueryParam))//막혀도 각도가 낮으면 통과시켜줘
+	{
+		bCanGoForward = m_WalkableSlopeAngle < InputHit.ImpactNormal.Rotation().Pitch;
+		PRINTF("Z Angle : %f", InputHit.ImpactNormal.Rotation().Pitch);
+	}
+	//m_WalkableSlopeAngle
+
+	if (bCanGoForward)
+	{
+		PRINTF("I CAN GO");
+	}
+	else {
+		PRINTF("I CANT NOT gO");
+	}
+
+	return bCanGoForward;
+}
+
 void UPhysicsMovement::TickCastGround()
 {
 	FVector TraceStart = m_MovingTarget->GetComponentLocation();
-	TraceStart.Z += 12.f;
+	TraceStart.Z -= m_fGroundCastBoxSize;
 
 	FVector TraceEnd = TraceStart;
 	TraceEnd.Z += m_fGroundCastOffset;
@@ -183,14 +255,22 @@ void UPhysicsMovement::TickCastGround()
 	FCollisionQueryParams QueryParam;
 	QueryParam.AddIgnoredActor(this->GetOwner());
 
-	if (GetWorld()->LineTraceSingleByChannel(m_GroundHitResult, TraceStart, TraceEnd, ECollisionChannel::ECC_Visibility, QueryParam))
-	{
-		m_bOnGround = true;
+	const FCollisionShape BoxShape = FCollisionShape::MakeBox(FVector(m_fGroundCastBoxSize, m_fGroundCastBoxSize, m_fGroundCastBoxSize));
 
-	}
-	else
+#if WITH_EDITOR
+	if (m_bDebugShowForwardCast)
 	{
-		m_bOnGround = false;
+		DrawDebugBox(GetWorld(), TraceStart, FVector(m_fGroundCastBoxSize, m_fGroundCastBoxSize, m_fGroundCastBoxSize), FColor(120, 0, 120), false, -1.f, 0.1f);
+		DrawDebugBox(GetWorld(), TraceEnd, FVector(m_fGroundCastBoxSize, m_fGroundCastBoxSize, m_fGroundCastBoxSize), FColor(120, 0, 120), false, -1.f, 0.1f);
+	}
+#endif
+	m_bOnGround=GetWorld()->SweepSingleByChannel(m_GroundHitResult,TraceStart,TraceEnd,FQuat(FVector(0.f, 0.f, -1.f), PI * 0.25f),ECollisionChannel::ECC_Visibility,BoxShape,QueryParam);
+
+	if (!m_bOnGround)
+	{
+		m_GroundHitResult.Reset(1.f, false);
+
+		m_bOnGround =GetWorld()->SweepSingleByChannel(m_GroundHitResult,TraceStart,TraceEnd,FQuat::Identity,ECollisionChannel::ECC_Visibility,BoxShape,QueryParam);
 	}
 }
 
@@ -201,9 +281,7 @@ void UPhysicsMovement::UpdateComponentVelocity()
 		return;
 	}
 
-
 	m_MovingTarget->SetPhysicsLinearVelocity(Velocity, false, m_NameLinearVelocityBone);
-	Velocity= FVector::ZeroVector;
 }
 
 bool UPhysicsMovement::IsGround() const
@@ -211,19 +289,23 @@ bool UPhysicsMovement::IsGround() const
 	return m_bOnGround;
 }
 
-FVector UPhysicsMovement::ScaleInputAccel(const FVector inputPure) const
+FVector UPhysicsMovement::ScaleInputAccel(const FVector inputPure)
 {
-	return GetMaxForce() *inputPure.GetClampedToMaxSize(1.f);
+	m_InputNormal = inputPure.GetClampedToMaxSize(1.f);
+	return GetMaxForce() *m_InputNormal;
 }
 
 
 void UPhysicsMovement::Jump()
 {
+	m_bPressedJump = true;
+	m_fJumpKeyHoldTime = 0.0f;
 }
 
 void UPhysicsMovement::StopJumping()
 {
 	m_bPressedJump = false;
+	ResetJumpState();
 }
 
 
@@ -251,3 +333,114 @@ void UPhysicsMovement::AddImpulse(FVector impulseWant)
 
 	m_MovingTarget->AddImpulse(impulseWant);
 }
+
+void UPhysicsMovement::CheckJumpInput(float DeltaTime)
+{
+	if (m_bPressedJump)
+	{
+		const bool bDidJump = DoJump();
+		if (bDidJump)
+		{
+			if (!m_bWasJumping)
+			{
+				m_fJumpForceTimeRemaining = m_fMaxHoldTime;
+			}
+		}
+		m_bWasJumping = bDidJump;
+	}
+}
+
+
+bool UPhysicsMovement::DoJump()
+{
+	if (CanJump())
+	{
+		FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
+
+		CurrentV.Z = FMath::Max(CurrentV.Z, m_fJumpZVelocity);
+
+		m_MovingTarget->SetPhysicsLinearVelocity(CurrentV);
+
+		m_nJumpCurrentCount++;
+
+		return true;
+	}
+
+	return false;
+}
+
+void UPhysicsMovement::ClearJumpInput(float delta)
+{
+	if (m_bPressedJump)
+	{
+		m_fJumpKeyHoldTime += delta;
+
+		if (m_fJumpKeyHoldTime >= m_fMaxHoldTime)
+		{
+			m_bPressedJump = false;
+			
+		}
+	}
+	else
+	{
+		m_fJumpForceTimeRemaining = 0.0f;
+		m_bWasJumping = false;
+	}
+}
+
+
+bool UPhysicsMovement::CanJump() const
+{
+	bool bCanJump = true;
+
+
+	if (m_nJumpCurrentCount == 0)
+	{
+		bCanJump = IsGround();
+	}
+	bCanJump =  m_nJumpCurrentCount < m_nJumpMaxCount;
+
+
+	return bCanJump;
+}
+
+void UPhysicsMovement::ResetJumpState()
+{
+	m_bPressedJump = false;
+	m_bWasJumping = false;
+	m_fJumpKeyHoldTime = 0.0f;
+	m_fJumpForceTimeRemaining = 0.0f;
+
+	if (!IsFalling())
+	{
+		m_nJumpCurrentCount = 0;
+	}
+}
+
+
+
+//bool bBlockingHit = false;
+//
+//if (!bUseFlatBaseForFloorChecks)
+//{
+//	bBlockingHit = GetWorld()->SweepSingleByChannel(OutHit, Start, End, FQuat::Identity, TraceChannel, CollisionShape, Params, ResponseParam);
+//}
+//else
+//{
+//	// Test with a box that is enclosed by the capsule.
+//	const float CapsuleRadius = CollisionShape.GetCapsuleRadius();
+//	const float CapsuleHeight = CollisionShape.GetCapsuleHalfHeight();
+//	const FCollisionShape BoxShape = FCollisionShape::MakeBox(FVector(CapsuleRadius * 0.707f, CapsuleRadius * 0.707f, CapsuleHeight));
+//
+//	// First test with the box rotated so the corners are along the major axes (ie rotated 45 degrees).
+//	bBlockingHit = GetWorld()->SweepSingleByChannel(OutHit, Start, End, FQuat(FVector(0.f, 0.f, -1.f), PI * 0.25f), TraceChannel, BoxShape, Params, ResponseParam);
+//
+//	if (!bBlockingHit)
+//	{
+//		// Test again with the same box, not rotated.
+//		OutHit.Reset(1.f, false);
+//		bBlockingHit = GetWorld()->SweepSingleByChannel(OutHit, Start, End, FQuat::Identity, TraceChannel, BoxShape, Params, ResponseParam);
+//	}
+//}
+//
+//return bBlockingHit;

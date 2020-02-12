@@ -1024,13 +1024,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Pawn|Components|CharacterMovement")
 		virtual void ClearAccumulatedForces();
 
-	/** 1464 Update the character state in PerformMovement right before doing the actual position change */
-	virtual void UpdateCharacterStateBeforeMovement(float DeltaSeconds);
-
-	/** 1467 Update the character state in PerformMovement after the position change. Some rotation updates happen after this. */
-	virtual void UpdateCharacterStateAfterMovement(float DeltaSeconds);
-
-	/** 1486 Handle falling movement. */
 	virtual void PhysFalling(float deltaTime, int32 Iterations);
 
 	// Helpers for PhysFalling
@@ -1125,20 +1118,6 @@ public:
 	/** 1621 Set movement mode to the default based on the current physics volume. */
 	virtual void SetDefaultMovementMode();
 
-	/** 1624
-	 * Moves along the given movement direction using simple movement rules based on the current movement mode (usually used by simulated proxies).
-	 *
-	 * @param InVelocity:			Velocity of movement
-	 * @param DeltaSeconds:			Time over which movement occurs
-	 * @param OutStepDownResult:	[Out] If non-null, and a floor check is performed, this will be updated to reflect that result.
-	 */
-	virtual void MoveSmooth(const FVector& InVelocity, const float DeltaSeconds, FStepDownResult* OutStepDownResult = NULL);
-
-	/** 1633
-	 * Used during SimulateMovement for proxies, this computes a new value for Acceleration before running proxy simulation.
-	 * The base implementation simply derives a value from the normalized Velocity value, which may help animations that want some indication of the direction of movement.
-	 * Proxies don't implement predictive acceleration by default so this value is not used for the actual simulation.
-	 */
 	virtual void UpdateProxyAcceleration();
 
 	// 1640

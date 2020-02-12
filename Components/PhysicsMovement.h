@@ -24,24 +24,49 @@ public:
 	UPhysicsMovement(const FObjectInitializer& objInit);
 private:
 	UPrimitiveComponent* m_MovingTarget;
+	FVector m_InputNormal;
 	FVector m_Acceleration;
 	bool m_bOnGround;
 	bool m_bPressedJump;
 	FHitResult m_GroundHitResult;
 	FName m_NameLinearVelocityBone;
+	//jump
+	bool m_bWasJumping;
+	float m_fJumpKeyHoldTime;
+	int m_nJumpCurrentCount;
+	float m_fJumpForceTimeRemaining;
+	//
+	
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement")
+	bool m_bDebugShowForwardCast;
+	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
+	float m_fGroundCastBoxSize;
+	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
+	float m_fForwardCastOffset;
+	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMax = "0", UIMax = "0"))
 	float m_fGroundCastOffset;
-	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement")
+	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
 	float m_fMovingForce;
-	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement")
-	float m_fJumpZVelocity;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement_Rotate")
 	FRotator m_RotationRate;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
 	float m_fAngularDampingForPhysicsAsset;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
+	float m_WalkableSlopeAngle;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
+	float m_WalkableSlopeHeight;
+	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement_Jump", meta = (ClampMin = "0", UIMin = "0"))
+	float m_fJumpZVelocity;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
 	float m_fLinearDampingForPhysicsAsset;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement_Jump", meta = (ClampMin = "0", UIMin = "0"))
+	float m_fMaxHoldTime;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement_Jump", meta = (ClampMin = "0", UIMin = "0"))
+	int m_nJumpMaxCount;
+protected://Air
+	UPROPERTY(Category = "PhysicsMovement_Jump", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
+	float m_fAirControl;
 public:
 	UPROPERTY(BlueprintAssignable, Category = "PhysicsMovement_Jump")
 	FVoidVoidBP m_OnJumpBP;
@@ -61,11 +86,20 @@ public:
 	void AddImpulse(FVector impulseWant);
 private:
 	virtual void UpdateComponentVelocity() override;
-	FVector ScaleInputAccel(const FVector inputPure) const;
+	FVector ScaleInputAccel(const FVector inputPure) ;
 	float GetAxisDeltaRotation(float InAxisRotationRate, float DeltaTime) const;
 	FRotator GetDeltaRotation(float DeltaTime) const;
 	FRotator ComputeOrientToMovementRotation(const FRotator& CurrentRotation, FRotator& DeltaRotation) const;
+protected:
+	virtual bool IsFalling()  const override;
 private:
+	void ResetJumpState();
+	void CheckJumpInput(float delta);
+	void ClearJumpInput(float delta);
+	bool CanJump() const;
+	bool DoJump();
+private:
+	bool TickCheckCanMoveForward();
 	void TickCastGround();
 	void TickRotate(float delta);
 	void TickMovement(float delta);
@@ -83,5 +117,4 @@ public:
 	void SetAngularDamping(float fAngDamp);
 	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
 	void SetLinearDamping(float fLinDamp);
-
 };

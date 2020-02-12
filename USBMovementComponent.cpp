@@ -1,134 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-/************************************************************************************************************************************************************
-*
-*		19.10.03 Character Movement Component 소스 복사 및 분석 시작
-*
-*		19.10.04 SimulateMovemnt 메소드를 중심으로 다 복사완료.
-*				 다만 SimulateMovement는 네트워크 기반에서 동작하는 메소드라 네트워크 관련 제어값과 별개로 동작하도록 개조 중
-*				  - 네트워크 관련 전부 주석 처리
-*				  - 빠른 빌드를 위해 동적인 지면과 캐릭터가 같이 움직이도록 도와주는 Base 처리도 주석처리(메소드 내부만, 껍데기는 남겨둠)
-*				  - 근데 그러자니 Floor도 다 터지네 망 ㅡㅡ
-*
-*		19.10.14 Floor관련 변수, 메소드 우선적으로 옮겨두기 시작
-*				 GetMovementSphere() 메소드 생성	=>	CharacterOwner->GetCapsuleComponent() 대체
-*				 지면인식 및 경사면 타기 성공!
-*				 중력은 대충 구현해두고 나중에 다듬어야함
-*				 GetImpartedMovementBaseVelocity 로 지면이동시 같은 속도로 이동되는거 하려 했는데 Base가 NULL이 떠서 손봐야함 ㅡㅡ
-*
-*		19.10.15 SimulateMovement를 개조하다보니 어차피 구성요소를 다 가져왔으니 PerformMovement에서 이것들을 적용하는게 더 좋다고 판단
-*				 PerformMovement 가져옴. 개조 필요.
-*				 Root모션 관련 다 제거
-*				 PerformMovement -> StartNewPhysics -> PhysWalking까지 옮겨뒀음. 다만 아직 Base가 없어서인지 제대로 움직이질 못함... 잘 찾아보자.
-*
-*		19.10.24 Base관련 변수 및 함수 정리
-*				 Base 관련된 것들을 옮기기 전에 Falling 처리부터 하기로함.
-*				 PhysFalling 옮기기
-*				 Falling 동작
-*
-*				 Character.h / .cpp에서 Jump와 관련된 요소들을 가져옴. Character가 아닌 Pawn이기 때문에 무브먼트에서 처리
-*				 아직 요소들만 가져오고 Tick 함수 같은 곳에서 처리하는 부분은 구현하지 않음
-*
-*				 FVector::GetClampedToMaxSize()가 이상하게 동작하여 CustomGetClampedToMaxSize를 따로 작성하였다.
-*				 예전에 예제 작성해볼 때도 겪었던 오류인데 도저히 원인 파악이 안됨
-*				 => 방향키 눌렀을 때 슝하고 이상한 곳으로 날라가던 현상이 조금 완화됨
-*				 => 해당 버그는 Walking 상태에서 방향키를 눌렀다가 떼었을 때, 방향벡터가 조금이라도 변하였을 때(ex 고개를 돌림) 방향키를 눌러 이동할 때 나타남
-*				 ==> 앞으로 블랙아웃 현상이라 기술
-*
-*				 Falling 상태에서 움직이는지 안움직이는지 잘 모르겠음 차후 확인 필요
-*
-*
-*		19.10.25 Falling 상태에서 움직임(방향키에 따른 가속) 동작 확인
-*				 => 현재 감속량이 굉장히 큰데 이는 Air Control에 의한 감속이 정상 동작하는지는 확인할 필요가 있음
-*
-*				 어제 작업한 CustomGetClampedToMaxSize에서 특정방향, 특정 Max 값에서만 정상 동작하던 오류를 해결
-*				 => 방향벡터가 조금이라도 변하였을 때(ex 고개를 돌림) 나타나던 블랙아웃 현상이 해결됨
-*
-*				 블랙아웃 현상에 대한 고찰
-*				 => Walking 상태에서 방향키를 누르다 떼면 현상이 나타난다.
-*				 => Walking 상태에서 방향키를 누르는 중에 반대 방향 키를 같이 눌러도 현상이 나타난다.
-*				 => Falling 상태에서 방향키를 한 번이라도 눌렀다면 Walking 상태로 넘어가자마자 현상이 나타난다.
-*				 => Walking 상태에서 서로 방향이 수직인 키를 누르고 있을 때 한 키의 반대방향 키를 누를 때는 현상이 나타나지 않는다.
-*				 => Walking => Falling 상태로 넘어가면 방향키를 떼어도 현상이 나타나지 않는다.
-*				 => 블랙아웃 현상이 나타났을 때 Velocity의 값이 굉장히 크게 변한다. (X, Y 중 하나만)
-*				 ===> 블랙아웃 현상은 방향키에 의해 Velocity가 가속된 이후 다시 Zero Vector로 감속되는 와중에 생기는 오류로 추정됨.
-*
-*				 멘탈이 나갈꺼 같다. 이게 대체 무슨 증상이지?...
-*				 CalcVelocity 앞에 UE_LOG(LogTemp, Log, TEXT("Before Velocity : %s"), *Velocity.ToString());를 붙이면 정상동작하고 안붙이면 블랙아웃 현상이 나타난다.
-*				 LOG가 인게임에 영향을 줄리도 없고 Velocity.ToString 또한 그럴텐데 대체 뭘까.... 일단 계속 증상을 파고 들어가보자.
-*				 => 일단 이 증상은 CalcVelocity 함수에서 나타나는 것 이 확인.
-*				 => CalcVelocity 내에서 가속이 없을 때를 나타내는 변수인 bZeroAcceleration를 살펴보자
-*
-*				 CalcVelocity() 내의 else if (!bZeroAcceleration) 부분과 ApplyVelocityBraking()에서
-*				 FVector::GetSafeNormal()를 사용하면서 생기던 오류였다.
-*				 VS 2019 16.3.3 버전에서 생기는 컴파일러의 오류란다. (이걸 작성하는 시점에선 16.3.6버전 사용)
-*				 FVector::GetClampedToMaxSize()도 동일한 이유에서 에러가 나오던 것 같다.
-*				 무슨 이윤진 몰라도 해당 함수들이 호출되기 전에 UE_LOG 매크로를 사용하면 정상 동작했던 것...
-*				 해결 방법은 직접 커스텀 함수를 만들어서 바꾸는 방법과 이전버전의 컴파일러로 교체하여 사용하는 방법이 있다.
-*				 => 본인은 전자의 방법을 사용하였음.
-*				 => 해당 함수들에는 모두 FMath::InvSqrt()가 사용되었는데 이것이 문제인 것 같음.
-*				 ==> 블랙아웃 버그 해결!
-*
-*		19.10.28 Tick 내 점프 추가
-*				 OnMovementModeChanged 추가 및 기존 Character에 있던 것도 같이 가져옴(점프 구현을 위함)
-*				 이제 기존 Character에서 점프를 구현하듯 Jump() StopJumping()만 추가해줘도 캐릭터가 점프 할 수 있음
-*
-*				 대망의 Base 작업 화이팅화이팅합시다.
-*				 Base 관련 namespase, 구조체는 Character.h에서 사용
-*				 Character에서 Base 관련 요소 가져옴. 네트워크 관련은 제외.
-*				 Base 관련되어 주석처리했던 부분들 전부 정상화
-*				 ==>> Base 정상 작동!!! 지면에 따라 움직인다 ㅠㅠㅠㅠ
-*				 단, PostPhysicsTick 부분은 전부 주석처리. Base가 시뮬레이션일 때 그에 따른 처리를 하는 것으로 보임. 나중에 적용
-*
-*				 Walking 상태에서 입력 버튼을 꾹 누르면 지면 밖으로 나가도 Falling으로 변하지 않는 버그 발견
-*				 Base가 갱신되지 않기 때문인걸로 추정
-*				 => 예전에 Ledge(모서리) 처리 부분을 주석처리 해둬서 생긴 문제였음. 해결
-*
-*				 PosyPhysicsTick 부분 가져왔음. 가져왔는데 음... 어...
-*				 정상동작하는지는 의문 내일 확인해보자.
-*				 일단 시뮬레이팅 오브젝트에 비비다보면 슝하고 날라가는거 있음
-*
-*		19.10.29 GetSafeNormal2D => CustomGetSafeNormal2D. 이유는 여태까지와 동일
-*				 => 적용 후 시뮬레이팅 오브젝트에 비비다 날라가는 오류 사라짐
-*
-*				 적용안되어 있던 Ledge 처리 관련 함수 추가
-*
-*				 bEnablePhysicsInteraction = true시 시뮬레이팅 엑터에 관여하는 부분 보완 완료.
-*				 이제 기존 CharacterMovementComponent랑 거의 비슷하게 동작하는 것 같다.
-*
-*				 Add Impulse, Add Force, Launch 추가.
-*				 이 함수들을 통해 Sphere에 물리력을 가할 수 있음.
-*
-*				 OnTeleported가 제대로 동작하지 않음. 다만 이건 당장에 큰 문제는 없으니 나중에 점검해보자.
-*
-*		19.10.31 bEnableGravity 변수 추가. 사용자가 Falling 상태에서 중력을 적용할지 말지를 정함.
-*				 값에 False면 GetGravityZ()에서 0을 반환
-*
-*				 USB 캐릭터에 적용 아주 잘됨!
-*				 버그 1. Ledge 밖으로 나갈 때 위치가 꺾이는 버그
-*				 버그 2. USB가 시작될 때 USBMovementComponent가 Valid하지 않다가 Valid한 버그
-*
-*				 개선이 필요한 부분
-*				 1. Flying모드 개발 필요성 - 공중에서 날아가는 부분은 Falling 모드에서 자연스럽게 날리기가 쉽지 않음.
-*
-*				 버그 1에 대한 방안으로 CheckLedgeDirection 부분에서 Sweep 실패시 두번째 Sweep하는 부분을 주석처리 하였다.
-*				 버그 1은 거의 사라졌으나 아주 가끔 낮은 확률로 나타난다. 계속 테스트 하면서 1,2번 본거 같은데 잘못 봤을 수도 있다.
-*				 주석처리한 부분은 정확도를 위해 추가된 부분이니 오류가 있더라도 크리티컬하진 않고 미미한 오류이지 않을까라고 생각.
-*
-*		19.11.08 Walkable Floor Angle 과  Wakable Floor Z 값이 연동되는 부분을 추가하였음.
-*				 
-*		19.11.25 PhysicsRotation 및 관련 메소드 추가
-*				 캐릭터의 회전과 관련된 부분.
-*
-*
-************************************************************************************************************************************************************/
-
-
-
-
-
-
-#include "USBMovementComponent.h"
+﻿#include "USBMovementComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/PhysicsVolume.h"
 #include "GameFramework/Controller.h"
@@ -140,18 +10,6 @@
 #include "Engine/Engine.h"
 
 
-
-/***********************************************************************************************
-*
-*							CharacterMovement 소스 복사
-*
-***********************************************************************************************/
-
-/** 41
- * Character stats
- *
- * 프로파일링을 위한 SCOPE_CYCLE_COUNTER 매크로에 들어갈 STAT 목록
- */
 DECLARE_CYCLE_STAT(TEXT("Char Tick"), STAT_CharacterMovementTick, STATGROUP_Character);
 DECLARE_CYCLE_STAT(TEXT("Char NonSimulated Time"), STAT_CharacterMovementNonSimulated, STATGROUP_Character);
 DECLARE_CYCLE_STAT(TEXT("Char Simulated Time"), STAT_CharacterMovementSimulated, STATGROUP_Character);
@@ -180,8 +38,6 @@ DECLARE_CYCLE_STAT(TEXT("Char PhysNavWalking"), STAT_CharPhysNavWalking, STATGRO
 DECLARE_CYCLE_STAT(TEXT("Char NavProjectPoint"), STAT_CharNavProjectPoint, STATGROUP_Character);
 DECLARE_CYCLE_STAT(TEXT("Char NavProjectLocation"), STAT_CharNavProjectLocation, STATGROUP_Character);
 DECLARE_CYCLE_STAT(TEXT("Char ProcessLanded"), STAT_CharProcessLanded, STATGROUP_Character);
-
-
 DECLARE_CYCLE_STAT(TEXT("Char HandleImpact"), STAT_CharHandleImpact, STATGROUP_Character);
 
 
@@ -204,83 +60,6 @@ const float UUSBMovementComponent::SWEEP_EDGE_REJECT_DISTANCE = 0.15f;
 #endif
 
 
-// 97 CVars
-//namespace CharacterMovementCVars
-	/**************************************************************************************************
-	*
-	*	콘솔 변수를 생성/등록 한다.
-	*	콘솔 변수에 대한 자세한 설명은 아래 링크 참조
-	*	https://docs.unrealengine.com/ko/Programming/Development/Tools/ConsoleManager/index.html
-	*
-	**************************************************************************************************/
-/*{// 소스 가져오면서 에러 없애려고 가져왔는데 필요 없는애들 빼다보니 그 사이에 이것도 필요가 없어진 것 같음
-	// Listen server smoothing
-	static int32 NetEnableListenServerSmoothing = 1;
-	FAutoConsoleVariableRef CVarNetEnableListenServerSmoothing(
-		TEXT("p.NetEnableListenServerSmoothing"),
-		NetEnableListenServerSmoothing,
-		TEXT("Whether to enable mesh smoothing on listen servers for the local view of remote clients.\n")
-		TEXT("0: Disable, 1: Enable"),
-		ECVF_Default);
-
-	// Latent proxy prediction
-	static int32 NetEnableSkipProxyPredictionOnNetUpdate = 1;
-	FAutoConsoleVariableRef CVarNetEnableSkipProxyPredictionOnNetUpdate(
-		TEXT("p.NetEnableSkipProxyPredictionOnNetUpdate"),
-		NetEnableSkipProxyPredictionOnNetUpdate,
-		TEXT("Whether to allow proxies to skip prediction on frames with a network position update, if bNetworkSkipProxyPredictionOnNetUpdate is also true on the movement component.\n")
-		TEXT("0: Disable, 1: Enable"),
-		ECVF_Default);
-
-	// Logging when character is stuck. Off by default in shipping.
-#if UE_BUILD_SHIPPING
-	static float StuckWarningPeriod = -1.f;
-#else
-	static float StuckWarningPeriod = 1.f;
-#endif
-
-	FAutoConsoleVariableRef CVarStuckWarningPeriod(
-		TEXT("p.CharacterStuckWarningPeriod"),
-		StuckWarningPeriod,
-		TEXT("How often (in seconds) we are allowed to log a message about being stuck in geometry.\n")
-		TEXT("<0: Disable, >=0: Enable and log this often, in seconds."),
-		ECVF_Default);
-
-	static int32 NetEnableMoveCombining = 1;
-	FAutoConsoleVariableRef CVarNetEnableMoveCombining(
-		TEXT("p.NetEnableMoveCombining"),
-		NetEnableMoveCombining,
-		TEXT("Whether to enable move combining on the client to reduce bandwidth by combining similar moves.\n")
-		TEXT("0: Disable, 1: Enable"),
-		ECVF_Default);
-
-	static int32 NetUseClientTimestampForReplicatedTransform = 1;
-	FAutoConsoleVariableRef CVarNetUseClientTimestampForReplicatedTransform(
-		TEXT("p.NetUseClientTimestampForReplicatedTransform"),
-		NetUseClientTimestampForReplicatedTransform,
-		TEXT("If enabled, use client timestamp changes to track the replicated transform timestamp, otherwise uses server tick time as the timestamp.\n")
-		TEXT("Game session usually needs to be restarted if this is changed at runtime.\n")
-		TEXT("0: Disable, 1: Enable"),
-		ECVF_Default);
-
-	static int32 ReplayUseInterpolation = 0;
-	FAutoConsoleVariableRef CVarReplayUseInterpolation(
-		TEXT("p.ReplayUseInterpolation"),
-		ReplayUseInterpolation,
-		TEXT(""),
-		ECVF_Default);
-		
-}*/
-/***********************************************************************************************/
-
-
-/****************************************************
- *
- *
- *			PostPhysics 관련 320~341줄
- *
- *
- ****************************************************/
 void FUSBMovementComponentPostPhysicsTickFunction::ExecuteTick(float DeltaTime, enum ELevelTick TickType, ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent)
 {
 	FActorComponentTickFunction::ExecuteTickHelper(Target, /*bTickInEditor=*/ false, DeltaTime, TickType, [this](float DilatedTime)
@@ -339,56 +118,22 @@ UUSBMovementComponent::UUSBMovementComponent(const FObjectInitializer& ObjectIni
 	MaxSimulationTimeStep = 0.05f;
 	MaxSimulationIterations = 8;
 
-	//MaxDepenetrationWithGeometry = 500.f;
-	//MaxDepenetrationWithGeometryAsProxy = 100.f;
-	//MaxDepenetrationWithPawn = 100.f;
-	//MaxDepenetrationWithPawnAsProxy = 2.f;
-
-	// Set to match EVectorQuantization::RoundTwoDecimals
-	//NetProxyShrinkRadius = 0.01f;
-	//NetProxyShrinkHalfHeight = 0.01f;
-
-	//NetworkSimulatedSmoothLocationTime = 0.100f;
-	//NetworkSimulatedSmoothRotationTime = 0.050f;
-	//ListenServerNetworkSimulatedSmoothLocationTime = 0.040f;
-	//ListenServerNetworkSimulatedSmoothRotationTime = 0.033f;
-	//NetworkMaxSmoothUpdateDistance = 256.f;
-	//NetworkNoSmoothUpdateDistance = 384.f;
-	//NetworkSmoothingMode = ENetworkSmoothingMode::Exponential;
-	//ServerLastClientGoodMoveAckTime = -1.f;
-	//ServerLastClientAdjustmentTime = -1.f;
-	//NetworkMinTimeBetweenClientAckGoodMoves = 0.10f;
-	//NetworkMinTimeBetweenClientAdjustments = 0.10f;
-	//NetworkMinTimeBetweenClientAdjustmentsLargeCorrection = 0.05f;
-	//NetworkLargeClientCorrectionDistance = 15.0f;
-
 	MaxWalkSpeedCrouched = MaxWalkSpeed * 0.5f;
-	//MaxOutOfWaterStepHeight = 40.0f;
-	//OutofWaterZ = 420.0f;
 	AirControl = 0.05f;
 	AirControlBoostMultiplier = 2.f;
 	AirControlBoostVelocityThreshold = 25.f;
+	BrakingDecelerationFlying = 0.f;
 	FallingLateralFriction = 0.f;
 	MaxAcceleration = 2048.0f;
 	BrakingFrictionFactor = 2.0f; // Historical value, 1 would be more appropriate.
 	BrakingSubStepTime = 1.0f / 33.0f;
 	BrakingDecelerationWalking = MaxAcceleration;
 	BrakingDecelerationFalling = 0.f;
-	BrakingDecelerationFlying = 0.f;
 	BrakingDecelerationSwimming = 0.f;
 	LedgeCheckThreshold = 4.0f;
-	//JumpOutOfWaterPitch = 11.25f;
-
-#if WITH_EDITORONLY_DATA
-	//CrouchedSpeedMultiplier_DEPRECATED = 0.5f;
-	//UpperImpactNormalScale_DEPRECATED = 0.5f;
-	//bForceBraking_DEPRECATED = false;
-#endif
 
 	Mass = 100.0f;
 	bJustTeleported = true;
-	//CrouchedHalfHeight = 40.0f;
-	//Buoyancy = 1.0f;
 	LastUpdateRotation = FQuat::Identity;
 	LastUpdateVelocity = FVector::ZeroVector;
 	PendingImpulseToApply = FVector::ZeroVector;
@@ -398,12 +143,8 @@ UUSBMovementComponent::UUSBMovementComponent(const FObjectInitializer& ObjectIni
 	GroundMovementMode = MOVE_Walking;
 	MovementMode = GroundMovementMode; // 임의 추가
 	bForceNextFloorCheck = true;
-	//bShrinkProxyCapsule = true;
 	bCanWalkOffLedges = true;
-	//bCanWalkOffLedgesWhenCrouching = false;
-	//bNetworkSmoothingComplete = true; // Initially true until we get a net update, so we don't try to smooth to an uninitialized value.
 	bWantsToLeaveNavWalking = false;
-	//bIsNavWalkingOnServer = false;
 	bSweepWhileNavWalking = true;
 	bNeedsSweepWhileWalkingUpdate = false;
 
@@ -422,7 +163,6 @@ UUSBMovementComponent::UUSBMovementComponent(const FObjectInitializer& ObjectIni
 	MaxTouchForce = 250.0f;
 	RepulsionForce = 2.5f;
 
-	//bAllowPhysicsRotationDuringAnimRootMotion = false; // Old default behavior.
 	bUseControllerDesiredRotation = false;
 
 	bUseSeparateBrakingFriction = false; // Old default behavior.
@@ -432,7 +172,6 @@ UUSBMovementComponent::UUSBMovementComponent(const FObjectInitializer& ObjectIni
 	bImpartBaseVelocityY = true;
 	bImpartBaseVelocityZ = true;
 	bImpartBaseAngularVelocity = true;
-	//bIgnoreClientMovementErrorChecksAndCorrection = false;
 	bAlwaysCheckFloor = true;
 
 	// default character can jump, walk, and swim
@@ -441,36 +180,11 @@ UUSBMovementComponent::UUSBMovementComponent(const FObjectInitializer& ObjectIni
 	NavAgentProps.bCanSwim = true;
 	ResetMoveState();
 
-	//ClientPredictionData = NULL;
-	//ServerPredictionData = NULL;
-
-	// This should be greater than tolerated player timeout * 2.
-	//MinTimeBetweenTimeStampResets = 4.f * 60.f;
-	//LastTimeStampResetServerTime = 0.f;
-
 	bEnableScopedMovementUpdates = true;
-	// Disabled by default since it can be a subtle behavior change, you should opt in if you want to accept that.
-	//bEnableServerDualMoveScopedMovementUpdates = false;
-
 	bRequestedMoveUseAcceleration = true;
-	//bUseRVOAvoidance = false;
-	//bUseRVOPostProcess = false;
-	//AvoidanceLockVelocity = FVector::ZeroVector;
-	//AvoidanceLockTimer = 0.0f;
-	//AvoidanceGroup.bGroup0 = true;
-	//GroupsToAvoid.Packed = 0xFFFFFFFF;
-	//GroupsToIgnore.Packed = 0;
-	//AvoidanceConsiderationRadius = 500.0f;
 
 	OldBaseQuat = FQuat::Identity;
 	OldBaseLocation = FVector::ZeroVector;
-
-	//NavMeshProjectionInterval = 0.1f;
-	//NavMeshProjectionInterpSpeed = 12.f;
-	//NavMeshProjectionHeightScaleUp = 0.67f;
-	//NavMeshProjectionHeightScaleDown = 1.0f;
-	//NavWalkingFloorDistTolerance = 10.0f;
-
 
 	// Jump 관련 요소. 출처 Character.cpp 
 	JumpKeyHoldTime = 0.0f;
@@ -1102,7 +816,6 @@ void UUSBMovementComponent::SimulateMovement(float DeltaSeconds)
 		UpdateProxyAcceleration();
 
 		FStepDownResult StepDownResult;
-		MoveSmooth(Velocity, DeltaSeconds, &StepDownResult);
 
 		// find floor and check if falling
 		if (IsMovingOnGround() || MovementMode == MOVE_Falling)
@@ -1489,10 +1202,6 @@ void UUSBMovementComponent::PerformMovement(float DeltaSeconds)
 
 		ApplyAccumulatedForces(DeltaSeconds);
 
-		// Update the character state before we do our movement 
-		// Crouching(웅크린) 상태 관련. 현재 주석처리
-		UpdateCharacterStateBeforeMovement(DeltaSeconds);
-
 		if (MovementMode == MOVE_NavWalking && bWantsToLeaveNavWalking)
 		{
 			//TryToLeaveNavWalking();
@@ -1515,10 +1224,6 @@ void UUSBMovementComponent::PerformMovement(float DeltaSeconds)
 		{
 			return;
 		}
-
-		// Update character state based on change from movement
-		// Crouching(웅크린) 상태 관련. 현재 주석처리
-		UpdateCharacterStateAfterMovement(DeltaSeconds);
 
 		if (!PawnOwner->IsMatineeControlled())
 		{
@@ -1602,33 +1307,6 @@ void UUSBMovementComponent::SaveBaseLocation()
 }
 
 // 2731
-void UUSBMovementComponent::UpdateCharacterStateBeforeMovement(float DeltaSeconds)
-{
-	// Check for a change in crouch state. Players toggle crouch by changing bWantsToCrouch.
-	/*
-	const bool bIsCrouching = IsCrouching();
-	if (bIsCrouching && (!bWantsToCrouch || !CanCrouchInCurrentState()))
-	{
-		UnCrouch(false);
-	}
-	else if (!bIsCrouching && bWantsToCrouch && CanCrouchInCurrentState())
-	{
-		Crouch(false);
-	}
-	*/
-}
-
-// 2745
-void UUSBMovementComponent::UpdateCharacterStateAfterMovement(float DeltaSeconds)
-{
-	/*
-	// Uncrouch if no longer allowed to be crouched
-	if (IsCrouching() && !CanCrouchInCurrentState())
-	{
-		UnCrouch(false);
-	}
-	*/
-}
 
 // 2754
 void UUSBMovementComponent::StartNewPhysics(float deltaTime, int32 Iterations)
@@ -1654,20 +1332,8 @@ void UUSBMovementComponent::StartNewPhysics(float deltaTime, int32 Iterations)
 	case MOVE_Walking:
 		PhysWalking(deltaTime, Iterations);
 		break;
-	case MOVE_NavWalking:
-		//PhysNavWalking(deltaTime, Iterations);
-		break;
 	case MOVE_Falling:
 		PhysFalling(deltaTime, Iterations);
-		break;
-	case MOVE_Flying:
-		//PhysFlying(deltaTime, Iterations);
-		break;
-	case MOVE_Swimming:
-		//PhysSwimming(deltaTime, Iterations);
-		break;
-	case MOVE_Custom:
-		//PhysCustom(deltaTime, Iterations);
 		break;
 	default:
 		//UE_LOG(LogCharacterMovement, Warning, TEXT("%s has unsupported movement mode %d"), *CharacterOwner->GetName(), int32(MovementMode));
@@ -2009,15 +1675,6 @@ void UUSBMovementComponent::CalcVelocity(float DeltaTime, float Friction, bool b
 		Velocity = CustomGetClampedToMaxSize(Velocity, NewMaxRequestedSpeed);
 	}
 
-	/*
-
-	RVO 알고리즘을 통해 Ai 캐릭터가 장애물을 알아서 회피하며 이동할 수 있드록 하는 부분이지만
-	서버에서만 동작한다고 하고, 우리 프로젝트에선 의미 없는거 같으니 사용하지 않는다.
-	if (bUseRVOAvoidance)
-	{
-		CalcAvoidanceVelocity(DeltaTime);
-	}
-	*/
 }
 
 // 3179
@@ -3044,7 +2701,6 @@ void UUSBMovementComponent::AdjustFloorHeight()
 		const float AvgFloorDist = (MIN_FLOOR_DIST + MAX_FLOOR_DIST) * 0.5f;
 		const float MoveDist = AvgFloorDist - OldFloorDist;
 		SafeMoveUpdatedComponent(FVector(0.f, 0.f, MoveDist), UpdatedComponent->GetComponentQuat(), true, AdjustHit);
-		//UE_LOG(LogCharacterMovement, VeryVerbose, TEXT("Adjust floor height %.3f (Hit = %d)"), MoveDist, AdjustHit.bBlockingHit);
 
 		if (!AdjustHit.IsValidBlockingHit())
 		{
@@ -3082,35 +2738,8 @@ void UUSBMovementComponent::ProcessLanded(const FHitResult& Hit, float remaining
 
 	if (IsFalling())
 	{
-		if (GroundMovementMode == MOVE_NavWalking)
-		{
-			/*
-			// verify navmesh projection and current floor
-			// otherwise movement will be stuck in infinite loop:
-			// navwalking -> (no navmesh) -> falling -> (standing on something) -> navwalking -> ....
-
-			const FVector TestLocation = GetActorFeetLocation();
-			FNavLocation NavLocation;
-
-			const bool bHasNavigationData = FindNavFloor(TestLocation, NavLocation);
-			if (!bHasNavigationData || NavLocation.NodeRef == INVALID_NAVNODEREF)
-			{
-				GroundMovementMode = MOVE_Walking;
-				//UE_LOG(LogNavMeshMovement, Verbose, TEXT("ProcessLanded(): %s tried to go to NavWalking but couldn't find NavMesh! Using Walking instead."), *GetNameSafe(CharacterOwner));
-			}
-			*/
-		}
-
 		SetPostLandedPhysics(Hit);
 	}
-
-	// AI를 위한 부분
-	/*
-	IPathFollowingAgentInterface* PFAgent = GetPathFollowingAgent();
-	if (PFAgent)
-	{
-		PFAgent->OnLanded();
-	}*/
 
 	StartNewPhysics(remainingTime, Iterations);
 }
@@ -3370,73 +2999,6 @@ void UUSBMovementComponent::AddForce(FVector Force)
 			//UE_LOG(LogCharacterMovement, Warning, TEXT("Attempt to apply force to zero or negative Mass in CharacterMovement"));
 		}
 	}
-}
-
-// 5718
-void UUSBMovementComponent::MoveSmooth(const FVector& InVelocity, const float DeltaSeconds, FStepDownResult* OutStepDownResult)
-{
-	/*
-	if (!HasValidData())
-	{
-		return;
-	}
-
-	// Custom movement mode.
-	// Custom movement may need an update even if there is zero velocity.
-	if (MovementMode == MOVE_Custom)
-	{
-		FScopedMovementUpdate ScopedMovementUpdate(UpdatedComponent, bEnableScopedMovementUpdates ? EScopedUpdate::DeferredUpdates : EScopedUpdate::ImmediateUpdates);
-		PhysCustom(DeltaSeconds, 0);
-		return;
-	}
-
-	FVector Delta = InVelocity * DeltaSeconds;
-	if (Delta.IsZero())
-	{
-		return;
-	}
-
-	FScopedMovementUpdate ScopedMovementUpdate(UpdatedComponent, bEnableScopedMovementUpdates ? EScopedUpdate::DeferredUpdates : EScopedUpdate::ImmediateUpdates);
-
-	if (IsMovingOnGround())
-	{
-		MoveAlongFloor(InVelocity, DeltaSeconds, OutStepDownResult);
-	}
-	else
-	{
-		FHitResult Hit(1.f);
-		SafeMoveUpdatedComponent(Delta, UpdatedComponent->GetComponentQuat(), true, Hit);
-
-		if (Hit.IsValidBlockingHit())
-		{
-			bool bSteppedUp = false;
-
-			if (IsFlying())
-			{
-				if (CanStepUp(Hit))
-				{
-					OutStepDownResult = NULL; // No need for a floor when not walking.
-					if (FMath::Abs(Hit.ImpactNormal.Z) < 0.2f)
-					{
-						const FVector GravDir = FVector(0.f, 0.f, -1.f);
-						const FVector DesiredDir = CustomGetSafeNormal(Delta);
-						const float UpDown = GravDir | DesiredDir;
-						if ((UpDown < 0.5f) && (UpDown > -0.2f))
-						{
-							bSteppedUp = StepUp(GravDir, Delta * (1.f - Hit.Time), Hit, OutStepDownResult);
-						}
-					}
-				}
-			}
-
-			// If StepUp failed, try sliding.
-			if (!bSteppedUp)
-			{
-				SlideAlongSurface(Delta, 1.f - Hit.Time, Hit.Normal, Hit, false);
-			}
-		}
-	}
-	*/
 }
 
 // 5783
