@@ -6,10 +6,10 @@
 #include "Datas/USB_Macros.h"
 #include "Components/InputComponent.h"
 #include "GameFramework/Controller.h"
-
+#include "DrawDebugHelpers.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Animation/AnimBlueprint.h"
-
+#include "Components/PortSkMeshComponent.h"
 
 AUSB_PlayerPawn::AUSB_PlayerPawn(const FObjectInitializer& objInit):Super(objInit)
 {
@@ -19,10 +19,22 @@ AUSB_PlayerPawn::AUSB_PlayerPawn(const FObjectInitializer& objInit):Super(objIni
 	CreateSkFaceMesh();
 	m_CurrentHead = m_PinUSB;
 	m_CurrentTail = m_Pin5Pin;
+	m_fPortTraceRange = 77.f;
 	//SetHeadTail(m_PinUSB, m_Pin5Pin);
 }
 
+void AUSB_PlayerPawn::BeginPlay()
+{
+	Super::BeginPlay();
+	SetHeadTail(m_PinUSB, m_Pin5Pin);
+	InitTraceIgnoreAry();
+}
 
+void AUSB_PlayerPawn::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+	TickTracePortable();
+}
 void AUSB_PlayerPawn::InitPlayerPawn()
 {
 	m_fSpineAngularDamping = 20.f;
@@ -92,7 +104,12 @@ void AUSB_PlayerPawn::SetHeadTail(UPinSkMeshComponent * headWant, UPinSkMeshComp
 	m_Movement->SetVelocityBone(m_CurrentHead->GetBoneVelo());
 	m_Movement->SetUpdatedComponent(m_CurrentHead);
 
-	m_CamRoot->AttachToComponent(m_CurrentHead,FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	m_CamRoot->AttachToComponent(m_CurrentHead,FAttachmentTransformRules::KeepRelativeTransform);
+}
+
+void AUSB_PlayerPawn::AddIgnoreActorsToQuery(FCollisionQueryParams & queryParam)
+{
+	queryParam.AddIgnoredActors(m_AryTraceIgnoreActors);
 }
 
 void AUSB_PlayerPawn::SetupPlayerInputComponent(UInputComponent * PlayerInputComponent)
@@ -105,12 +122,18 @@ void AUSB_PlayerPawn::SetupPlayerInputComponent(UInputComponent * PlayerInputCom
 
 	PlayerInputComponent->BindAxis("Turn", this, &AUSB_PlayerPawn::RotateYaw);
 	PlayerInputComponent->BindAxis("LookUp", this, &AUSB_PlayerPawn::RotatePitch);
-
+	//Connect
+	PlayerInputComponent->BindAction(FName(TEXT("Connect")),EInputEvent::IE_Pressed,this, &AUSB_PlayerPawn::ConnectShot);
+	PlayerInputComponent->BindAction(FName(TEXT("Jump")), EInputEvent::IE_Pressed, this, &AUSB_PlayerPawn::Jump);
+	PlayerInputComponent->BindAction(FName(TEXT("Jump")), EInputEvent::IE_Released, this, &AUSB_PlayerPawn::StopJumping);
+	PlayerInputComponent->BindAction(FName(TEXT("HeadChange")), EInputEvent::IE_Pressed, this, &AUSB_PlayerPawn::ChangeHeadTail);
 }
-void AUSB_PlayerPawn::BeginPlay()
+
+void AUSB_PlayerPawn::InitTraceIgnoreAry()
 {
-	Super::BeginPlay();
-	SetHeadTail(m_PinUSB,m_Pin5Pin);
+	m_AryTraceIgnoreActors.Reserve(10);
+	AddTraceIgnoreActor(this);
+	m_Movement->SetTraceIgnoreActorAry(&m_AryTraceIgnoreActors);
 }
 void AUSB_PlayerPawn::MoveForward(float v)
 {
@@ -145,13 +168,95 @@ void AUSB_PlayerPawn::RotateYaw(float v)
 	AddControllerYawInput(v);
 }
 
-
 void AUSB_PlayerPawn::ChangeHeadTail()
 {
 	SetHeadTail(m_CurrentTail,m_CurrentHead);
+}
+
+bool AUSB_PlayerPawn::TryConnect()
+{
+	if (!m_CurrentFocusedPort)
+	{
+		return false;
+	}
+
+	bool Result= GetHead()->Connect(m_CurrentFocusedPort);
+
+	if (Result)
+	{
+		AddTraceIgnoreActor(m_CurrentFocusedPort->GetOwner());
+	}
+
+	return Result;
+}
+
+void AUSB_PlayerPawn::AddTraceIgnoreActor(AActor * actorWant)
+{
+	m_AryTraceIgnoreActors.Emplace(actorWant);
+}
+
+bool AUSB_PlayerPawn::RemoveTraceIgnoreActor(AActor * actorWant)
+{
+	return m_AryTraceIgnoreActors.Remove(actorWant);
 }
 
 UPinSkMeshComponent * AUSB_PlayerPawn::GetHead()
 {
 	return _inline_GetHead();
 }
+
+void AUSB_PlayerPawn::ConnectShot()
+{
+	TryConnect();
+}
+
+void AUSB_PlayerPawn::Jump()
+{
+	m_Movement->Jump();
+}
+
+void AUSB_PlayerPawn::StopJumping()
+{
+	m_Movement->StopJumping();
+}
+
+void AUSB_PlayerPawn::TickTracePortable()
+{
+	FHitResult HitResult;
+	FVector StartTrace = GetHead()->GetComponentLocation();
+	FVector EndTrace = (GetController()->GetRootComponent()->GetForwardVector() * m_fPortTraceRange) + StartTrace;
+
+	FCollisionQueryParams QueryParams;
+	AddIgnoreActorsToQuery(QueryParams);
+
+	DrawDebugLine(
+		GetWorld(),
+		StartTrace,
+		EndTrace,
+		FColor(255, 0, 0),
+		false, -1, 0,
+		6.333
+	);
+
+	if (GetWorld()->
+		LineTraceSingleByChannel(HitResult, StartTrace, EndTrace, ECC_GameTraceChannel4, QueryParams))
+	{
+		if (!HitResult.GetActor())
+		{
+			return;
+		}
+
+		UPortSkMeshComponent* PortableCompo = Cast<UPortSkMeshComponent>(HitResult.GetActor()->GetComponentByClass(UPortSkMeshComponent::StaticClass())); 
+
+		if (PortableCompo)
+		{
+			m_CurrentFocusedPort = PortableCompo;
+
+			return;
+		}
+	}
+
+	m_CurrentFocusedPort = nullptr;
+}
+
+

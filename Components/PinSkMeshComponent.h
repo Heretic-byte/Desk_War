@@ -19,17 +19,16 @@ enum class E_PinPortType :uint8
 	ELength
 };
 
-class UPort;
+class UPortSkMeshComponent;
 UCLASS()
 class DESK_WAR_API UPinSkMeshComponent : public USkeletalMeshComponent
 {
 	GENERATED_BODY()
 public:
-
-	
-
+	static FName ConnectPointName;
+public:
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnConnectPortOwner, UObject*, portOwner);
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnConnectPort, UPort*, port);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnConnectPort, UPortSkMeshComponent*, port);
 
 public:
 	UPinSkMeshComponent(const FObjectInitializer& objInit);
@@ -48,7 +47,7 @@ protected:
 	E_PinPortType m_Pintype;
 protected:
 	UPROPERTY()
-	UPort* m_PortConnected;
+	UPortSkMeshComponent* m_PortConnected;
 	UPROPERTY()
 	UObject* m_PortOwner;
 private:
@@ -59,11 +58,12 @@ public:
 public:
 	void SetPinType(E_PinPortType pinType);
 	FVector GetNeckLoc() const;
-	virtual void Connect(UPort* port);
+	virtual bool Connect(UPortSkMeshComponent* port);
 	virtual bool CheckTypeMatch(E_PinPortType portsType);
 	void SetNeckName(FName nameWant);
 	void SetVelocityPivotName(FName nameWant);
 private:
+	
 	virtual void BeginPlay() override;
 public:
 	FORCEINLINE FName GetBoneNeck()
@@ -74,7 +74,7 @@ public:
 	{
 		return m_NameVelocityPivotBone;
 	}
-	FORCEINLINE UPort* GetPortConnected()
+	FORCEINLINE UPortSkMeshComponent* GetPortConnected()
 	{
 		return m_PortConnected;
 	}

@@ -35,6 +35,7 @@ AUSB_PhysicsPawn::AUSB_PhysicsPawn(const FObjectInitializer& objInit):Super(objI
 	{
 		m_PinFriction = FoundUSBPhyMat.Object;
 	}
+
 }
 
 void AUSB_PhysicsPawn::CreatePinUSB()

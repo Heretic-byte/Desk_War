@@ -3,9 +3,11 @@
 
 #include "PinSkMeshComponent.h"
 
-#include "Components/Port.h"
+#include "Components/PortSkMeshComponent.h"
 #include "UObject/ConstructorHelpers.h"
 
+
+FName UPinSkMeshComponent::ConnectPointName(TEXT("ConnectPoint"));
 
 UPinSkMeshComponent::UPinSkMeshComponent(const FObjectInitializer& objInit) :Super(objInit)
 {
@@ -36,11 +38,11 @@ FVector UPinSkMeshComponent::GetNeckLoc() const
 	return GetSocketLocation(m_NameNeckBone);
 }
 
-void UPinSkMeshComponent::Connect(UPort * port)
+bool UPinSkMeshComponent::Connect(UPortSkMeshComponent * port)
 {
 	if (!CheckTypeMatch(port->GetPortType()))
 	{
-		return;
+		return false;
 	}
 
 	m_PortConnected = port;
@@ -49,6 +51,8 @@ void UPinSkMeshComponent::Connect(UPort * port)
 
 	m_OnConnectedPortOwner.Broadcast(m_PortOwner);
 	m_OnConnectedPort.Broadcast(m_PortConnected);
+
+	return true;
 }
 
 void UPinSkMeshComponent::BeginPlay()
@@ -72,6 +76,7 @@ void UPinSkMeshComponent::SetVelocityPivotName(FName nameWant)
 {
 	m_NameVelocityPivotBone = nameWant;
 }
+
 
 
 

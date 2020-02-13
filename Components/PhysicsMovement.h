@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Datas/USB_Macros.h"
 #include "GameFramework/PawnMovementComponent.h"
+#include "CollisionQueryParams.h"
 #include "PhysicsMovement.generated.h"
 
 /**
@@ -22,8 +23,15 @@ class DESK_WAR_API UPhysicsMovement : public UPawnMovementComponent
 	GENERATED_BODY()
 public:
 	UPhysicsMovement(const FObjectInitializer& objInit);
+public:
+	//FName Test;
+	//UPrimitiveComponent* TestTail;
 private:
+	UPROPERTY()
 	UPrimitiveComponent* m_MovingTarget;
+
+	TArray<AActor*>* m_ptrAryTraceIgnoreActors;
+private:
 	FVector m_InputNormal;
 	FVector m_Acceleration;
 	bool m_bOnGround;
@@ -36,7 +44,6 @@ private:
 	int m_nJumpCurrentCount;
 	float m_fJumpForceTimeRemaining;
 	//
-	
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement")
 	bool m_bDebugShowForwardCast;
@@ -90,8 +97,10 @@ private:
 	float GetAxisDeltaRotation(float InAxisRotationRate, float DeltaTime) const;
 	FRotator GetDeltaRotation(float DeltaTime) const;
 	FRotator ComputeOrientToMovementRotation(const FRotator& CurrentRotation, FRotator& DeltaRotation) const;
+	void AddIgnoreActorsToQuery(FCollisionQueryParams& queryParam);
 protected:
 	virtual bool IsFalling()  const override;
+	virtual void BeginPlay() override;
 private:
 	void ResetJumpState();
 	void CheckJumpInput(float delta);
@@ -104,6 +113,7 @@ private:
 	void TickRotate(float delta);
 	void TickMovement(float delta);
 public:
+	void SetTraceIgnoreActorAry(TArray<AActor*>* aryWant);
 	virtual void SetUpdatedComponent(USceneComponent* NewUpdatedComponent) override;
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 public:
