@@ -65,30 +65,22 @@ void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent
 	}
 }
 
-void UPhysicsMovement::SetVelocityBone(FName boneName)
+void UPhysicsMovement::SetDamping(float fLinDamp, float fAngDamp)
 {
-	m_NameLinearVelocityBone = boneName;
-}
-
-void UPhysicsMovement::SetMovingForce(float fForce)
-{
-	m_fMovingForce = fForce;
-}
-
-void UPhysicsMovement::SetJumpZVelocity(float zVelo)
-{
-	m_fJumpZVelocity = zVelo;
-}
-
-void UPhysicsMovement::SetAngularDamping(float fAngDamp)
-{
-	m_fAngularDampingForPhysicsAsset = fAngDamp;
-}
-
-void UPhysicsMovement::SetLinearDamping(float fLinDamp)
-{
+	if (!GetWorld())
+	{
+		return;
+	}
 	m_fLinearDampingForPhysicsAsset = fLinDamp;
+	m_fAngularDampingForPhysicsAsset = fAngDamp;
+	if (m_MovingTarget->GetBodyInstance())
+	{
+		m_MovingTarget->SetAngularDamping(m_fAngularDampingForPhysicsAsset);
+		m_MovingTarget->SetLinearDamping(m_fLinearDampingForPhysicsAsset);
+		m_MovingTarget->GetBodyInstance()->UpdateDampingProperties();
+	}
 }
+
 
 void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction)
 {

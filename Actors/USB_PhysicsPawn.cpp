@@ -4,6 +4,7 @@
 #include "USB_PhysicsPawn.h"
 #include "UObject/ConstructorHelpers.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
+#include "PhysicsEngine/PhysicsAsset.h"
 // Sets default values
 AUSB_PhysicsPawn::AUSB_PhysicsPawn(const FObjectInitializer& objInit):Super(objInit)
 {
@@ -19,7 +20,7 @@ AUSB_PhysicsPawn::AUSB_PhysicsPawn(const FObjectInitializer& objInit):Super(objI
 	m_ArySpineColls.Empty();
 	m_ArySplineMeshCompos.Empty();
 
-	static ConstructorHelpers::FObjectFinder<UPhysicalMaterial> FoundPhyMat(TEXT("PhysicalMaterial'/Game/01_FinalUSB/PhysicsMaterial/PM_LowFriction1.PM_LowFriction1'"));
+	static ConstructorHelpers::FObjectFinder<UPhysicalMaterial> FoundPhyMat(TEXT("PhysicalMaterial'/Game/PhysicsMaterial/PM_LowFriction.PM_LowFriction'"));
 	if (FoundPhyMat.Succeeded())
 	{
 		m_SpineFriction = FoundPhyMat.Object;
@@ -30,7 +31,7 @@ AUSB_PhysicsPawn::AUSB_PhysicsPawn(const FObjectInitializer& objInit):Super(objI
 	CreatePin4Pin();
 	CreateSpline();
 
-	static ConstructorHelpers::FObjectFinder<UPhysicalMaterial> FoundUSBPhyMat(TEXT("/Game/01_FinalUSB/PhysicsMaterial/PM_USB_Main.PM_USB_Main"));
+	static ConstructorHelpers::FObjectFinder<UPhysicalMaterial> FoundUSBPhyMat(TEXT("PhysicalMaterial'/Game/PhysicsMaterial/PM_USB_Main.PM_USB_Main'"));
 	if (FoundUSBPhyMat.Succeeded())
 	{
 		m_PinFriction = FoundUSBPhyMat.Object;
@@ -44,11 +45,20 @@ void AUSB_PhysicsPawn::CreatePinUSB()
 	m_PinUSB->SetupAttachment(RootComponent);
 	m_PinUSB->SetPinType(E_PinPortType::EUSB);
 
-	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FoundMeshPortUSB(TEXT("SkeletalMesh'/Game/01_FinalUSB/Mesh/Head/NewHead0120/USB_Head_Mesh_06.USB_Head_Mesh_06'"));
-	check(FoundMeshPortUSB.Object);
-	m_PinUSB->SetSkeletalMesh(FoundMeshPortUSB.Object);
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FoundMeshPinUSB(TEXT("SkeletalMesh'/Game/Meshes/Characters/Player_USB/SK_USB_Head.SK_USB_Head'"));
+	check(FoundMeshPinUSB.Object);
+	m_PinUSB->SetSkeletalMesh(FoundMeshPinUSB.Object);
 	m_PinUSB->SetCollisionProfileName(TEXT("USBMesh"));
 	m_PinUSB->RelativeScale3D = FVector(3.000000, 3.000000, 3.000000);
+	m_PinUSB->bEditableWhenInherited = true;
+
+	if (!GetWorld())
+	{
+		return;
+	}
+	static ConstructorHelpers::FObjectFinder<UPhysicsAsset> Found_PA_USB(TEXT("PhysicsAsset'/Game/PhysicsAsset/PA_USB_Head.PA_USB_Head'"));
+	check(Found_PA_USB.Object);
+	m_PinUSB->SetPhysicsAsset(Found_PA_USB.Object);
 }
 
 void AUSB_PhysicsPawn::CreatePin4Pin()
@@ -57,24 +67,35 @@ void AUSB_PhysicsPawn::CreatePin4Pin()
 	m_Pin5Pin->SetupAttachment(RootComponent);
 	m_Pin5Pin->SetPinType(E_PinPortType::E5Pin);
 
-	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FoundMeshPort4Pin(TEXT("SkeletalMesh'/Game/01_FinalUSB/Mesh/Tail/Tail_03.Tail_03'"));
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FoundMeshPort4Pin(TEXT("SkeletalMesh'/Game/Meshes/Characters/Player_USB/SK_USB_Tail.SK_USB_Tail'"));
 	check(FoundMeshPort4Pin.Object);
 	m_Pin5Pin->SetSkeletalMesh(FoundMeshPort4Pin.Object);
 	m_Pin5Pin->SetCollisionProfileName(TEXT("USBMesh"));
 	m_Pin5Pin->SetNeckName(TEXT("joint12"));
 	m_Pin5Pin->SetVelocityPivotName(TEXT("joint11"));
-	m_Pin5Pin->RelativeLocation = FVector(-83.560440, 0.000000, 0.000000);
+	m_Pin5Pin->RelativeLocation = FVector(-93.560440, 0.000000, 0.000000);
 	m_Pin5Pin->RelativeRotation = FRotator(0.f, 180.f, 0.f);
 	m_Pin5Pin->RelativeScale3D = FVector(3.000000, 3.000000, 3.000000);
+	m_Pin5Pin->bEditableWhenInherited = true;
+
+	if (!GetWorld())
+	{
+		return;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UPhysicsAsset> Found_PA_5Pin(TEXT("PhysicsAsset'/Game/PhysicsAsset/PA_USB_Tail.PA_USB_Tail'"));
+	check(Found_PA_5Pin.Object);
+	m_Pin5Pin->SetPhysicsAsset(Found_PA_5Pin.Object);
 }
 
 void AUSB_PhysicsPawn::CreateSpline()
 {
 	m_SpineSpline = CreateDefaultSubobject<USplineComponent>(TEXT("Spine00"));
 	m_SpineSpline->SetupAttachment(RootComponent);
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> FoundMeshSpine(TEXT("StaticMesh'/Game/01_FinalUSB/Mesh/Body/USB_Parts_Body.USB_Parts_Body'"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> FoundMeshSpine(TEXT("StaticMesh'/Game/Meshes/Characters/Player_USB/ST_USB_Spine.ST_USB_Spine'"));
 	check(FoundMeshSpine.Object);
 	m_SpineMesh = FoundMeshSpine.Object;
+	m_SpineSpline->bEditableWhenInherited = true;
 }
 
 void AUSB_PhysicsPawn::InitUSB()

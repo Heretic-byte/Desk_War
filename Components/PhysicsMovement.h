@@ -37,14 +37,15 @@ private:
 	bool m_bOnGround;
 	bool m_bPressedJump;
 	FHitResult m_GroundHitResult;
-	FName m_NameLinearVelocityBone;
 	//jump
 	bool m_bWasJumping;
 	float m_fJumpKeyHoldTime;
 	int m_nJumpCurrentCount;
 	float m_fJumpForceTimeRemaining;
 	//
-protected:
+public:
+	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement")
+	FName m_NameLinearVelocityBone;
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement")
 	bool m_bDebugShowForwardCast;
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
@@ -71,7 +72,6 @@ protected:
 	float m_fMaxHoldTime;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement_Jump", meta = (ClampMin = "0", UIMin = "0"))
 	int m_nJumpMaxCount;
-protected://Air
 	UPROPERTY(Category = "PhysicsMovement_Jump", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
 	float m_fAirControl;
 public:
@@ -116,15 +116,5 @@ public:
 	void SetTraceIgnoreActorAry(TArray<AActor*>* aryWant);
 	virtual void SetUpdatedComponent(USceneComponent* NewUpdatedComponent) override;
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-public:
-	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
-	void SetVelocityBone(FName boneName);
-	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
-	void SetMovingForce(float fForce);
-	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
-	void SetJumpZVelocity(float zVelo);
-	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
-	void SetAngularDamping(float fAngDamp);
-	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
-	void SetLinearDamping(float fLinDamp);
+	void SetDamping(float fLinDamp, float fAngDamp);
 };

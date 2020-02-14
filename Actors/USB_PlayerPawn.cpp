@@ -17,9 +17,7 @@ AUSB_PlayerPawn::AUSB_PlayerPawn(const FObjectInitializer& objInit):Super(objIni
 	CreatePhysicMovement();
 	CreateCameraFamily();
 	CreateSkFaceMesh();
-	m_CurrentHead = m_PinUSB;
-	m_CurrentTail = m_Pin5Pin;
-	m_fPortTraceRange = 77.f;
+	
 	//SetHeadTail(m_PinUSB, m_Pin5Pin);
 }
 
@@ -37,22 +35,36 @@ void AUSB_PlayerPawn::Tick(float DeltaTime)
 }
 void AUSB_PlayerPawn::InitPlayerPawn()
 {
-	m_fSpineAngularDamping = 20.f;
-	m_fSpineLinearDamping = 10.f;
-	m_fCollMass = 0.1f;
-	m_fMaxAngularVelocity = 1000.f;
+	m_fSpineAngularDamping = 1.f;
+	m_fSpineLinearDamping = 0.01f;
+	m_fCollMass = 1.f;
+	m_fMaxAngularVelocity = 150.f;
 
 	AutoPossessPlayer = EAutoReceiveInput::Player0;
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+
+	m_CurrentHead = m_PinUSB;
+	m_CurrentTail = m_Pin5Pin;
+	m_fPortTraceRange = 77.f;
+
+
 }
 
 void AUSB_PlayerPawn::CreatePhysicMovement()
 {
 	m_Movement = CreateDefaultSubobject<UPhysicsMovement>(TEXT("Movement00"));
 
-	m_Movement->SetMovingForce(7000.f);
-	m_Movement->SetAngularDamping(12.f);
-	m_Movement->SetLinearDamping(8.f);
+	m_Movement->SetUpdatedComponent(m_CurrentHead);
+	m_Movement->SetDamping(0.01f, 1.f);
+
+	m_Movement->m_fMovingForce=28000.f;
+	m_Movement->m_fGroundCastBoxSize = 10.f;
+	m_Movement->m_fForwardCastOffset = 55.f;
+	m_Movement->m_fGroundCastOffset = -20.f;
+	m_Movement->m_WalkableSlopeAngle = 55.f;
+	m_Movement->m_fJumpZVelocity = 3000.f;
+	m_Movement->m_nJumpMaxCount = 2;
+	m_Movement->m_fAirControl = 0.3f;
 }
 
 void AUSB_PlayerPawn::CreateCameraFamily()
@@ -85,7 +97,7 @@ void AUSB_PlayerPawn::CreateSkFaceMesh()
 {
 	m_MeshFaceSk = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FaceSkMesh00"));
 	m_MeshFaceSk->SetupAttachment(m_PinUSB);
-	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FoundSkMesh(TEXT("SkeletalMesh'/Game/01_FinalUSB/Mesh/Head/NewFace/Face_idle.Face_idle'"));
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FoundSkMesh(TEXT("SkeletalMesh'/Game/Meshes/Characters/Player_USB/SK_USB_Face.SK_USB_Face'"));
 
 	if (FoundSkMesh.Succeeded())
 	{
@@ -101,7 +113,8 @@ void AUSB_PlayerPawn::SetHeadTail(UPinSkMeshComponent * headWant, UPinSkMeshComp
 	m_CurrentHead = headWant;
 	m_CurrentTail = tailWant;
 
-	m_Movement->SetVelocityBone(m_CurrentHead->GetBoneVelo());
+	m_Movement->m_NameLinearVelocityBone=m_CurrentHead->GetBoneVelo();
+
 	m_Movement->SetUpdatedComponent(m_CurrentHead);
 
 	m_CamRoot->AttachToComponent(m_CurrentHead,FAttachmentTransformRules::KeepRelativeTransform);
