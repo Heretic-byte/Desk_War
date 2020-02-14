@@ -24,8 +24,8 @@ class DESK_WAR_API UPhysicsMovement : public UPawnMovementComponent
 public:
 	UPhysicsMovement(const FObjectInitializer& objInit);
 public:
-	//FName Test;
-	//UPrimitiveComponent* TestTail;
+	FName Test;
+	UPrimitiveComponent* TestTail;
 private:
 	UPROPERTY()
 	UPrimitiveComponent* m_MovingTarget;

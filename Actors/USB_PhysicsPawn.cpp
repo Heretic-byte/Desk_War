@@ -14,9 +14,9 @@ AUSB_PhysicsPawn::AUSB_PhysicsPawn(const FObjectInitializer& objInit):Super(objI
 	m_fLineRadius = 5.3f;
 	m_fLineExtraSpacing = 2.f;
 	m_fCollMass = 0.5;
-	m_fSpineLinearDamping = 1.f;
+	m_fSpineLinearDamping = 0.01f;
 	m_fSpineAngularDamping = 1.f;
-	m_fMaxAngularVelocity = 500.f;
+	m_fMaxAngularVelocity = 150.f;
 	m_ArySpineColls.Empty();
 	m_ArySplineMeshCompos.Empty();
 
@@ -52,13 +52,9 @@ void AUSB_PhysicsPawn::CreatePinUSB()
 	m_PinUSB->RelativeScale3D = FVector(3.000000, 3.000000, 3.000000);
 	m_PinUSB->bEditableWhenInherited = true;
 
-	if (!GetWorld())
-	{
-		return;
-	}
 	static ConstructorHelpers::FObjectFinder<UPhysicsAsset> Found_PA_USB(TEXT("PhysicsAsset'/Game/PhysicsAsset/PA_USB_Head.PA_USB_Head'"));
 	check(Found_PA_USB.Object);
-	m_PinUSB->SetPhysicsAsset(Found_PA_USB.Object);
+	m_paHead = Found_PA_USB.Object;
 }
 
 void AUSB_PhysicsPawn::CreatePin4Pin()
@@ -73,19 +69,14 @@ void AUSB_PhysicsPawn::CreatePin4Pin()
 	m_Pin5Pin->SetCollisionProfileName(TEXT("USBMesh"));
 	m_Pin5Pin->SetNeckName(TEXT("joint12"));
 	m_Pin5Pin->SetVelocityPivotName(TEXT("joint11"));
-	m_Pin5Pin->RelativeLocation = FVector(-93.560440, 0.000000, 0.000000);
+	m_Pin5Pin->RelativeLocation = FVector(-85.560440, 0.000000, 0.000000);
 	m_Pin5Pin->RelativeRotation = FRotator(0.f, 180.f, 0.f);
 	m_Pin5Pin->RelativeScale3D = FVector(3.000000, 3.000000, 3.000000);
 	m_Pin5Pin->bEditableWhenInherited = true;
 
-	if (!GetWorld())
-	{
-		return;
-	}
-
 	static ConstructorHelpers::FObjectFinder<UPhysicsAsset> Found_PA_5Pin(TEXT("PhysicsAsset'/Game/PhysicsAsset/PA_USB_Tail.PA_USB_Tail'"));
 	check(Found_PA_5Pin.Object);
-	m_Pin5Pin->SetPhysicsAsset(Found_PA_5Pin.Object);
+	m_paTail = Found_PA_5Pin.Object;
 }
 
 void AUSB_PhysicsPawn::CreateSpline()
@@ -100,6 +91,8 @@ void AUSB_PhysicsPawn::CreateSpline()
 
 void AUSB_PhysicsPawn::InitUSB()
 {
+	m_PinUSB->SetPhysicsAsset(m_paHead);
+	m_Pin5Pin->SetPhysicsAsset(m_paTail);
 	m_nSphereSpineCount =SetTailLocation();
 	if (m_nSphereSpineCount <= 0)
 	{

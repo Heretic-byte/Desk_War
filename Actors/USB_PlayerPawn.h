@@ -10,13 +10,16 @@
 #include "Components/PhysicsMovement.h"
 #include "USB_PlayerPawn.generated.h"
 class UPortSkMeshComponent;
-UCLASS()
+
+
+UCLASS(BlueprintType)
 class DESK_WAR_API AUSB_PlayerPawn : public AUSB_PhysicsPawn
 {
 	GENERATED_BODY()
 public:
 	AUSB_PlayerPawn(const FObjectInitializer& objInit);
 protected:
+	FVector m_CamOffset;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "USB_Action")
 	float m_fPortTraceRange;
 protected://component

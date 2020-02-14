@@ -95,11 +95,11 @@ void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 	TickCastGround();
 	FVector InputDir = ConsumeInputVector();
 	m_Acceleration = ScaleInputAccel(InputDir);
-	if (!TickCheckCanMoveForward())
+	if (TickCheckCanMoveForward())
 	{
-		return;
+		TickMovement(DeltaTime);
 	}
-	TickMovement(DeltaTime);
+	ClearJumpInput(DeltaTime);
 }
 void UPhysicsMovement::TickMovement(float delta)
 {
@@ -118,8 +118,6 @@ void UPhysicsMovement::TickMovement(float delta)
 	}
 
 	UpdateComponentVelocity();
-
-	ClearJumpInput(delta);
 }
 void UPhysicsMovement::TickRotate(float delta)
 {
@@ -300,7 +298,6 @@ void UPhysicsMovement::Jump()
 void UPhysicsMovement::StopJumping()
 {
 	m_bPressedJump = false;
-	ResetJumpState();
 }
 
 
@@ -352,13 +349,12 @@ bool UPhysicsMovement::DoJump()
 {
 	if (CanJump())
 	{
-		PRINTF("Did Jump");
 		FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
-
 		CurrentV.Z = FMath::Max(CurrentV.Z, m_fJumpZVelocity);
-
 		m_MovingTarget->SetPhysicsLinearVelocity(CurrentV);
-		//TestTail->SetPhysicsLinearVelocity(CurrentV, false, Test);
+
+		TestTail->SetPhysicsLinearVelocity(CurrentV);
+
 		m_nJumpCurrentCount++;
 		return true;
 	}
@@ -383,20 +379,21 @@ void UPhysicsMovement::ClearJumpInput(float delta)
 		m_fJumpForceTimeRemaining = 0.0f;
 		m_bWasJumping = false;
 	}
+
+	if(IsGround())
+		ResetJumpState();
 }
 
 
 bool UPhysicsMovement::CanJump() const
 {
 	bool bCanJump = true;
-	PRINTF("Can Jump1");
 
 	if (m_nJumpCurrentCount == 0)
 	{
-		PRINTF("Can Jump2");
 		bCanJump = IsGround();
 	}
-	bCanJump =  m_nJumpCurrentCount < m_nJumpMaxCount;
+	bCanJump =  m_nJumpCurrentCount < m_nJumpMaxCount -1;
 
 	return bCanJump;
 }
@@ -407,10 +404,5 @@ void UPhysicsMovement::ResetJumpState()
 	m_bWasJumping = false;
 	m_fJumpKeyHoldTime = 0.0f;
 	m_fJumpForceTimeRemaining = 0.0f;
-	PRINTF("Reset Jump1");
-	if (!IsFalling())
-	{
-		PRINTF("Reset Jump2");
-		m_nJumpCurrentCount = 0;
-	}
+	m_nJumpCurrentCount = 0;
 }

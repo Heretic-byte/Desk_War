@@ -20,7 +20,7 @@ enum class E_PinPortType :uint8
 };
 
 class UPortSkMeshComponent;
-UCLASS()
+UCLASS(ClassGroup = (Custom), hidecategories = Object, config = Engine, editinlinenew, meta = (BlueprintSpawnableComponent),BlueprintType)
 class DESK_WAR_API UPinSkMeshComponent : public USkeletalMeshComponent
 {
 	GENERATED_BODY()
@@ -66,6 +66,10 @@ private:
 	
 	virtual void BeginPlay() override;
 public:
+	FORCEINLINE FName GetNameConnectPoint()
+	{
+		return m_NameConnectSocket;
+	}
 	FORCEINLINE FName GetBoneNeck()
 	{
 		return m_NameNeckBone;

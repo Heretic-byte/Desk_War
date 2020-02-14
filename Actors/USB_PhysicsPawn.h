@@ -18,6 +18,7 @@
 
 #include "USB_PhysicsPawn.generated.h"
 
+class UPhysicsAsset;
 UCLASS()
 class DESK_WAR_API AUSB_PhysicsPawn : public APawn
 {
@@ -26,11 +27,11 @@ class DESK_WAR_API AUSB_PhysicsPawn : public APawn
 public:
 	AUSB_PhysicsPawn(const FObjectInitializer& objInit);
 protected://components
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "USB_Body_Mesh",  meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "USB_Body_Mesh",  meta = (AllowPrivateAccess = "true"))
 	UPinSkMeshComponent* m_PinUSB;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "USB_Body_Mesh",  meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly , Category = "USB_Body_Mesh", meta = (AllowPrivateAccess = "true"))
 	UPinSkMeshComponent* m_Pin5Pin;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Spine_Physics", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spine_Physics", meta = (AllowPrivateAccess = "true"))
 	USplineComponent* m_SpineSpline;
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Spine_Physics")
@@ -58,6 +59,10 @@ protected:
 	float m_fMaxAngularVelocity;
 private:
 	int m_nSphereSpineCount;
+	UPROPERTY()
+	UPhysicsAsset* m_paHead;
+	UPROPERTY()
+	UPhysicsAsset* m_paTail;
 public:
 	UFUNCTION(BlueprintCallable, Category = "Init")
 	virtual void InitUSB() ;

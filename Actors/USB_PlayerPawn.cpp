@@ -8,8 +8,10 @@
 #include "GameFramework/Controller.h"
 #include "DrawDebugHelpers.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "Animation/AnimBlueprint.h"
 #include "Components/PortSkMeshComponent.h"
+#include "DrawDebugHelpers.h"
 
 AUSB_PlayerPawn::AUSB_PlayerPawn(const FObjectInitializer& objInit):Super(objInit)
 {
@@ -17,22 +19,15 @@ AUSB_PlayerPawn::AUSB_PlayerPawn(const FObjectInitializer& objInit):Super(objIni
 	CreatePhysicMovement();
 	CreateCameraFamily();
 	CreateSkFaceMesh();
-	
-	//SetHeadTail(m_PinUSB, m_Pin5Pin);
 }
 
 void AUSB_PlayerPawn::BeginPlay()
 {
 	Super::BeginPlay();
-	SetHeadTail(m_PinUSB, m_Pin5Pin);
+	SetHeadTail(m_CurrentHead, m_CurrentTail);
 	InitTraceIgnoreAry();
 }
 
-void AUSB_PlayerPawn::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-	TickTracePortable();
-}
 void AUSB_PlayerPawn::InitPlayerPawn()
 {
 	m_fSpineAngularDamping = 1.f;
@@ -46,8 +41,6 @@ void AUSB_PlayerPawn::InitPlayerPawn()
 	m_CurrentHead = m_PinUSB;
 	m_CurrentTail = m_Pin5Pin;
 	m_fPortTraceRange = 77.f;
-
-
 }
 
 void AUSB_PlayerPawn::CreatePhysicMovement()
@@ -55,28 +48,35 @@ void AUSB_PlayerPawn::CreatePhysicMovement()
 	m_Movement = CreateDefaultSubobject<UPhysicsMovement>(TEXT("Movement00"));
 
 	m_Movement->SetUpdatedComponent(m_CurrentHead);
+	m_Movement->TestTail = m_CurrentTail;
+
 	m_Movement->SetDamping(0.01f, 1.f);
 
-	m_Movement->m_fMovingForce=28000.f;
+	m_Movement->m_fMovingForce=38000.f;
 	m_Movement->m_fGroundCastBoxSize = 10.f;
 	m_Movement->m_fForwardCastOffset = 55.f;
 	m_Movement->m_fGroundCastOffset = -20.f;
 	m_Movement->m_WalkableSlopeAngle = 55.f;
-	m_Movement->m_fJumpZVelocity = 3000.f;
+	m_Movement->m_fJumpZVelocity = 2000.f;
 	m_Movement->m_nJumpMaxCount = 2;
-	m_Movement->m_fAirControl = 0.3f;
+	m_Movement->m_fAirControl = 0.2f;
+
+	m_Movement->m_bDebugShowForwardCast = false;
 }
 
 void AUSB_PlayerPawn::CreateCameraFamily()
 {
 	m_CamRoot = CreateDefaultSubobject<USceneComponent>(TEXT("CamRoot"));
 	m_CamRoot->SetupAttachment(m_PinUSB);
+	m_CamOffset = FVector(3.5f, 0.f, 0.f);
+	m_CamRoot->SetRelativeLocation(m_CamOffset);
 
 	m_MainSpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("Spring00"));
 	m_MainSpringArm->SetupAttachment(m_CamRoot);
 	m_MainSpringArm->TargetArmLength = 600.f;
 	m_MainSpringArm->SocketOffset = FVector(50.f, 0, 0);
 	m_MainSpringArm->TargetOffset = FVector(0.f, 0.f, 400.f);
+	m_MainSpringArm->m_fMinimumArmLength = 33.f;
 	m_MainSpringArm->bUsePawnControlRotation = true;
 	m_MainSpringArm->bInheritRoll = false;
 	m_MainSpringArm->bEnableCameraLag = true;
@@ -116,6 +116,8 @@ void AUSB_PlayerPawn::SetHeadTail(UPinSkMeshComponent * headWant, UPinSkMeshComp
 	m_Movement->m_NameLinearVelocityBone=m_CurrentHead->GetBoneVelo();
 
 	m_Movement->SetUpdatedComponent(m_CurrentHead);
+	m_Movement->TestTail = m_CurrentTail;
+	m_Movement->Test = m_CurrentTail->GetBoneVelo();
 
 	m_CamRoot->AttachToComponent(m_CurrentHead,FAttachmentTransformRules::KeepRelativeTransform);
 }
@@ -148,6 +150,22 @@ void AUSB_PlayerPawn::InitTraceIgnoreAry()
 	AddTraceIgnoreActor(this);
 	m_Movement->SetTraceIgnoreActorAry(&m_AryTraceIgnoreActors);
 }
+
+void AUSB_PlayerPawn::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+	TickTracePortable();
+
+		DrawDebugLine(
+			GetWorld(),
+			GetHead()->GetComponentLocation(),
+			m_CamRoot->GetComponentLocation(),
+			FColor(0, 100, 150),
+			false, -1, 0,
+			5.333
+		);
+}
+
 void AUSB_PlayerPawn::MoveForward(float v)
 {
 	if ((Controller != NULL) && (v != 0.0f))
@@ -242,14 +260,14 @@ void AUSB_PlayerPawn::TickTracePortable()
 	FCollisionQueryParams QueryParams;
 	AddIgnoreActorsToQuery(QueryParams);
 
-	DrawDebugLine(
+	/*DrawDebugLine(
 		GetWorld(),
 		StartTrace,
 		EndTrace,
 		FColor(255, 0, 0),
 		false, -1, 0,
 		6.333
-	);
+	);*/
 
 	if (GetWorld()->
 		LineTraceSingleByChannel(HitResult, StartTrace, EndTrace, ECC_GameTraceChannel4, QueryParams))

@@ -25,9 +25,15 @@ protected:
 	FName m_NamePinConnectBone;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interact")
 	E_PinPortType m_PortType;
-protected:
 	UPROPERTY(VisibleAnywhere)
 	UPinSkMeshComponent* m_ConnectedPin;
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Connect")
+	UPhysicsConstraintComponent* m_PhysicsConst;
+private:
+	bool m_bIsConnected;
+private:
+	void CreatePhysicsConst();
 public:
 	UFUNCTION(BlueprintCallable, Category = "Interact")
 	void Connect(UPinSkMeshComponent* connector);
