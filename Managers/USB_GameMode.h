@@ -6,12 +6,14 @@
 #include "GameFramework/GameModeBase.h"
 #include "USB_GameMode.generated.h"
 
-/**
- * 
- */
+
+
 UCLASS()
 class DESK_WAR_API AUSB_GameMode : public AGameModeBase
 {
 	GENERATED_BODY()
-	
+
+public:
+	AUSB_GameMode(const FObjectInitializer& ObjectInitializer);
+
 };

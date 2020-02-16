@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "ActionManagerComponent.h"
 #include "Camera/CameraComponent.h"
-#include "GameFramework/SpringArmComponent.h"
+#include "Components/USB_SpringArm.h"
 #include "Actors/USB_PhysicsPawn.h"
 #include "Components/PhysicsMovement.h"
 #include "USB_PlayerPawn.generated.h"
@@ -30,7 +30,7 @@ protected://component
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Camera")
 	UCameraComponent* m_MainCam;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Camera")
-	USpringArmComponent* m_MainSpringArm;
+	UUSB_SpringArm* m_MainSpringArm;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "USB_Action")
 	UActionManagerComponent* m_ActionManager;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "USB_Body")

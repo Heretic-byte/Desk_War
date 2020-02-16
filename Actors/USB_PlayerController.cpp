@@ -2,10 +2,13 @@
 
 
 #include "USB_PlayerController.h"
+#include "Managers/USB_CameraManager.h"
+#include "Managers/USB_CheatManager.h"
 
 AUSB_PlayerController::AUSB_PlayerController()
 {
-
+	PlayerCameraManagerClass = AUSB_CameraManager::StaticClass();
+	CheatClass = UUSB_CheatManager::StaticClass();
 }
 
 

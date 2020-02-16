@@ -59,7 +59,7 @@ void AUSB_PlayerPawn::CreatePhysicMovement()
 	m_Movement->m_WalkableSlopeAngle = 55.f;
 	m_Movement->m_fJumpZVelocity = 2000.f;
 	m_Movement->m_nJumpMaxCount = 2;
-	m_Movement->m_fAirControl = 0.2f;
+	m_Movement->m_fAirControl = 0.6f;
 
 	m_Movement->m_bDebugShowForwardCast = false;
 }
@@ -71,7 +71,7 @@ void AUSB_PlayerPawn::CreateCameraFamily()
 	m_CamOffset = FVector(3.5f, 0.f, 0.f);
 	m_CamRoot->SetRelativeLocation(m_CamOffset);
 
-	m_MainSpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("Spring00"));
+	m_MainSpringArm = CreateDefaultSubobject<UUSB_SpringArm>(TEXT("Spring00"));
 	m_MainSpringArm->SetupAttachment(m_CamRoot);
 	m_MainSpringArm->TargetArmLength = 600.f;
 	m_MainSpringArm->SocketOffset = FVector(50.f, 0, 0);
