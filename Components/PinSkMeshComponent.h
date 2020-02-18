@@ -36,11 +36,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Body_Bones")
 	FName m_NameNeckBone;
 	UPROPERTY(EditDefaultsOnly, Category = "Body_Bones")
-	FName m_NameConnectSocket;
-	UPROPERTY(EditDefaultsOnly, Category = "Body_Bones")
-	FName m_NameConnectStartSocket;
-	UPROPERTY(EditDefaultsOnly, Category = "Body_Bones")
-	FName m_NameConnectPushPointSocket;
+	FName m_NamePinBone;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Body_Bones")
 	FName m_NameVelocityPivotBone;
 	UPROPERTY(EditDefaultsOnly, Category = "PinType")
@@ -68,7 +64,7 @@ private:
 public:
 	FORCEINLINE FName GetNameConnectPoint()
 	{
-		return m_NameConnectSocket;
+		return m_NamePinBone;
 	}
 	FORCEINLINE FName GetBoneNeck()
 	{

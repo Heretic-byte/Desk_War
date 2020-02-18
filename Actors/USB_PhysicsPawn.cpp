@@ -49,9 +49,7 @@ void AUSB_PhysicsPawn::CreatePinUSB()
 	check(FoundMeshPinUSB.Object);
 	m_PinUSB->SetSkeletalMesh(FoundMeshPinUSB.Object);
 	m_PinUSB->SetCollisionProfileName(TEXT("USBMesh"));
-	m_PinUSB->RelativeScale3D = FVector(3.000000, 3.000000, 3.000000);
 	m_PinUSB->bEditableWhenInherited = true;
-
 	static ConstructorHelpers::FObjectFinder<UPhysicsAsset> Found_PA_USB(TEXT("PhysicsAsset'/Game/PhysicsAsset/PA_USB_Head.PA_USB_Head'"));
 	check(Found_PA_USB.Object);
 	m_paHead = Found_PA_USB.Object;
@@ -67,11 +65,8 @@ void AUSB_PhysicsPawn::CreatePin4Pin()
 	check(FoundMeshPort4Pin.Object);
 	m_Pin5Pin->SetSkeletalMesh(FoundMeshPort4Pin.Object);
 	m_Pin5Pin->SetCollisionProfileName(TEXT("USBMesh"));
-	m_Pin5Pin->SetNeckName(TEXT("joint12"));
-	m_Pin5Pin->SetVelocityPivotName(TEXT("joint11"));
 	m_Pin5Pin->RelativeLocation = FVector(-85.560440, 0.000000, 0.000000);
 	m_Pin5Pin->RelativeRotation = FRotator(0.f, 180.f, 0.f);
-	m_Pin5Pin->RelativeScale3D = FVector(3.000000, 3.000000, 3.000000);
 	m_Pin5Pin->bEditableWhenInherited = true;
 
 	static ConstructorHelpers::FObjectFinder<UPhysicsAsset> Found_PA_5Pin(TEXT("PhysicsAsset'/Game/PhysicsAsset/PA_USB_Tail.PA_USB_Tail'"));

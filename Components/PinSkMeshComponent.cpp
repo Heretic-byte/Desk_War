@@ -13,11 +13,9 @@ UPinSkMeshComponent::UPinSkMeshComponent(const FObjectInitializer& objInit) :Sup
 {
 	m_PortConnected = nullptr;
 	m_PortOwner = nullptr;
-	m_NameNeckBone = FName(TEXT("joint9"));
-	m_NameConnectSocket = FName(TEXT("ConnectPoint"));
-	m_NameConnectStartSocket = FName(TEXT("ConnectStart"));
-	m_NameConnectPushPointSocket = FName(TEXT("PushPoint"));
-	m_NameVelocityPivotBone = FName(TEXT("joint8"));
+	m_NameNeckBone = FName(TEXT("Root"));
+	m_NamePinBone = FName(TEXT("PinPoint"));
+	m_NameVelocityPivotBone = FName(TEXT("PinPoint"));
 	m_Pintype = E_PinPortType::ENoneType;
 
 	for (auto& b : m_AryTypeMatch)

@@ -27,14 +27,18 @@ protected:
 	E_PinPortType m_PortType;
 	UPROPERTY(VisibleAnywhere)
 	UPinSkMeshComponent* m_ConnectedPin;
-protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Connect")
+	UPROPERTY(VisibleAnywhere)
 	UPhysicsConstraintComponent* m_PhysicsConst;
-private:
+protected:
 	bool m_bIsConnected;
 private:
-	void CreatePhysicsConst();
+	void ConstraintPinPort();
+	void AdjustPinActorTransform();
+	void DisableCollider();
+	void EnableCollider();
 public:
+	UFUNCTION(BlueprintCallable, Category = "Connect Init")
+	void InitPort(UPhysicsConstraintComponent* physicsJoint, E_PinPortType portType = E_PinPortType::ENoneType,FName namePinBone = NAME_None);
 	UFUNCTION(BlueprintCallable, Category = "Interact")
 	void Connect(UPinSkMeshComponent* connector);
 	UFUNCTION(BlueprintCallable, Category = "Interact")
@@ -47,11 +51,6 @@ protected:
 	virtual void BeginPlay() override;
 public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-private:
-	
-	void DisableCollider();
-	void EnableCollider();
-	void BindConstraintConnector(USkeletalMeshComponent* connectorMesh);
 public:
 	FORCEINLINE E_PinPortType _inline_GetPortType() const
 	{

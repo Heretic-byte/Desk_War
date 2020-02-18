@@ -11,6 +11,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Animation/AnimBlueprint.h"
 #include "Components/PortSkMeshComponent.h"
+#include "Actors/PortPawn.h"
 #include "DrawDebugHelpers.h"
 
 AUSB_PlayerPawn::AUSB_PlayerPawn(const FObjectInitializer& objInit):Super(objInit)
@@ -62,6 +63,9 @@ void AUSB_PlayerPawn::CreatePhysicMovement()
 	m_Movement->m_fAirControl = 0.6f;
 
 	m_Movement->m_bDebugShowForwardCast = false;
+
+	m_Movement->m_NameLinearVelocityBone = "PinPoint";
+	m_Movement->Test = "PinPoint";
 }
 
 void AUSB_PlayerPawn::CreateCameraFamily()
@@ -104,20 +108,20 @@ void AUSB_PlayerPawn::CreateSkFaceMesh()
 		m_MeshFaceSk->SetSkeletalMesh(FoundSkMesh.Object);
 	}
 
-	m_MeshFaceSk->SetRelativeLocation(FVector(-0.165f,0,0.825f));
-	m_MeshFaceSk->SetRelativeScale3D(FVector(0.88f, 0.88f, 0.88f ));
+	m_MeshFaceSk->SetRelativeLocation(FVector(-0.165f,0, 0.93f));
+	m_MeshFaceSk->SetRelativeScale3D(FVector(2.64f, 2.64f, 2.64f));
 }
 
-void AUSB_PlayerPawn::SetHeadTail(UPinSkMeshComponent * headWant, UPinSkMeshComponent * tailWant)
+void AUSB_PlayerPawn::SetHeadTail(UPrimitiveComponent * headWant, UPrimitiveComponent * tailWant)
 {
 	m_CurrentHead = headWant;
 	m_CurrentTail = tailWant;
 
-	m_Movement->m_NameLinearVelocityBone=m_CurrentHead->GetBoneVelo();
+	//m_Movement->m_NameLinearVelocityBone=m_CurrentHead->GetBoneVelo();
 
 	m_Movement->SetUpdatedComponent(m_CurrentHead);
 	m_Movement->TestTail = m_CurrentTail;
-	m_Movement->Test = m_CurrentTail->GetBoneVelo();
+	
 
 	m_CamRoot->AttachToComponent(m_CurrentHead,FAttachmentTransformRules::KeepRelativeTransform);
 }
@@ -211,11 +215,12 @@ bool AUSB_PlayerPawn::TryConnect()
 		return false;
 	}
 
-	bool Result= GetHead()->Connect(m_CurrentFocusedPort);
+	bool Result= Cast<UPinSkMeshComponent>(GetHead())->Connect(m_CurrentFocusedPort);
 
 	if (Result)
 	{
 		AddTraceIgnoreActor(m_CurrentFocusedPort->GetOwner());
+		SetHeadTail(m_CurrentFocusedPort, m_CurrentTail);
 	}
 
 	return Result;
@@ -231,7 +236,7 @@ bool AUSB_PlayerPawn::RemoveTraceIgnoreActor(AActor * actorWant)
 	return m_AryTraceIgnoreActors.Remove(actorWant);
 }
 
-UPinSkMeshComponent * AUSB_PlayerPawn::GetHead()
+UPrimitiveComponent * AUSB_PlayerPawn::GetHead()
 {
 	return _inline_GetHead();
 }
@@ -260,14 +265,14 @@ void AUSB_PlayerPawn::TickTracePortable()
 	FCollisionQueryParams QueryParams;
 	AddIgnoreActorsToQuery(QueryParams);
 
-	/*DrawDebugLine(
+	DrawDebugLine(
 		GetWorld(),
 		StartTrace,
 		EndTrace,
 		FColor(255, 0, 0),
 		false, -1, 0,
 		6.333
-	);*/
+	);
 
 	if (GetWorld()->
 		LineTraceSingleByChannel(HitResult, StartTrace, EndTrace, ECC_GameTraceChannel4, QueryParams))

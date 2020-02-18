@@ -20,7 +20,7 @@ public:
 	AUSB_PlayerPawn(const FObjectInitializer& objInit);
 protected:
 	FVector m_CamOffset;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "USB_Action")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
 	float m_fPortTraceRange;
 protected://component
 	UPROPERTY(VisibleAnywhere,BlueprintReadWrite,Category="Movement")
@@ -39,9 +39,9 @@ private:
 	UPROPERTY()
 	TArray<AActor*> m_AryTraceIgnoreActors;
 	UPROPERTY()
-	UPinSkMeshComponent* m_CurrentHead;
+	UPrimitiveComponent* m_CurrentHead;
 	UPROPERTY()
-	UPinSkMeshComponent* m_CurrentTail;
+	UPrimitiveComponent* m_CurrentTail;
 	UPROPERTY()
 	UPortSkMeshComponent* m_CurrentFocusedPort;
 public:
@@ -52,7 +52,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "USB_Action")
 	bool RemoveTraceIgnoreActor(AActor* actorWant);
 	UFUNCTION(BlueprintCallable, Category = "USB_Getter")
-	UPinSkMeshComponent* GetHead();
+	UPrimitiveComponent* GetHead();
 	UFUNCTION(BlueprintCallable, Category = "USB_Action")
 	void ConnectShot();
 	UFUNCTION(BlueprintCallable, Category = "USB_Action")
@@ -65,7 +65,7 @@ private://construct
 	void CreateCameraFamily();
 	void CreateSkFaceMesh();
 private:
-	void SetHeadTail(UPinSkMeshComponent* headWant, UPinSkMeshComponent* tailWant);
+	void SetHeadTail(UPrimitiveComponent* headWant, UPrimitiveComponent* tailWant);
 	void MoveForward(float v);
 	void MoveRight(float v);
 	void RotateYaw(float v);
@@ -80,7 +80,7 @@ protected:
 public:
 	virtual void Tick(float DeltaTime) override;
 private:
-	FORCEINLINE UPinSkMeshComponent* _inline_GetHead()
+	FORCEINLINE UPrimitiveComponent* _inline_GetHead()
 	{
 		return m_CurrentHead;
 	}

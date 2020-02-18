@@ -8,9 +8,17 @@ public class Desk_War : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore",
-        "DialoguePlugin",
-        "EasyActionPlugin"
+		PublicDependencyModuleNames.AddRange(new string[] {
+            "Core",
+            "CoreUObject",
+            "Engine",
+            "InputCore",
+            "DialoguePlugin",
+            "EasyActionPlugin",
+            "UMG",
+            "PhysX",
+            "APEX",
+            "AIModule"
         });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {

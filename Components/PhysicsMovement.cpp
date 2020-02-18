@@ -44,7 +44,9 @@ void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent
 
 	USceneComponent* OldUpdatedComponent = UpdatedComponent;
 
-	Super::SetUpdatedComponent(NewUpdatedComponent);
+	UMovementComponent::SetUpdatedComponent(NewUpdatedComponent);
+
+	PawnOwner = NewUpdatedComponent ? CastChecked<APawn>(NewUpdatedComponent->GetOwner()) : NULL;
 
 	if (UpdatedComponent == NULL)
 	{

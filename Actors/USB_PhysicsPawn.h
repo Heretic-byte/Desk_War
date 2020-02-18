@@ -59,9 +59,9 @@ protected:
 	float m_fMaxAngularVelocity;
 private:
 	int m_nSphereSpineCount;
-	UPROPERTY()
+	UPROPERTY(EditDefaultsOnly, Category = "Spine_Physics")
 	UPhysicsAsset* m_paHead;
-	UPROPERTY()
+	UPROPERTY(EditDefaultsOnly, Category = "Spine_Physics")
 	UPhysicsAsset* m_paTail;
 public:
 	UFUNCTION(BlueprintCallable, Category = "Init")
