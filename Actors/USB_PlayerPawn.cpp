@@ -49,7 +49,7 @@ void AUSB_PlayerPawn::CreatePhysicMovement()
 	m_Movement = CreateDefaultSubobject<UPhysicsMovement>(TEXT("Movement00"));
 
 	m_Movement->SetUpdatedComponent(m_CurrentHead);
-	m_Movement->TestTail = m_CurrentTail;
+	m_Movement->m_MovingTargetTail = m_CurrentTail;
 
 	m_Movement->SetDamping(0.01f, 1.f);
 
@@ -64,8 +64,8 @@ void AUSB_PlayerPawn::CreatePhysicMovement()
 
 	m_Movement->m_bDebugShowForwardCast = false;
 
-	m_Movement->m_NameLinearVelocityBone = "PinPoint";
-	m_Movement->Test = "PinPoint";
+	m_Movement->m_NameLinearVeloHeadBone = "PinPoint";
+	m_Movement->m_NameLinearVeloTailBone = "PinPoint";
 }
 
 void AUSB_PlayerPawn::CreateCameraFamily()
@@ -112,7 +112,7 @@ void AUSB_PlayerPawn::CreateSkFaceMesh()
 	m_MeshFaceSk->SetRelativeScale3D(FVector(2.64f, 2.64f, 2.64f));
 }
 
-void AUSB_PlayerPawn::SetHeadTail(UPrimitiveComponent * headWant, UPrimitiveComponent * tailWant)
+void AUSB_PlayerPawn::SetHeadTail(USkeletalMeshComponent * headWant, USkeletalMeshComponent * tailWant)
 {
 	m_CurrentHead = headWant;
 	m_CurrentTail = tailWant;
@@ -120,7 +120,7 @@ void AUSB_PlayerPawn::SetHeadTail(UPrimitiveComponent * headWant, UPrimitiveComp
 	//m_Movement->m_NameLinearVelocityBone=m_CurrentHead->GetBoneVelo();
 
 	m_Movement->SetUpdatedComponent(m_CurrentHead);
-	m_Movement->TestTail = m_CurrentTail;
+	m_Movement->m_MovingTargetTail = m_CurrentTail;
 	
 
 	m_CamRoot->AttachToComponent(m_CurrentHead,FAttachmentTransformRules::KeepRelativeTransform);

@@ -39,9 +39,9 @@ private:
 	UPROPERTY()
 	TArray<AActor*> m_AryTraceIgnoreActors;
 	UPROPERTY()
-	UPrimitiveComponent* m_CurrentHead;
+	USkeletalMeshComponent* m_CurrentHead;
 	UPROPERTY()
-	UPrimitiveComponent* m_CurrentTail;
+	USkeletalMeshComponent* m_CurrentTail;
 	UPROPERTY()
 	UPortSkMeshComponent* m_CurrentFocusedPort;
 public:
@@ -65,7 +65,7 @@ private://construct
 	void CreateCameraFamily();
 	void CreateSkFaceMesh();
 private:
-	void SetHeadTail(UPrimitiveComponent* headWant, UPrimitiveComponent* tailWant);
+	void SetHeadTail(USkeletalMeshComponent* headWant, USkeletalMeshComponent* tailWant);
 	void MoveForward(float v);
 	void MoveRight(float v);
 	void RotateYaw(float v);

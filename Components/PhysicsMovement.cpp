@@ -34,10 +34,10 @@ void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent
 {
 	if (NewUpdatedComponent)
 	{
-		m_MovingTarget = Cast<UPrimitiveComponent>(NewUpdatedComponent);
+		m_MovingTarget = Cast<USkeletalMeshComponent>(NewUpdatedComponent);
 		if (!m_MovingTarget)
 		{
-			PRINTF("Target is not Primitive");
+			PRINTF("Target is not USkeletalMesh");
 			return;
 		}
 	}
@@ -97,6 +97,21 @@ void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 	TickCastGround();
 	FVector InputDir = ConsumeInputVector();
 	m_Acceleration = ScaleInputAccel(InputDir);
+
+
+
+	auto ASD = m_MovingTarget->GetBoneLocation(m_NameLinearVeloHeadBone);
+
+	DrawDebugLine(
+		GetWorld(),
+		ASD,
+		ASD+ m_Acceleration*200.f,
+		FColor(255, 255, 255),
+		false, -1, 0,
+		12.333
+	);
+
+
 	if (TickCheckCanMoveForward())
 	{
 		TickMovement(DeltaTime);
@@ -126,11 +141,11 @@ void UPhysicsMovement::TickRotate(float delta)
 	FRotator CurrentRotation = UpdatedComponent->GetComponentRotation(); // Normalized
 	CurrentRotation.DiagnosticCheckNaN(TEXT("UPhysicsMovement::Rotate(): CurrentRotation"));
 
-	FRotator DeltaRot = GetDeltaRotation(delta);
+	FRotator DeltaRot = GetDeltaRotation(delta);//돌릴 값
 	DeltaRot.DiagnosticCheckNaN(TEXT("UPhysicsMovement::Rotate(): GetDeltaRotation"));
 
 	FRotator DesiredRotation = CurrentRotation;
-
+	//
 	DesiredRotation = ComputeOrientToMovementRotation(CurrentRotation,  DeltaRot);
 
 	DesiredRotation.Normalize();
@@ -156,8 +171,6 @@ void UPhysicsMovement::TickRotate(float delta)
 		}
 
 		DesiredRotation.DiagnosticCheckNaN(TEXT("UPhysicsMovement::Rotate(): DesiredRotation"));
-
-		//m_MovingTarget->SetPhysicsAngularVelocityInDegrees(DesiredRotation.Euler(),false);
 		MoveUpdatedComponent(FVector::ZeroVector, DesiredRotation, true, nullptr, ETeleportType::TeleportPhysics);
 	}
 }
@@ -175,17 +188,22 @@ float UPhysicsMovement::GetAxisDeltaRotation(float InAxisRotationRate, float Del
 FRotator UPhysicsMovement::ComputeOrientToMovementRotation(const FRotator& CurrentRotation, FRotator& DeltaRotation) const
 {
 	FVector WantRotate = m_Acceleration;
+	FRotator WantRotator= WantRotate.GetSafeNormal().Rotation();
 
 	if (IsGround())
 	{
-		WantRotate += m_GroundHitResult.ImpactNormal;
+		//WantRotate += m_GroundHitResult.ImpactNormal;
+		//Pitch 값이 기울어진 값을 90에서 뺀 값이 나온다.
+		//일반 땅 수직이 90 나오니까 90에서 빼면 될듯 피치를
+		//1. 이동 액셀레이션의 높이 자체를 올리기
+		//2. 원트 로테이트 자체가 잘되고있는지 확인
 	}
 
 	if (WantRotate.SizeSquared() < KINDA_SMALL_NUMBER)
 	{
 		return CurrentRotation;
 	}
-	return WantRotate.GetSafeNormal().Rotation();
+	return WantRotator;
 }
 
 void UPhysicsMovement::AddIgnoreActorsToQuery(FCollisionQueryParams & queryParam)
@@ -205,7 +223,7 @@ void UPhysicsMovement::BeginPlay()
 
 bool UPhysicsMovement::TickCheckCanMoveForward()
 {
-	FVector InputDirStart = m_MovingTarget->GetComponentLocation();
+	FVector InputDirStart = m_MovingTarget->GetBoneLocation(m_NameLinearVeloHeadBone);
 	FVector InputDirEnd = InputDirStart;
 	InputDirEnd += m_InputNormal*m_fForwardCastOffset;
 	FHitResult InputHit;
@@ -237,7 +255,7 @@ bool UPhysicsMovement::TickCheckCanMoveForward()
 
 void UPhysicsMovement::TickCastGround()
 {
-	FVector TraceStart = m_MovingTarget->GetComponentLocation();
+	FVector TraceStart = m_MovingTarget->GetBoneLocation(m_NameLinearVeloHeadBone);
 	TraceStart.Z -= m_fGroundCastBoxSize;
 
 	FVector TraceEnd = TraceStart;
@@ -276,7 +294,7 @@ void UPhysicsMovement::UpdateComponentVelocity()
 	
 	Velocity.Z = CurrentV.Z;
 
-	m_MovingTarget->SetPhysicsLinearVelocity(Velocity, false, m_NameLinearVelocityBone);
+	m_MovingTarget->SetPhysicsLinearVelocity(Velocity, false, m_NameLinearVeloHeadBone);
 }
 
 bool UPhysicsMovement::IsGround() const
@@ -287,9 +305,16 @@ bool UPhysicsMovement::IsGround() const
 FVector UPhysicsMovement::ScaleInputAccel(const FVector inputPure)
 {
 	m_InputNormal = inputPure.GetClampedToMaxSize(1.f);
+
+	FVector ImpactGround = m_GroundHitResult.ImpactNormal;
+
+	PRINTF("Normal : %s", *ImpactGround.Rotation().ToString());
+	/*그라운드 임팩트 노말의 피치는 경사 오브젝트의 각도를 90도에서 뺀값이다.
+		플레이어가 올라갈때와 내려갈떄의 피치는 양수 음수 차이있다.
+		플레이어의 각도 또한 90 - 값으로 추정한다.
+		이에 맞춰 벨로시티 혹은 회전을 줘보자*/
 	return GetMaxForce() *m_InputNormal;
 }
-
 
 void UPhysicsMovement::Jump()
 {
@@ -301,7 +326,6 @@ void UPhysicsMovement::StopJumping()
 {
 	m_bPressedJump = false;
 }
-
 
 float UPhysicsMovement::GetMaxForce() const
 {
@@ -328,7 +352,6 @@ void UPhysicsMovement::AddImpulse(FVector impulseWant)
 	m_MovingTarget->AddImpulse(impulseWant);
 }
 
-
 void UPhysicsMovement::CheckJumpInput(float DeltaTime)
 {
 	if (m_bPressedJump)
@@ -346,7 +369,6 @@ void UPhysicsMovement::CheckJumpInput(float DeltaTime)
 	}
 }
 
-
 bool UPhysicsMovement::DoJump()
 {
 	if (CanJump())
@@ -355,7 +377,7 @@ bool UPhysicsMovement::DoJump()
 		CurrentV.Z = FMath::Max(CurrentV.Z, m_fJumpZVelocity);
 		m_MovingTarget->SetPhysicsLinearVelocity(CurrentV);
 
-		TestTail->SetPhysicsLinearVelocity(CurrentV);
+		m_MovingTargetTail->SetPhysicsLinearVelocity(CurrentV);
 
 		m_nJumpCurrentCount++;
 		return true;

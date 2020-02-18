@@ -4,18 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "Datas/USB_Macros.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/PawnMovementComponent.h"
 #include "CollisionQueryParams.h"
 #include "PhysicsMovement.generated.h"
-
-/**
- * 설계 목적:
- 해당 게임에 등장하는 플레이어 및 npc가 
- 서로 물리 상호작용 + 네비게이션 이동까지 되야함.
- */
-
-
-
 
 UCLASS(ClassGroup = Movement, meta = (BlueprintSpawnableComponent))
 class DESK_WAR_API UPhysicsMovement : public UPawnMovementComponent
@@ -24,11 +16,10 @@ class DESK_WAR_API UPhysicsMovement : public UPawnMovementComponent
 public:
 	UPhysicsMovement(const FObjectInitializer& objInit);
 public:
-	FName Test;
-	UPrimitiveComponent* TestTail;
-private:
 	UPROPERTY()
-	UPrimitiveComponent* m_MovingTarget;
+	USkeletalMeshComponent* m_MovingTarget;
+	UPROPERTY()
+	USkeletalMeshComponent* m_MovingTargetTail;
 
 	TArray<AActor*>* m_ptrAryTraceIgnoreActors;
 private:
@@ -45,7 +36,9 @@ private:
 	//
 public:
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement")
-	FName m_NameLinearVelocityBone;
+	FName m_NameLinearVeloHeadBone;
+	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement")
+	FName m_NameLinearVeloTailBone;
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement")
 	bool m_bDebugShowForwardCast;
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
