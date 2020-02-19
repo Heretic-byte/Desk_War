@@ -72,6 +72,7 @@ private:
 	void RotatePitch(float v);
 protected:
 	bool TryConnect();
+	void BlockInput(bool tIsBlock);
 	void AddIgnoreActorsToQuery(FCollisionQueryParams& queryParam);
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void BeginPlay() override;

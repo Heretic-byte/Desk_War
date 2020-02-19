@@ -38,13 +38,9 @@ void UPortSkMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType, F
 void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)
 {
 	PRINTF("Connect in Port");
-
 	m_ConnectedPin = connector;
-
 	AdjustPinActorTransform();
 	ConstraintPinPort();
-	ResetAllBodiesSimulatePhysics();
-	m_ConnectedPin->ResetAllBodiesSimulatePhysics();
 	m_bIsConnected = true;
 }
 

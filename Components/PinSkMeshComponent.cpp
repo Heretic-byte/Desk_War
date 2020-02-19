@@ -2,7 +2,7 @@
 
 
 #include "PinSkMeshComponent.h"
-
+#include "GameFramework/Controller.h"
 #include "Components/PortSkMeshComponent.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -42,7 +42,8 @@ bool UPinSkMeshComponent::Connect(UPortSkMeshComponent * port)
 	{
 		return false;
 	}
-
+	
+	//Input¸·±â
 	m_PortConnected = port;
 	m_PortOwner = m_PortConnected->GetOwner();
 	m_PortConnected->Connect(this);

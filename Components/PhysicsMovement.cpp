@@ -23,6 +23,8 @@ UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 	m_fAirControl = 0.05f;
 	m_fGroundCastBoxSize = 15.f;
 	m_WalkableSlopeAngle = 65.f;
+
+	OnCalculateCustomPhysics.BindUObject(this, &UPhysicsMovement::CustomPhysics);
 }
 
 void UPhysicsMovement::SetTraceIgnoreActorAry(TArray<AActor*>* aryWant)
@@ -75,6 +77,7 @@ void UPhysicsMovement::SetDamping(float fLinDamp, float fAngDamp)
 	}
 	m_fLinearDampingForPhysicsAsset = fLinDamp;
 	m_fAngularDampingForPhysicsAsset = fAngDamp;
+
 	if (m_MovingTarget->GetBodyInstance())
 	{
 		m_MovingTarget->SetAngularDamping(m_fAngularDampingForPhysicsAsset);
@@ -83,49 +86,59 @@ void UPhysicsMovement::SetDamping(float fLinDamp, float fAngDamp)
 	}
 }
 
-
 void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction)
 {
-	if (!PawnOwner || !UpdatedComponent || ShouldSkipUpdate(DeltaTime) || !GetWorld())
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	if (m_MovingTarget&&m_MovingTarget->GetBodyInstance())
+	{
+		m_MovingTarget->GetBodyInstance()->AddCustomPhysics(OnCalculateCustomPhysics);
+
+		TickRotate(DeltaTime);
+	}
+}
+
+void UPhysicsMovement::PhysicsTick(float SubstepDeltaTime)
+{
+	if (!PawnOwner || !UpdatedComponent || !GetWorld())
 	{
 		return;
 	}
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	CheckJumpInput(DeltaTime);
-
+	
+	CheckJumpInput(SubstepDeltaTime);
 	TickCastGround();
 	FVector InputDir = ConsumeInputVector();
 	m_Acceleration = ScaleInputAccel(InputDir);
 
-
-
 	auto ASD = m_MovingTarget->GetBoneLocation(m_NameLinearVeloHeadBone);
-
 	DrawDebugLine(
 		GetWorld(),
 		ASD,
-		ASD+ m_Acceleration*200.f,
+		ASD + m_Acceleration * 200.f,
 		FColor(255, 255, 255),
 		false, -1, 0,
 		12.333
 	);
 
-
 	if (TickCheckCanMoveForward())
 	{
-		TickMovement(DeltaTime);
+		TickMovement(SubstepDeltaTime);
 	}
-	ClearJumpInput(DeltaTime);
+
+	ClearJumpInput(SubstepDeltaTime);
 }
+
+void UPhysicsMovement::CustomPhysics(float DeltaTime, FBodyInstance * BodyInstance)
+{
+	PhysicsTick(DeltaTime);
+}
+
 void UPhysicsMovement::TickMovement(float delta)
 {
 	if (m_Acceleration.IsNearlyZero(0.1f))
 	{
 		return;
 	}
-	TickRotate(delta);
-
 	
 	Velocity = m_Acceleration * delta;
 
@@ -152,7 +165,6 @@ void UPhysicsMovement::TickRotate(float delta)
 
 	const float AngleTolerance = 1e-1f;
 
-
 	if (!CurrentRotation.Equals(DesiredRotation, AngleTolerance))
 	{
 		if (!FMath::IsNearlyEqual(CurrentRotation.Pitch, DesiredRotation.Pitch, AngleTolerance))
@@ -171,6 +183,7 @@ void UPhysicsMovement::TickRotate(float delta)
 		}
 
 		DesiredRotation.DiagnosticCheckNaN(TEXT("UPhysicsMovement::Rotate(): DesiredRotation"));
+
 		MoveUpdatedComponent(FVector::ZeroVector, DesiredRotation, true, nullptr, ETeleportType::TeleportPhysics);
 	}
 }
@@ -188,22 +201,12 @@ float UPhysicsMovement::GetAxisDeltaRotation(float InAxisRotationRate, float Del
 FRotator UPhysicsMovement::ComputeOrientToMovementRotation(const FRotator& CurrentRotation, FRotator& DeltaRotation) const
 {
 	FVector WantRotate = m_Acceleration;
-	FRotator WantRotator= WantRotate.GetSafeNormal().Rotation();
-
-	if (IsGround())
-	{
-		//WantRotate += m_GroundHitResult.ImpactNormal;
-		//Pitch 값이 기울어진 값을 90에서 뺀 값이 나온다.
-		//일반 땅 수직이 90 나오니까 90에서 빼면 될듯 피치를
-		//1. 이동 액셀레이션의 높이 자체를 올리기
-		//2. 원트 로테이트 자체가 잘되고있는지 확인
-	}
 
 	if (WantRotate.SizeSquared() < KINDA_SMALL_NUMBER)
 	{
 		return CurrentRotation;
 	}
-	return WantRotator;
+	return WantRotate.GetSafeNormal().Rotation();
 }
 
 void UPhysicsMovement::AddIgnoreActorsToQuery(FCollisionQueryParams & queryParam)
@@ -223,34 +226,23 @@ void UPhysicsMovement::BeginPlay()
 
 bool UPhysicsMovement::TickCheckCanMoveForward()
 {
-	FVector InputDirStart = m_MovingTarget->GetBoneLocation(m_NameLinearVeloHeadBone);
-	FVector InputDirEnd = InputDirStart;
-	InputDirEnd += m_InputNormal*m_fForwardCastOffset;
-	FHitResult InputHit;
-#if WITH_EDITOR
-	if (m_bDebugShowForwardCast)
-	{
-		DrawDebugLine(
-			GetWorld(),
-			InputDirStart,
-			InputDirEnd,
-			FColor(255, 0, 0),
-			false, -1, 0,
-			12.333
-		);
-	}
-#endif
-	FCollisionQueryParams QueryParam;
-	AddIgnoreActorsToQuery(QueryParam);
+	float PlayerAngle = m_MovingTarget->GetComponentRotation().Pitch;
 
-	bool bCanGoForward = true;
-
-	if (GetWorld()->LineTraceSingleByChannel(InputHit, InputDirStart, InputDirEnd, ECollisionChannel::ECC_GameTraceChannel8, QueryParam))//막혀도 각도가 낮으면 통과시켜줘
+	if (PlayerAngle <= 0)
 	{
-		bCanGoForward = m_WalkableSlopeAngle < InputHit.ImpactNormal.Rotation().Pitch;
+		return true;
 	}
 
-	return bCanGoForward;
+	FVector ImpactN= m_GroundHitResult.ImpactNormal;
+	float Angle = 90.f - ImpactN.Rotation().Pitch;
+
+
+	if (m_WalkableSlopeAngle < Angle)
+	{
+		return false;
+	}
+
+	return true;
 }
 
 void UPhysicsMovement::TickCastGround()
@@ -306,13 +298,6 @@ FVector UPhysicsMovement::ScaleInputAccel(const FVector inputPure)
 {
 	m_InputNormal = inputPure.GetClampedToMaxSize(1.f);
 
-	FVector ImpactGround = m_GroundHitResult.ImpactNormal;
-
-	PRINTF("Normal : %s", *ImpactGround.Rotation().ToString());
-	/*그라운드 임팩트 노말의 피치는 경사 오브젝트의 각도를 90도에서 뺀값이다.
-		플레이어가 올라갈때와 내려갈떄의 피치는 양수 음수 차이있다.
-		플레이어의 각도 또한 90 - 값으로 추정한다.
-		이에 맞춰 벨로시티 혹은 회전을 줘보자*/
 	return GetMaxForce() *m_InputNormal;
 }
 

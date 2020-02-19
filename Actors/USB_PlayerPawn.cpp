@@ -13,6 +13,8 @@
 #include "Components/PortSkMeshComponent.h"
 #include "Actors/PortPawn.h"
 #include "DrawDebugHelpers.h"
+#include "GameFramework/PlayerController.h"
+
 
 AUSB_PlayerPawn::AUSB_PlayerPawn(const FObjectInitializer& objInit):Super(objInit)
 {
@@ -214,8 +216,16 @@ bool AUSB_PlayerPawn::TryConnect()
 	{
 		return false;
 	}
+	auto* Head = Cast<UPinSkMeshComponent>(GetHead());
 
-	bool Result= Cast<UPinSkMeshComponent>(GetHead())->Connect(m_CurrentFocusedPort);
+	if (!Head)
+	{
+		return false;
+	}
+	
+	BlockInput(true);
+
+	bool Result= Head->Connect(m_CurrentFocusedPort);
 
 	if (Result)
 	{
@@ -223,7 +233,21 @@ bool AUSB_PlayerPawn::TryConnect()
 		SetHeadTail(m_CurrentFocusedPort, m_CurrentTail);
 	}
 
+	BlockInput(false);
 	return Result;
+}
+
+void AUSB_PlayerPawn::BlockInput(bool tIsBlock)
+{
+	auto* PlayerCon = Cast<APlayerController>(GetController());
+	if (!tIsBlock)
+	{
+		EnableInput(PlayerCon);
+	}
+	else
+	{
+		DisableInput(PlayerCon);
+	}
 }
 
 void AUSB_PlayerPawn::AddTraceIgnoreActor(AActor * actorWant)

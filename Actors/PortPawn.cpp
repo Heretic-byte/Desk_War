@@ -20,7 +20,9 @@ APortPawn::APortPawn(const FObjectInitializer& objInit):Super(objInit)
 	m_PhyConPort->SetLinearYLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 	m_PhyConPort->SetLinearZLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 
-
+	m_PhyConPort->SetDisableCollision(true);
 	m_MeshPort->InitPort(m_PhyConPort);
+
+	SetTickGroup(ETickingGroup::TG_StartPhysics);
 }
 

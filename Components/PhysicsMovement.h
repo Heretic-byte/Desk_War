@@ -108,6 +108,12 @@ private:
 public:
 	void SetTraceIgnoreActorAry(TArray<AActor*>* aryWant);
 	virtual void SetUpdatedComponent(USceneComponent* NewUpdatedComponent) override;
-	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	void SetDamping(float fLinDamp, float fAngDamp);
+public:
+	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
+	void PhysicsTick(float SubstepDeltaTime);
+
+	FCalculateCustomPhysics OnCalculateCustomPhysics;
+	void CustomPhysics(float DeltaTime, FBodyInstance* BodyInstance);
 };
