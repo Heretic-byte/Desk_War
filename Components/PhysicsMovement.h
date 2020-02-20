@@ -94,6 +94,7 @@ private:
 protected:
 	virtual bool IsFalling()  const override;
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 private:
 	void ResetJumpState();
 	void CheckJumpInput(float delta);
@@ -112,8 +113,7 @@ public:
 public:
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-	void PhysicsTick(float SubstepDeltaTime);
+	void PhysSceneStep(FPhysScene* PhysScene, float DeltaTime);
 
-	FCalculateCustomPhysics OnCalculateCustomPhysics;
-	void CustomPhysics(float DeltaTime, FBodyInstance* BodyInstance);
+	FDelegateHandle OnPhysSceneStepHandle;
 };

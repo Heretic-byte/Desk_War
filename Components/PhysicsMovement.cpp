@@ -24,7 +24,36 @@ UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 	m_fGroundCastBoxSize = 15.f;
 	m_WalkableSlopeAngle = 65.f;
 
-	OnCalculateCustomPhysics.BindUObject(this, &UPhysicsMovement::CustomPhysics);
+}
+
+void UPhysicsMovement::BeginPlay()
+{
+	Super::BeginPlay();
+
+	UWorld* World = GetWorld();
+	if (World)
+	{
+		FPhysScene* PScene = World->GetPhysicsScene();
+		if (PScene)
+		{
+			OnPhysSceneStepHandle = PScene->OnPhysSceneStep.AddUObject(this, &UPhysicsMovement::PhysSceneStep);
+		}
+	}
+}
+
+void UPhysicsMovement::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	UWorld* World = GetWorld();
+	if (World)
+	{
+		FPhysScene* PScene = World->GetPhysicsScene();
+		if (PScene)
+		{
+			PScene->OnPhysSceneStep.Remove(OnPhysSceneStepHandle);
+		}
+	}
+
+	Super::EndPlay(EndPlayReason);
 }
 
 void UPhysicsMovement::SetTraceIgnoreActorAry(TArray<AActor*>* aryWant)
@@ -86,26 +115,14 @@ void UPhysicsMovement::SetDamping(float fLinDamp, float fAngDamp)
 	}
 }
 
-void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction)
-{
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	if (m_MovingTarget&&m_MovingTarget->GetBodyInstance())
-	{
-		m_MovingTarget->GetBodyInstance()->AddCustomPhysics(OnCalculateCustomPhysics);
-
-		TickRotate(DeltaTime);
-	}
-}
-
-void UPhysicsMovement::PhysicsTick(float SubstepDeltaTime)
+void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
 {
 	if (!PawnOwner || !UpdatedComponent || !GetWorld())
 	{
 		return;
 	}
-	
-	CheckJumpInput(SubstepDeltaTime);
+
+	CheckJumpInput(DeltaTime);
 	TickCastGround();
 	FVector InputDir = ConsumeInputVector();
 	m_Acceleration = ScaleInputAccel(InputDir);
@@ -122,15 +139,17 @@ void UPhysicsMovement::PhysicsTick(float SubstepDeltaTime)
 
 	if (TickCheckCanMoveForward())
 	{
-		TickMovement(SubstepDeltaTime);
+		TickMovement(DeltaTime);
 	}
-
-	ClearJumpInput(SubstepDeltaTime);
+	TickRotate(DeltaTime);
+	ClearJumpInput(DeltaTime);
 }
 
-void UPhysicsMovement::CustomPhysics(float DeltaTime, FBodyInstance * BodyInstance)
+void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction)
 {
-	PhysicsTick(DeltaTime);
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	//TickRotate(DeltaTime);
 }
 
 void UPhysicsMovement::TickMovement(float delta)
@@ -219,10 +238,7 @@ bool UPhysicsMovement::IsFalling() const
 	return !IsGround();
 }
 
-void UPhysicsMovement::BeginPlay()
-{
-	Super::BeginPlay();
-}
+
 
 bool UPhysicsMovement::TickCheckCanMoveForward()
 {
@@ -233,14 +249,12 @@ bool UPhysicsMovement::TickCheckCanMoveForward()
 		return true;
 	}
 
-	FVector ImpactN= m_GroundHitResult.ImpactNormal;
-	float Angle = 90.f - ImpactN.Rotation().Pitch;
+	float Angle = 90.f - m_GroundHitResult.ImpactNormal.Rotation().Pitch;
 
-
-	if (m_WalkableSlopeAngle < Angle)
+	/*if (m_WalkableSlopeAngle < Angle)
 	{
 		return false;
-	}
+	}*/
 
 	return true;
 }
