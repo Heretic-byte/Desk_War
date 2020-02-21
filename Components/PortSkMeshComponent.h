@@ -22,15 +22,16 @@ public:
 	UPortSkMeshComponent(const FObjectInitializer& objInit);
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interact")
-	FName m_NamePinConnectBone;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interact")
 	E_PinPortType m_PortType;
 	UPROPERTY(VisibleAnywhere)
 	UPinSkMeshComponent* m_ConnectedPin;
 	UPROPERTY(VisibleAnywhere)
-	UPhysicsConstraintComponent* m_PhysicsConst;
+	UPhysicsConstraintComponent* m_ParentPhysicsConst;
+	UPROPERTY(VisibleAnywhere)
+	USkeletalMeshComponent* m_MeshParentActor;
 protected:
 	bool m_bIsConnected;
+	FName m_NameParentBonePortPoint;
 private:
 	void ConstraintPinPort();
 	void AdjustPinActorTransform();
@@ -38,7 +39,7 @@ private:
 	void EnableCollider();
 public:
 	UFUNCTION(BlueprintCallable, Category = "Connect Init")
-	void InitPort(UPhysicsConstraintComponent* physicsJoint, E_PinPortType portType = E_PinPortType::ENoneType,FName namePinBone = NAME_None);
+	void InitPort(UPhysicsConstraintComponent* physicsJoint,USkeletalMeshComponent* parentMesh,E_PinPortType portType = E_PinPortType::ENoneType,FName namePinBone = NAME_None);
 	UFUNCTION(BlueprintCallable, Category = "Interact")
 	void Connect(UPinSkMeshComponent* connector);
 	UFUNCTION(BlueprintCallable, Category = "Interact")
@@ -49,8 +50,6 @@ public:
 	E_PinPortType GetPortType() const;
 protected:
 	virtual void BeginPlay() override;
-public:
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 public:
 	FORCEINLINE E_PinPortType _inline_GetPortType() const
 	{

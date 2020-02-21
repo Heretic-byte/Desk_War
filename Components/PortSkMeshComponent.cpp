@@ -3,16 +3,25 @@
 
 #include "PortSkMeshComponent.h"
 #include "Datas/USB_Macros.h"
+#include "UObject/ConstructorHelpers.h"
 
 UPortSkMeshComponent::UPortSkMeshComponent(const FObjectInitializer & objInit)
 {
-	m_NamePinConnectBone = FName(TEXT("PortPoint"));
+	m_NameParentBonePortPoint = FName(TEXT("PortPoint"));
 	m_PortType = E_PinPortType::ENoneType;
 	m_bIsConnected = false;
+	//SkeletalMesh'/Game/Meshes/Characters/Port/SK_PortPoint.SK_PortPoint'
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FoundMesh(TEXT("SkeletalMesh'/Game/Meshes/Characters/Port/SK_PortPoint.SK_PortPoint'"));
+	if (FoundMesh.Succeeded())
+	{
+		m_MeshParentActor->SetSkeletalMesh(FoundMesh.Object);
+	}
+	//트레이스만 당하는 고유 콜라이더 필요
 }
-void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, E_PinPortType portType, FName namePinBone)
+void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, USkeletalMeshComponent* parentMesh,E_PinPortType portType, FName namePinBone)
 {
-	m_PhysicsConst = physicsJoint;
+	m_ParentPhysicsConst = physicsJoint;
+	m_MeshParentActor = parentMesh;
 
 	if (portType != E_PinPortType::ENoneType)
 	{
@@ -21,18 +30,13 @@ void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, 
 
 	if (namePinBone != NAME_None)
 	{
-		m_NamePinConnectBone = namePinBone;
+		m_NameParentBonePortPoint = namePinBone;
 	}
 }
 
 void UPortSkMeshComponent::BeginPlay()
 {
 	Super::BeginPlay();
-}
-
-void UPortSkMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction)
-{
-	Super::TickComponent(DeltaTime,TickType,ThisTickFunction);
 }
 
 void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)
@@ -53,14 +57,14 @@ void UPortSkMeshComponent::AdjustPinActorTransform()
 
 void UPortSkMeshComponent::ConstraintPinPort()
 {
-	m_PhysicsConst->SetConstrainedComponents(m_ConnectedPin, m_ConnectedPin->GetNameConnectPoint(), this, m_NamePinConnectBone);//Mesh
+	m_ParentPhysicsConst->SetConstrainedComponents(m_ConnectedPin, m_ConnectedPin->GetNameConnectPoint(), m_MeshParentActor, m_NameParentBonePortPoint);//Mesh
 }
 
 
 void UPortSkMeshComponent::Disconnect()
 {
 	PRINTF("Dis");
-	m_PhysicsConst->BreakConstraint();
+	m_ParentPhysicsConst->BreakConstraint();
 	m_ConnectedPin = nullptr;
 	m_bIsConnected = false;
 }

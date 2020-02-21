@@ -9,12 +9,6 @@
 #include "PhysicsPublic.h"
 #include "Engine/World.h"
 
-
-
-
-
-
-
 UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 {
 	m_MovingTarget = nullptr;
@@ -147,7 +141,6 @@ void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
 	}
 	
 	ClearJumpInput(DeltaTime);
-	
 }
 
 void UPhysicsMovement::TickMovement(float delta)
@@ -372,9 +365,7 @@ bool UPhysicsMovement::DoJump()
 		FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
 		CurrentV.Z = FMath::Max(CurrentV.Z, m_fJumpZVelocity);
 		m_MovingTarget->SetPhysicsLinearVelocity(CurrentV);
-
-		m_MovingTargetTail->SetPhysicsLinearVelocity(CurrentV);
-
+		m_MovingTargetTail->SetPhysicsLinearVelocity(CurrentV,false,m_NameLinearVeloTailBone);
 		m_nJumpCurrentCount++;
 		return true;
 	}
@@ -391,7 +382,6 @@ void UPhysicsMovement::ClearJumpInput(float delta)
 		if (m_fJumpKeyHoldTime >= m_fMaxHoldTime)
 		{
 			m_bPressedJump = false;
-			
 		}
 	}
 	else
