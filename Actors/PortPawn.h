@@ -15,8 +15,7 @@ class DESK_WAR_API APortPawn : public APawn
 {
 	GENERATED_UCLASS_BODY()
 protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mesh")
-	UPinSkMeshComponent* m_MeshPin;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly , Category = "Mesh")
 	UPortSkMeshComponent* m_MeshPort;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly,Category = "Connect")

@@ -25,8 +25,6 @@ class DESK_WAR_API UPinSkMeshComponent : public USkeletalMeshComponent
 {
 	GENERATED_BODY()
 public:
-	static FName ConnectPointName;
-public:
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnConnectPortOwner, UObject*, portOwner);
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnConnectPort, UPortSkMeshComponent*, port);
 

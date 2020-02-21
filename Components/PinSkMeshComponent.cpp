@@ -7,7 +7,6 @@
 #include "UObject/ConstructorHelpers.h"
 
 
-FName UPinSkMeshComponent::ConnectPointName(TEXT("ConnectPoint"));
 
 UPinSkMeshComponent::UPinSkMeshComponent(const FObjectInitializer& objInit) :Super(objInit)
 {

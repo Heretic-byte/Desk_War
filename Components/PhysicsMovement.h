@@ -112,8 +112,6 @@ public:
 	void SetDamping(float fLinDamp, float fAngDamp);
 public:
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-
 	void PhysSceneStep(FPhysScene* PhysScene, float DeltaTime);
-
 	FDelegateHandle OnPhysSceneStepHandle;
 };

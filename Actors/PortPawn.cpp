@@ -8,10 +8,8 @@
 APortPawn::APortPawn(const FObjectInitializer& objInit):Super(objInit)
 {
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root00"));
-	m_MeshPin = CreateDefaultSubobject<UPinSkMeshComponent>(TEXT("MeshPin00"));
-	m_MeshPin->SetupAttachment(RootComponent);
 	m_MeshPort = CreateDefaultSubobject<UPortSkMeshComponent>(TEXT("MeshPort00"));
-	m_MeshPort->SetupAttachment(m_MeshPin);
+	m_MeshPort->SetupAttachment(RootComponent);
 
 	m_PhyConPort=CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("PhyCon00"));
 	m_PhyConPort->SetupAttachment(RootComponent);

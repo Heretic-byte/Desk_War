@@ -119,12 +119,9 @@ void AUSB_PlayerPawn::SetHeadTail(USkeletalMeshComponent * headWant, USkeletalMe
 	m_CurrentHead = headWant;
 	m_CurrentTail = tailWant;
 
-	//m_Movement->m_NameLinearVelocityBone=m_CurrentHead->GetBoneVelo();
-
 	m_Movement->SetUpdatedComponent(m_CurrentHead);
 	m_Movement->m_MovingTargetTail = m_CurrentTail;
 	
-
 	m_CamRoot->AttachToComponent(m_CurrentHead,FAttachmentTransformRules::KeepRelativeTransform);
 }
 
@@ -162,14 +159,6 @@ void AUSB_PlayerPawn::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	TickTracePortable();
 
-		DrawDebugLine(
-			GetWorld(),
-			GetHead()->GetComponentLocation(),
-			m_CamRoot->GetComponentLocation(),
-			FColor(0, 100, 150),
-			false, -1, 0,
-			5.333
-		);
 }
 
 void AUSB_PlayerPawn::MoveForward(float v)

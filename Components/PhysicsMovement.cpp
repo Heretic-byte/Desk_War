@@ -6,6 +6,14 @@
 #include "Components/PrimitiveComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "DrawDebugHelpers.h"
+#include "PhysicsPublic.h"
+#include "Engine/World.h"
+
+
+
+
+
+
 
 UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 {
@@ -23,7 +31,6 @@ UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 	m_fAirControl = 0.05f;
 	m_fGroundCastBoxSize = 15.f;
 	m_WalkableSlopeAngle = 65.f;
-
 }
 
 void UPhysicsMovement::BeginPlay()
@@ -115,6 +122,15 @@ void UPhysicsMovement::SetDamping(float fLinDamp, float fAngDamp)
 	}
 }
 
+void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	FVector InputDir = ConsumeInputVector();
+	m_Acceleration = ScaleInputAccel(InputDir);
+
+	TickRotate(DeltaTime);
+}
+
 void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
 {
 	if (!PawnOwner || !UpdatedComponent || !GetWorld())
@@ -124,41 +140,22 @@ void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
 
 	CheckJumpInput(DeltaTime);
 	TickCastGround();
-	FVector InputDir = ConsumeInputVector();
-	m_Acceleration = ScaleInputAccel(InputDir);
-
-	auto ASD = m_MovingTarget->GetBoneLocation(m_NameLinearVeloHeadBone);
-	DrawDebugLine(
-		GetWorld(),
-		ASD,
-		ASD + m_Acceleration * 200.f,
-		FColor(255, 255, 255),
-		false, -1, 0,
-		12.333
-	);
 
 	if (TickCheckCanMoveForward())
 	{
 		TickMovement(DeltaTime);
 	}
-	TickRotate(DeltaTime);
+	
 	ClearJumpInput(DeltaTime);
-}
-
-void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction)
-{
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	//TickRotate(DeltaTime);
+	
 }
 
 void UPhysicsMovement::TickMovement(float delta)
 {
-	if (m_Acceleration.IsNearlyZero(0.1f))
+	if (m_Acceleration.SizeSquared2D() <1)//maybe square better?
 	{
 		return;
 	}
-	
 	Velocity = m_Acceleration * delta;
 
 	if(!IsGround())
@@ -299,7 +296,7 @@ void UPhysicsMovement::UpdateComponentVelocity()
 	FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
 	
 	Velocity.Z = CurrentV.Z;
-
+	
 	m_MovingTarget->SetPhysicsLinearVelocity(Velocity, false, m_NameLinearVeloHeadBone);
 }
 
