@@ -22,15 +22,16 @@ public:
 	UPortSkMeshComponent(const FObjectInitializer& objInit);
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interact")
+	FName m_NameWantMovePoint;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interact")
 	E_PinPortType m_PortType;
 	UPROPERTY(VisibleAnywhere)
 	UPinSkMeshComponent* m_ConnectedPin;
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY()
 	UPhysicsConstraintComponent* m_ParentPhysicsConst;
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY()
 	USkeletalMeshComponent* m_MeshParentActor;
 protected:
-	bool m_bIsConnected;
 	FName m_NameParentBonePortPoint;
 private:
 	void ConstraintPinPort();
@@ -43,7 +44,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Interact")
 	void Connect(UPinSkMeshComponent* connector);
 	UFUNCTION(BlueprintCallable, Category = "Interact")
-	void Disconnect();
+	bool Disconnect();
 	UFUNCTION(BlueprintCallable, Category = "Interact")
 	bool IsConnected();
 	UFUNCTION(BlueprintCallable, Category = "Interact")
@@ -51,6 +52,9 @@ public:
 protected:
 	virtual void BeginPlay() override;
 public:
+	FName GetMovePointWant();
+	USkeletalMeshComponent* GetParentSkMesh();
+
 	FORCEINLINE E_PinPortType _inline_GetPortType() const
 	{
 		return m_PortType;

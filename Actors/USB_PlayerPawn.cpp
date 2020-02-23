@@ -15,6 +15,12 @@
 #include "GameFramework/PlayerController.h"
 
 
+
+
+//누구이든간 스켈메쉬를 머리꼬리로 바꿔버리니까
+//어댑터가 꼬리면 어댑터를 분리해야하고
+//어댑터가 없거나 어댑터 연결이 없으면 꼬리에 붙어있는 포트를
+//분리해야한다
 AUSB_PlayerPawn::AUSB_PlayerPawn(const FObjectInitializer& objInit):Super(objInit)
 {
 	InitPlayerPawn();
@@ -26,6 +32,7 @@ AUSB_PlayerPawn::AUSB_PlayerPawn(const FObjectInitializer& objInit):Super(objIni
 void AUSB_PlayerPawn::BeginPlay()
 {
 	Super::BeginPlay();
+	m_PlayerCon = Cast<APlayerController>(GetController());
 	SetHeadTail(m_CurrentHead, m_CurrentTail);
 	InitTraceIgnoreAry();
 }
@@ -140,10 +147,11 @@ void AUSB_PlayerPawn::SetupPlayerInputComponent(UInputComponent * PlayerInputCom
 	PlayerInputComponent->BindAxis("Turn", this, &AUSB_PlayerPawn::RotateYaw);
 	PlayerInputComponent->BindAxis("LookUp", this, &AUSB_PlayerPawn::RotatePitch);
 	//Connect
-	PlayerInputComponent->BindAction(FName(TEXT("Connect")),EInputEvent::IE_Pressed,this, &AUSB_PlayerPawn::ConnectShot);
-	PlayerInputComponent->BindAction(FName(TEXT("Jump")), EInputEvent::IE_Pressed, this, &AUSB_PlayerPawn::Jump);
-	PlayerInputComponent->BindAction(FName(TEXT("Jump")), EInputEvent::IE_Released, this, &AUSB_PlayerPawn::StopJumping);
-	PlayerInputComponent->BindAction(FName(TEXT("HeadChange")), EInputEvent::IE_Pressed, this, &AUSB_PlayerPawn::ChangeHeadTail);
+	PlayerInputComponent->BindAction(FName("Connect"),EInputEvent::IE_Pressed,this, &AUSB_PlayerPawn::ConnectShot);
+	PlayerInputComponent->BindAction(FName("Jump"), EInputEvent::IE_Pressed, this, &AUSB_PlayerPawn::Jump);
+	PlayerInputComponent->BindAction(FName("Jump"), EInputEvent::IE_Released, this, &AUSB_PlayerPawn::StopJumping);
+	PlayerInputComponent->BindAction(FName("HeadChange"), EInputEvent::IE_Pressed, this, &AUSB_PlayerPawn::ChangeHeadTail);
+	PlayerInputComponent->BindAction(FName("Disconnect"), EInputEvent::IE_Pressed, this, &AUSB_PlayerPawn::DisconnectShot);
 }
 
 void AUSB_PlayerPawn::InitTraceIgnoreAry()
@@ -204,9 +212,15 @@ bool AUSB_PlayerPawn::TryConnect()
 	{
 		return false;
 	}
+
 	auto* Head = Cast<UPinSkMeshComponent>(GetHead());
 
 	if (!Head)
+	{
+		return false;
+	}
+
+	if (Head->GetPortConnected())
 	{
 		return false;
 	}
@@ -218,23 +232,40 @@ bool AUSB_PlayerPawn::TryConnect()
 	if (Result)
 	{
 		AddTraceIgnoreActor(m_CurrentFocusedPort->GetOwner());
-		SetHeadTail(m_CurrentFocusedPort, m_CurrentTail);
+		SetHeadTail(m_CurrentFocusedPort->GetParentSkMesh(), m_CurrentTail);
 	}
 
 	BlockInput(false);
+
 	return Result;
+}
+
+bool AUSB_PlayerPawn::TryDisconnect()
+{
+	auto* Tail = Cast<UPinSkMeshComponent>(GetTail());
+
+	if (!Tail)
+	{
+		return false;
+	}
+
+	if (!Tail->GetPortConnected())
+	{
+		return false;
+	}
+	PRINTF("CompletelyDisconnected");
+	return Tail->Disconnect();
 }
 
 void AUSB_PlayerPawn::BlockInput(bool tIsBlock)
 {
-	auto* PlayerCon = Cast<APlayerController>(GetController());
 	if (!tIsBlock)
 	{
-		EnableInput(PlayerCon);
+		EnableInput(m_PlayerCon);
 	}
 	else
 	{
-		DisableInput(PlayerCon);
+		DisableInput(m_PlayerCon);
 	}
 }
 
@@ -253,9 +284,19 @@ UPrimitiveComponent * AUSB_PlayerPawn::GetHead()
 	return _inline_GetHead();
 }
 
+UPrimitiveComponent * AUSB_PlayerPawn::GetTail()
+{
+	return _inline_GetTail();
+}
+
 void AUSB_PlayerPawn::ConnectShot()
 {
 	TryConnect();
+}
+
+void AUSB_PlayerPawn::DisconnectShot()
+{
+	TryDisconnect();
 }
 
 void AUSB_PlayerPawn::Jump()
@@ -286,8 +327,7 @@ void AUSB_PlayerPawn::TickTracePortable()
 		6.333
 	);
 
-	if (GetWorld()->
-		LineTraceSingleByChannel(HitResult, StartTrace, EndTrace, ECC_GameTraceChannel4, QueryParams))
+	if (GetWorld()->LineTraceSingleByChannel(HitResult, StartTrace, EndTrace, ECC_GameTraceChannel9, QueryParams))
 	{
 		if (!HitResult.GetActor())
 		{

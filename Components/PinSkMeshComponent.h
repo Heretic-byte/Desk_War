@@ -53,6 +53,7 @@ public:
 	void SetPinType(E_PinPortType pinType);
 	FVector GetNeckLoc() const;
 	virtual bool Connect(UPortSkMeshComponent* port);
+	virtual bool Disconnect();
 	virtual bool CheckTypeMatch(E_PinPortType portsType);
 	void SetNeckName(FName nameWant);
 	void SetVelocityPivotName(FName nameWant);

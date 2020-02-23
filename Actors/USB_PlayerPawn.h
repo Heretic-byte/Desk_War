@@ -10,7 +10,7 @@
 #include "Components/PhysicsMovement.h"
 #include "USB_PlayerPawn.generated.h"
 class UPortSkMeshComponent;
-
+class APlayerController;
 
 UCLASS(BlueprintType)
 class DESK_WAR_API AUSB_PlayerPawn : public AUSB_PhysicsPawn
@@ -35,6 +35,8 @@ protected://component
 	UActionManagerComponent* m_ActionManager;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "USB_Body")
 	USkeletalMeshComponent* m_MeshFaceSk;
+	UPROPERTY(VisibleAnywhere, Category = "USB_Body")
+	APlayerController* m_PlayerCon;
 private:
 	UPROPERTY()
 	TArray<AActor*> m_AryTraceIgnoreActors;
@@ -42,6 +44,10 @@ private:
 	USkeletalMeshComponent* m_CurrentHead;
 	UPROPERTY()
 	USkeletalMeshComponent* m_CurrentTail;
+	UPROPERTY()
+	UPinSkMeshComponent* m_CurrentHeadPin;
+	UPROPERTY()
+	UPinSkMeshComponent* m_CurrentTailPin;
 	UPROPERTY()
 	UPortSkMeshComponent* m_CurrentFocusedPort;
 public:
@@ -53,8 +59,12 @@ public:
 	bool RemoveTraceIgnoreActor(AActor* actorWant);
 	UFUNCTION(BlueprintCallable, Category = "USB_Getter")
 	UPrimitiveComponent* GetHead();
+	UFUNCTION(BlueprintCallable, Category = "USB_Getter")
+	UPrimitiveComponent* GetTail();
 	UFUNCTION(BlueprintCallable, Category = "USB_Action")
 	void ConnectShot();
+	UFUNCTION(BlueprintCallable, Category = "USB_Action")
+	void DisconnectShot();
 	UFUNCTION(BlueprintCallable, Category = "USB_Action")
 	void Jump();
 	UFUNCTION(BlueprintCallable, Category = "USB_Action")
@@ -72,6 +82,7 @@ private:
 	void RotatePitch(float v);
 protected:
 	bool TryConnect();
+	bool TryDisconnect();
 	void BlockInput(bool tIsBlock);
 	void AddIgnoreActorsToQuery(FCollisionQueryParams& queryParam);
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -84,5 +95,17 @@ private:
 	FORCEINLINE UPrimitiveComponent* _inline_GetHead()
 	{
 		return m_CurrentHead;
+	}
+	FORCEINLINE UPrimitiveComponent* _inline_GetTail()
+	{
+		return m_CurrentTail;
+	}
+	FORCEINLINE UPrimitiveComponent* _inline_GetHeadPin()
+	{
+		return m_CurrentHeadPin;
+	}
+	FORCEINLINE UPrimitiveComponent* _inline_GetTailPin()
+	{
+		return m_CurrentTailPin;
 	}
 };

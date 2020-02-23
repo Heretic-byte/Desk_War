@@ -48,7 +48,7 @@ void AUSB_PhysicsPawn::CreatePinUSB()
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FoundMeshPinUSB(TEXT("SkeletalMesh'/Game/Meshes/Characters/Player_USB/SK_USB_Head.SK_USB_Head'"));
 	check(FoundMeshPinUSB.Object);
 	m_PinUSB->SetSkeletalMesh(FoundMeshPinUSB.Object);
-	m_PinUSB->SetCollisionProfileName(TEXT("USBMesh"));
+	m_PinUSB->SetCollisionProfileName("PhysicsActor");
 	m_PinUSB->bEditableWhenInherited = true;
 	static ConstructorHelpers::FObjectFinder<UPhysicsAsset> Found_PA_USB(TEXT("PhysicsAsset'/Game/01_PhysicsAsset/PA_USB_Head.PA_USB_Head'"));
 	check(Found_PA_USB.Object);
@@ -64,7 +64,7 @@ void AUSB_PhysicsPawn::CreatePin4Pin()
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FoundMeshPort4Pin(TEXT("SkeletalMesh'/Game/Meshes/Characters/Player_USB/SK_USB_Tail.SK_USB_Tail'"));
 	check(FoundMeshPort4Pin.Object);
 	m_Pin5Pin->SetSkeletalMesh(FoundMeshPort4Pin.Object);
-	m_Pin5Pin->SetCollisionProfileName(TEXT("USBMesh"));
+	m_Pin5Pin->SetCollisionProfileName("PhysicsActor");
 	m_Pin5Pin->RelativeLocation = FVector(-85.560440, 0.000000, 0.000000);
 	m_Pin5Pin->RelativeRotation = FRotator(0.f, 180.f, 0.f);
 	m_Pin5Pin->bEditableWhenInherited = true;
@@ -134,7 +134,7 @@ void AUSB_PhysicsPawn::SpawnSpineColls()
 		FVector SphereLocation(Offset, 0, 0);
 
 		auto* SphereSpawned = AddSceneComponent<USphereComponent>(USphereComponent::StaticClass(), RootComponent, FTransform());
-		SphereSpawned->SetCollisionProfileName(FName(TEXT("USBMesh")));
+		SphereSpawned->SetCollisionProfileName("PhysicsActor");
 		SphereSpawned->SetSphereRadius(m_fLineRadius);
 		SphereSpawned->SetMassOverrideInKg(NAME_None, m_fCollMass);
 		SphereSpawned->SetAngularDamping(m_fSpineAngularDamping);

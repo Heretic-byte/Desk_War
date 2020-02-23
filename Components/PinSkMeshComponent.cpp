@@ -5,7 +5,7 @@
 #include "GameFramework/Controller.h"
 #include "Components/PortSkMeshComponent.h"
 #include "UObject/ConstructorHelpers.h"
-
+#include "Datas/USB_Macros.h"
 
 
 UPinSkMeshComponent::UPinSkMeshComponent(const FObjectInitializer& objInit) :Super(objInit)
@@ -42,7 +42,6 @@ bool UPinSkMeshComponent::Connect(UPortSkMeshComponent * port)
 		return false;
 	}
 	
-	//Input¸·±â
 	m_PortConnected = port;
 	m_PortOwner = m_PortConnected->GetOwner();
 	m_PortConnected->Connect(this);
@@ -50,7 +49,16 @@ bool UPinSkMeshComponent::Connect(UPortSkMeshComponent * port)
 	m_OnConnectedPortOwner.Broadcast(m_PortOwner);
 	m_OnConnectedPort.Broadcast(m_PortConnected);
 
+	
 	return true;
+}
+
+bool UPinSkMeshComponent::Disconnect()
+{
+	m_PortConnected = nullptr;
+	m_PortOwner = nullptr;
+	
+	return m_PortConnected->Disconnect();
 }
 
 void UPinSkMeshComponent::BeginPlay()
@@ -58,6 +66,7 @@ void UPinSkMeshComponent::BeginPlay()
 	Super::BeginPlay();
 	SetPinType(m_Pintype);
 }
+
 
 
 bool UPinSkMeshComponent::CheckTypeMatch(E_PinPortType portsType)

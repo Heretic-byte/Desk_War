@@ -7,17 +7,20 @@
 
 UPortSkMeshComponent::UPortSkMeshComponent(const FObjectInitializer & objInit)
 {
+	m_NameWantMovePoint = "PortPoint";
 	m_NameParentBonePortPoint = FName(TEXT("PortPoint"));
 	m_PortType = E_PinPortType::ENoneType;
-	m_bIsConnected = false;
-	//SkeletalMesh'/Game/Meshes/Characters/Port/SK_PortPoint.SK_PortPoint'
+
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FoundMesh(TEXT("SkeletalMesh'/Game/Meshes/Characters/Port/SK_PortPoint.SK_PortPoint'"));
+
 	if (FoundMesh.Succeeded())
 	{
-		m_MeshParentActor->SetSkeletalMesh(FoundMesh.Object);
+		SetSkeletalMesh(FoundMesh.Object);
 	}
-	//트레이스만 당하는 고유 콜라이더 필요
+
+	SetCollisionProfileName("Port");
 }
+
 void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, USkeletalMeshComponent* parentMesh,E_PinPortType portType, FName namePinBone)
 {
 	m_ParentPhysicsConst = physicsJoint;
@@ -39,20 +42,31 @@ void UPortSkMeshComponent::BeginPlay()
 	Super::BeginPlay();
 }
 
+FName UPortSkMeshComponent::GetMovePointWant()
+{
+	return m_NameWantMovePoint;
+}
+
+USkeletalMeshComponent * UPortSkMeshComponent::GetParentSkMesh()
+{
+	return m_MeshParentActor;
+}
+
 void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)
 {
 	PRINTF("Connect in Port");
 	m_ConnectedPin = connector;
 	AdjustPinActorTransform();
+	GetParentSkMesh()->ResetAllBodiesSimulatePhysics();
+	ResetAllBodiesSimulatePhysics();
 	ConstraintPinPort();
-	m_bIsConnected = true;
 }
 
 void UPortSkMeshComponent::AdjustPinActorTransform()
 {
 	FRotator ConnectRot = m_ConnectedPin->GetComponentRotation();
-	SetWorldLocation(m_ConnectedPin->GetBoneLocation("PinPoint", EBoneSpaces::WorldSpace), false, nullptr, ETeleportType::TeleportPhysics);
-	SetWorldRotation(ConnectRot, false, nullptr, ETeleportType::TeleportPhysics);
+	GetParentSkMesh()->SetWorldLocation(m_ConnectedPin->GetBoneLocation("PinPoint", EBoneSpaces::WorldSpace), false, nullptr, ETeleportType::TeleportPhysics);
+	GetParentSkMesh()->SetWorldRotation(ConnectRot, false, nullptr, ETeleportType::TeleportPhysics);
 }
 
 void UPortSkMeshComponent::ConstraintPinPort()
@@ -61,17 +75,22 @@ void UPortSkMeshComponent::ConstraintPinPort()
 }
 
 
-void UPortSkMeshComponent::Disconnect()
+bool UPortSkMeshComponent::Disconnect()
 {
+	if (!m_ConnectedPin)
+	{
+		return false;
+	}
 	PRINTF("Dis");
 	m_ParentPhysicsConst->BreakConstraint();
 	m_ConnectedPin = nullptr;
-	m_bIsConnected = false;
+
+	return true;
 }
 
 bool UPortSkMeshComponent::IsConnected()
 {
-	return m_bIsConnected;
+	return m_ConnectedPin;
 }
 
 void UPortSkMeshComponent::DisableCollider()
