@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
 #include "Components/SphereComponent.h"
-#include "Components/SkeletalMeshComponent.h"
 #include "Datas/USB_Macros.h"
 #include "Datas/USB_Enum.h"
 #include "Kismet/KismetMathLibrary.h"

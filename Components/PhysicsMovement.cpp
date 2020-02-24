@@ -11,6 +11,8 @@
 
 UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 {
+
+	m_bBlockMove = false;
 	m_MovingTarget = nullptr;
 	m_fJumpZVelocity = 540.f;
 	m_fMovingForce = 5000.f;
@@ -21,10 +23,12 @@ UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 	m_fGroundCastOffset = -45.f;
 	m_RotationRate = FRotator(180.f,180.f,500.f);
 	m_bDebugShowForwardCast = false;
-	m_fForwardCastOffset = 100.f;
 	m_fAirControl = 0.05f;
 	m_fGroundCastBoxSize = 15.f;
 	m_WalkableSlopeAngle = 65.f;
+	m_fBlockMoveTime = 0.f;
+	m_fBlockMoveTimer = 0.f;
+	m_fAddTraceMultipleLength = 1.f;
 }
 
 void UPhysicsMovement::BeginPlay()
@@ -57,6 +61,22 @@ void UPhysicsMovement::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
+void UPhysicsMovement::SetUpdatePhysicsMovement(UPhysicsSkMeshComponent * headUpdatedCompo, UPhysicsSkMeshComponent * tailUpdatedCompo)
+{
+	SetCastingLength(headUpdatedCompo);;
+	SetUpdatedComponent(headUpdatedCompo);
+	m_MovingTargetTail = tailUpdatedCompo;
+}
+
+void UPhysicsMovement::SetCastingLength(UPhysicsSkMeshComponent * headUpdatedCompo)
+{
+	m_fGroundCastOffset /= m_fAddTraceMultipleLength;
+	m_fGroundCastBoxSize /= m_fAddTraceMultipleLength;
+	m_fAddTraceMultipleLength = headUpdatedCompo->GetMeshRadiusMultiple();
+	m_fGroundCastOffset *= m_fAddTraceMultipleLength;
+	m_fGroundCastBoxSize *= m_fAddTraceMultipleLength;
+}
+
 void UPhysicsMovement::SetTraceIgnoreActorAry(TArray<AActor*>* aryWant)
 {
 	m_ptrAryTraceIgnoreActors = aryWant;
@@ -66,7 +86,7 @@ void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent
 {
 	if (NewUpdatedComponent)
 	{
-		m_MovingTarget = Cast<USkeletalMeshComponent>(NewUpdatedComponent);
+		m_MovingTarget = Cast<UPhysicsSkMeshComponent>(NewUpdatedComponent);
 		if (!m_MovingTarget)
 		{
 			PRINTF("Target is not USkeletalMesh");
@@ -122,6 +142,16 @@ void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 	FVector InputDir = ConsumeInputVector();
 	m_Acceleration = ScaleInputAccel(InputDir);
 
+	if (m_bBlockMove)
+	{
+		m_fBlockMoveTimer += DeltaTime;
+		if (0<m_fBlockMoveTime&&m_fBlockMoveTimer > m_fBlockMoveTime)
+		{
+			m_fBlockMoveTimer = 0.f;
+			m_bBlockMove = false;
+		}
+		return;
+	}
 	TickRotate(DeltaTime);
 }
 
@@ -132,8 +162,12 @@ void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
 		return;
 	}
 
-	CheckJumpInput(DeltaTime);
 	TickCastGround();
+	if (m_bBlockMove)
+	{
+		return;
+	}
+	CheckJumpInput(DeltaTime);
 
 	if (TickCheckCanMoveForward())
 	{
@@ -228,8 +262,6 @@ bool UPhysicsMovement::IsFalling() const
 	return !IsGround();
 }
 
-
-
 bool UPhysicsMovement::TickCheckCanMoveForward()
 {
 	float PlayerAngle = m_MovingTarget->GetComponentRotation().Pitch;
@@ -255,7 +287,7 @@ void UPhysicsMovement::TickCastGround()
 	TraceStart.Z -= m_fGroundCastBoxSize;
 
 	FVector TraceEnd = TraceStart;
-	TraceEnd.Z += m_fGroundCastOffset;
+	TraceEnd.Z += m_fGroundCastOffset*m_fAddTraceMultipleLength;
 
 	FCollisionQueryParams QueryParam;
 	AddIgnoreActorsToQuery(QueryParam);
@@ -289,7 +321,6 @@ void UPhysicsMovement::UpdateComponentVelocity()
 	FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
 	
 	Velocity.Z = CurrentV.Z;
-	
 	m_MovingTarget->SetPhysicsLinearVelocity(Velocity, false, m_NameLinearVeloHeadBone);
 }
 
@@ -341,6 +372,19 @@ void UPhysicsMovement::AddImpulse(FVector impulseWant)
 	m_MovingTarget->AddImpulse(impulseWant);
 }
 
+void UPhysicsMovement::SetBlockMoveTimer(float wantBlockTime)
+{
+	m_fBlockMoveTimer = 0.f;
+	if (wantBlockTime == 0)
+	{
+		m_fBlockMoveTime = 0.f;
+		m_bBlockMove = false;
+		return;
+	}
+	m_fBlockMoveTime = wantBlockTime;
+	m_bBlockMove = true;
+}
+
 void UPhysicsMovement::CheckJumpInput(float DeltaTime)
 {
 	if (m_bPressedJump)
@@ -365,7 +409,8 @@ bool UPhysicsMovement::DoJump()
 		FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
 		CurrentV.Z = FMath::Max(CurrentV.Z, m_fJumpZVelocity);
 		m_MovingTarget->SetPhysicsLinearVelocity(CurrentV);
-		m_MovingTargetTail->SetPhysicsLinearVelocity(CurrentV,false,m_NameLinearVeloTailBone);
+		m_MovingTargetTail->SetPhysicsLinearVelocity(CurrentV);
+		//m_MovingTargetTail->SetPhysicsLinearVelocity(CurrentV,false,m_NameLinearVeloTailBone);
 		m_nJumpCurrentCount++;
 		return true;
 	}
@@ -393,7 +438,6 @@ void UPhysicsMovement::ClearJumpInput(float delta)
 	if(IsGround())
 		ResetJumpState();
 }
-
 
 bool UPhysicsMovement::CanJump() const
 {

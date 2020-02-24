@@ -55,10 +55,15 @@ bool UPinSkMeshComponent::Connect(UPortSkMeshComponent * port)
 
 bool UPinSkMeshComponent::Disconnect()
 {
+	if (!m_PortConnected->Disconnect())
+	{
+		return false;
+	}
+
 	m_PortConnected = nullptr;
 	m_PortOwner = nullptr;
-	
-	return m_PortConnected->Disconnect();
+
+	return true;
 }
 
 void UPinSkMeshComponent::BeginPlay()

@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Datas/USB_Macros.h"
-#include "Components/SkeletalMeshComponent.h"
+#include "Components/PhysicsSkMeshComponent.h"
 #include "GameFramework/PawnMovementComponent.h"
 #include "CollisionQueryParams.h"
 #include "PhysicsMovement.generated.h"
@@ -17,9 +17,9 @@ public:
 	UPhysicsMovement(const FObjectInitializer& objInit);
 public:
 	UPROPERTY()
-	USkeletalMeshComponent* m_MovingTarget;
+	UPhysicsSkMeshComponent* m_MovingTarget;
 	UPROPERTY()
-	USkeletalMeshComponent* m_MovingTargetTail;
+	UPhysicsSkMeshComponent* m_MovingTargetTail;
 
 	TArray<AActor*>* m_ptrAryTraceIgnoreActors;
 private:
@@ -30,10 +30,13 @@ private:
 	FHitResult m_GroundHitResult;
 	//jump
 	bool m_bWasJumping;
+	bool m_bBlockMove;
 	float m_fJumpKeyHoldTime;
 	int m_nJumpCurrentCount;
 	float m_fJumpForceTimeRemaining;
-	//
+	float m_fBlockMoveTime;
+	float m_fBlockMoveTimer;
+	float m_fAddTraceMultipleLength;
 public:
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement")
 	FName m_NameLinearVeloHeadBone;
@@ -43,8 +46,6 @@ public:
 	bool m_bDebugShowForwardCast;
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
 	float m_fGroundCastBoxSize;
-	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
-	float m_fForwardCastOffset;
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMax = "0", UIMax = "0"))
 	float m_fGroundCastOffset;
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
@@ -84,6 +85,8 @@ public:
 	void AddForce(FVector forceWant);
 	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
 	void AddImpulse(FVector impulseWant);
+public:
+	void SetBlockMoveTimer(float wantBlockTime);
 private:
 	virtual void UpdateComponentVelocity() override;
 	FVector ScaleInputAccel(const FVector inputPure) ;
@@ -106,9 +109,11 @@ private:
 	void TickCastGround();
 	void TickRotate(float delta);
 	void TickMovement(float delta);
-public:
-	void SetTraceIgnoreActorAry(TArray<AActor*>* aryWant);
 	virtual void SetUpdatedComponent(USceneComponent* NewUpdatedComponent) override;
+public:
+	void SetUpdatePhysicsMovement(UPhysicsSkMeshComponent* headUpdatedCompo, UPhysicsSkMeshComponent* tailUpdatedCompo);
+	void SetCastingLength(UPhysicsSkMeshComponent * headUpdatedCompo);
+	void SetTraceIgnoreActorAry(TArray<AActor*>* aryWant);
 	void SetDamping(float fLinDamp, float fAngDamp);
 public:
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;

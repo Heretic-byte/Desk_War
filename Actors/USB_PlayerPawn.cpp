@@ -13,7 +13,7 @@
 #include "Components/PortSkMeshComponent.h"
 #include "Actors/PortPawn.h"
 #include "GameFramework/PlayerController.h"
-
+#include "UObjects/EjectionCamShake.h"
 
 
 
@@ -39,31 +39,40 @@ void AUSB_PlayerPawn::BeginPlay()
 
 void AUSB_PlayerPawn::InitPlayerPawn()
 {
+	m_bCanConnectDist = false;
+	m_fConnectHorizontalAngle = 0.06f;
+	m_fEjectionPower = 4200.f;
 	m_fSpineAngularDamping = 1.f;
 	m_fSpineLinearDamping = 0.01f;
 	m_fCollMass = 1.f;
 	m_fMaxAngularVelocity = 150.f;
-
+	m_fBlockMoveTimeWhenEject = 1.5f;
 	AutoPossessPlayer = EAutoReceiveInput::Player0;
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 
+	m_NamePinConnectSocket = "ConnectPoint";
+	m_NamePinConnectStartSocket = "ConnectStart";
+	m_NamePinConnectPushPointSocket = "PushPoint";
+
 	m_CurrentHead = m_PinUSB;
 	m_CurrentTail = m_Pin5Pin;
+	m_CurrentHeadPin = m_PinUSB;
+	m_CurrentTailPin = m_Pin5Pin;
 	m_fPortTraceRange = 77.f;
+	m_fHeadChangeCD = 0.5f;
+	m_fHeadChangeCDTimer = 0.f;
 }
 
 void AUSB_PlayerPawn::CreatePhysicMovement()
 {
 	m_Movement = CreateDefaultSubobject<UPhysicsMovement>(TEXT("Movement00"));
 
-	m_Movement->SetUpdatedComponent(m_CurrentHead);
-	m_Movement->m_MovingTargetTail = m_CurrentTail;
+	m_Movement->SetUpdatePhysicsMovement(m_CurrentHead, m_CurrentTail);
 
 	m_Movement->SetDamping(0.01f, 1.f);
 
 	m_Movement->m_fMovingForce=38000.f;
 	m_Movement->m_fGroundCastBoxSize = 10.f;
-	m_Movement->m_fForwardCastOffset = 55.f;
 	m_Movement->m_fGroundCastOffset = -20.f;
 	m_Movement->m_WalkableSlopeAngle = 55.f;
 	m_Movement->m_fJumpZVelocity = 2000.f;
@@ -120,13 +129,16 @@ void AUSB_PlayerPawn::CreateSkFaceMesh()
 	m_MeshFaceSk->SetRelativeScale3D(FVector(2.64f, 2.64f, 2.64f));
 }
 
-void AUSB_PlayerPawn::SetHeadTail(USkeletalMeshComponent * headWant, USkeletalMeshComponent * tailWant)
+void AUSB_PlayerPawn::SetHeadTail(UPhysicsSkMeshComponent * headWant, UPhysicsSkMeshComponent * tailWant)
 {
 	m_CurrentHead = headWant;
 	m_CurrentTail = tailWant;
 
-	m_Movement->SetUpdatedComponent(m_CurrentHead);
-	m_Movement->m_MovingTargetTail = m_CurrentTail;
+	auto* HeadPin = m_CurrentHeadPin;
+	m_CurrentHeadPin = m_CurrentTailPin;
+	m_CurrentTailPin = HeadPin;
+
+	m_Movement->SetUpdatePhysicsMovement(m_CurrentHead, m_CurrentTail);
 	
 	m_CamRoot->AttachToComponent(m_CurrentHead,FAttachmentTransformRules::KeepRelativeTransform);
 }
@@ -163,6 +175,7 @@ void AUSB_PlayerPawn::InitTraceIgnoreAry()
 
 void AUSB_PlayerPawn::Tick(float DeltaTime)
 {
+	m_fHeadChangeCDTimer += DeltaTime;
 	Super::Tick(DeltaTime);
 	TickTracePortable();
 
@@ -203,16 +216,38 @@ void AUSB_PlayerPawn::RotateYaw(float v)
 
 void AUSB_PlayerPawn::ChangeHeadTail()
 {
+	if (m_fHeadChangeCDTimer < m_fHeadChangeCD)
+	{
+		return;
+	}
+	m_fHeadChangeCDTimer = 0.f;
 	SetHeadTail(m_CurrentTail,m_CurrentHead);
+}
+
+void AUSB_PlayerPawn::GetPortCenterTracePoint(FVector & startPoint, FVector & endPoint, float length)
+{
+	startPoint = GetHead()->GetSocketLocation(m_NamePinConnectSocket);
+	endPoint = (GetHead()->GetForwardVector() * length) + startPoint;
+}
+
+bool AUSB_PlayerPawn::CheckPortVerticalAngle(UPortSkMeshComponent * port)
+{
+	return UKismetMathLibrary::Abs(port->GetUpVector().Z - GetHead()->GetUpVector().Z) <= 0.1f;
+}
+
+bool AUSB_PlayerPawn::CheckPortHorizontalAngle(UPortSkMeshComponent * port)
+{
+	FVector A, B;
+	GetPortCenterTracePoint(A,B,80.f);
+	FVector PlayerConnectDir = (B - A).GetSafeNormal(0.001f);
+	FVector ConnectPortDir = port->GetForwardVector();
+	float Dot = UKismetMathLibrary::Dot_VectorVector(PlayerConnectDir, ConnectPortDir);
+	return UKismetMathLibrary::Acos(Dot) <= m_fConnectHorizontalAngle;
 }
 
 bool AUSB_PlayerPawn::TryConnect()
 {
-	if (!m_CurrentFocusedPort)
-	{
-		return false;
-	}
-
+	
 	auto* Head = Cast<UPinSkMeshComponent>(GetHead());
 
 	if (!Head)
@@ -224,8 +259,6 @@ bool AUSB_PlayerPawn::TryConnect()
 	{
 		return false;
 	}
-	
-	BlockInput(true);
 
 	bool Result= Head->Connect(m_CurrentFocusedPort);
 
@@ -233,11 +266,24 @@ bool AUSB_PlayerPawn::TryConnect()
 	{
 		AddTraceIgnoreActor(m_CurrentFocusedPort->GetOwner());
 		SetHeadTail(m_CurrentFocusedPort->GetParentSkMesh(), m_CurrentTail);
+
+		if (m_CurrentFocusedPort->GetBlockMoveOnConnnect())
+		{
+			BlockMovement();
+		}
 	}
 
-	BlockInput(false);
-
 	return Result;
+}
+
+void AUSB_PlayerPawn::BlockMovement()
+{
+	m_Movement->SetBlockMoveTimer(-1.f);
+}
+
+void AUSB_PlayerPawn::UnblockMovement()
+{
+	m_Movement->SetBlockMoveTimer(0.f);
 }
 
 bool AUSB_PlayerPawn::TryDisconnect()
@@ -246,15 +292,19 @@ bool AUSB_PlayerPawn::TryDisconnect()
 
 	if (!Tail)
 	{
-		return false;
+		Tail = m_CurrentTailPin;
 	}
 
 	if (!Tail->GetPortConnected())
 	{
 		return false;
 	}
-	PRINTF("CompletelyDisconnected");
-	return Tail->Disconnect();
+
+	RemoveTraceIgnoreActor(Tail->GetPortConnected()->GetOwner());
+	Tail->Disconnect();
+	SetHeadTail(m_CurrentHead, Tail);
+	UnblockMovement();
+	return true;
 }
 
 void AUSB_PlayerPawn::BlockInput(bool tIsBlock)
@@ -265,6 +315,7 @@ void AUSB_PlayerPawn::BlockInput(bool tIsBlock)
 	}
 	else
 	{
+		
 		DisableInput(m_PlayerCon);
 	}
 }
@@ -291,12 +342,61 @@ UPrimitiveComponent * AUSB_PlayerPawn::GetTail()
 
 void AUSB_PlayerPawn::ConnectShot()
 {
+
+	if (!m_bCanConnectDist)
+	{
+		PRINTF("TooFAR");
+		return;
+	}
+
+	bool ResultH = CheckPortHorizontalAngle(m_CurrentFocusedPort);
+	bool ResultV = CheckPortVerticalAngle(m_CurrentFocusedPort);
+
+	if (!ResultH || !ResultV)
+	{
+		return;
+	}
+
+	//
+	PRINTF("SUCCESS");
+	m_ActionManager->RemoveAllActions();
+
+	m_CurrentFocusedPort->DisableCollider();
+	//
+	auto* Sequence = UCActionFactory::MakeSequenceAction();
+
+	Sequence->AddAction(MoveForReadyConnect(portToAdd));
+
+	Sequence->AddAction(RotateForConnect(portToAdd));
+
+	auto* PushAction = MoveForPushConnection(portToAdd);
+
+	Sequence->AddAction(PushAction);
+
+	PushAction->m_OnActionComplete.BindLambda(
+		[=]()
+		{
+
+		m_ConnectorHead->Connect(portToAdd);
+		EnablePlayerInput();
+		});
+
+	m_ActionManager->RunAction(Sequence);
+	//
+	BlockInput(true);
 	TryConnect();
+	BlockInput(false);
 }
 
 void AUSB_PlayerPawn::DisconnectShot()
 {
-	TryDisconnect();
+	if (TryDisconnect())
+	{
+		FVector ImpulseDir = _inline_GetTailPin()->GetForwardVector() * 1.f * m_fEjectionPower;
+		m_Movement->AddImpulse(ImpulseDir);
+		m_Movement->SetBlockMoveTimer(m_fBlockMoveTimeWhenEject);
+		m_PlayerCon->PlayerCameraManager->PlayCameraShake(UEjectionCamShake::StaticClass(),1.0f);
+	}
 }
 
 void AUSB_PlayerPawn::Jump()
@@ -313,7 +413,7 @@ void AUSB_PlayerPawn::TickTracePortable()
 {
 	FHitResult HitResult;
 	FVector StartTrace = GetHead()->GetComponentLocation();
-	FVector EndTrace = (GetController()->GetRootComponent()->GetForwardVector() * m_fPortTraceRange) + StartTrace;
+	FVector EndTrace = (GetHead()->GetForwardVector()* m_fPortTraceRange) + StartTrace;
 
 	FCollisionQueryParams QueryParams;
 	AddIgnoreActorsToQuery(QueryParams);
@@ -339,11 +439,11 @@ void AUSB_PlayerPawn::TickTracePortable()
 		if (PortableCompo)
 		{
 			m_CurrentFocusedPort = PortableCompo;
-
+			m_bCanConnectDist=m_CurrentFocusedPort->SetAimTracePoint(HitResult.ImpactPoint);
 			return;
 		}
 	}
-
+	m_bCanConnectDist = false;
 	m_CurrentFocusedPort = nullptr;
 }
 

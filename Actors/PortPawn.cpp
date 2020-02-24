@@ -4,6 +4,8 @@
 #include "PortPawn.h"
 #include "ConstructorHelpers.h"
 
+FName APortPawn::MeshComponentName(TEXT("MeshPawn00"));
+FName APortPawn::MeshPortComponentName(TEXT("MeshPort00"));
 // Sets default values
 APortPawn::APortPawn(const FObjectInitializer& objInit):Super(objInit)
 {
@@ -16,10 +18,11 @@ APortPawn::APortPawn(const FObjectInitializer& objInit):Super(objInit)
 
 void APortPawn::CreateMesh()
 {
-	m_Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MeshPawn00"));
+	m_Mesh = CreateDefaultSubobject<UPhysicsSkMeshComponent>(MeshComponentName);
 	m_Mesh->SetupAttachment(RootComponent);
 	m_Mesh->SetCollisionProfileName("PhysicsActor");
 	m_Mesh->SetSimulatePhysics(true);
+	m_Mesh->SetMeshRadiusMultiple(1.2f);
 }
 
 void APortPawn::CreatePhyCon()
@@ -35,9 +38,19 @@ void APortPawn::CreatePhyCon()
 	m_PhyConPort->SetDisableCollision(true);
 }
 
+void APortPawn::PortConnected(UPinSkMeshComponent* pinConnect)
+{
+
+}
+
+void APortPawn::PortDisConnected(UPinSkMeshComponent* pinConnect)
+{
+
+}
+
 void APortPawn::CreatePort()
 {
-	m_MeshPort = CreateDefaultSubobject<UPortSkMeshComponent>(TEXT("MeshPort00"));
+	m_MeshPort = CreateDefaultSubobject<UPortSkMeshComponent>(MeshPortComponentName);
 	m_MeshPort->SetupAttachment(m_Mesh);
 	m_MeshPort->InitPort(m_PhyConPort, m_Mesh);
 }

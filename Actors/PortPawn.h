@@ -14,9 +14,12 @@ UCLASS()
 class DESK_WAR_API APortPawn : public APawn
 {
 	GENERATED_UCLASS_BODY()
+public:
+	static FName MeshComponentName;
+	static FName MeshPortComponentName;
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mesh")
-	USkeletalMeshComponent* m_Mesh;
+	UPhysicsSkMeshComponent* m_Mesh;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly , Category = "Mesh")
 	UPortSkMeshComponent* m_MeshPort;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly,Category = "Connect")
@@ -25,6 +28,8 @@ private:
 	void CreateMesh();
 	void CreatePort();
 	void CreatePhyCon();
+	virtual void PortConnected(UPinSkMeshComponent* pinConnect);
+	virtual void PortDisConnected(UPinSkMeshComponent* pinConnect);
 protected:
 	virtual void BeginPlay() override;
 };

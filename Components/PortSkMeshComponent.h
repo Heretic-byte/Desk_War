@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/SkeletalMeshComponent.h"
+#include "Components/PhysicsSkMeshComponent.h"
 #include "Components/ShapeComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
@@ -15,12 +15,22 @@
 //class UPinSkMeshComponent;
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
-class DESK_WAR_API UPortSkMeshComponent : public USkeletalMeshComponent
+class DESK_WAR_API UPortSkMeshComponent : public UPhysicsSkMeshComponent
 {
 	GENERATED_BODY()
 public:
+	DECLARE_MULTICAST_DELEGATE_OneParam(FPinConnection, UPinSkMeshComponent*);
 	UPortSkMeshComponent(const FObjectInitializer& objInit);
+public:
+	FPinConnection m_OnConnected;
+	FPinConnection m_OnDisconnected;
 protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interact")
+	bool m_bBlockMoveOnConnected;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interact")
+	float m_fEjectPower;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interact")
+	float m_fConnectableDistSqr;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interact")
 	FName m_NameWantMovePoint;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interact")
@@ -30,21 +40,20 @@ protected:
 	UPROPERTY()
 	UPhysicsConstraintComponent* m_ParentPhysicsConst;
 	UPROPERTY()
-	USkeletalMeshComponent* m_MeshParentActor;
+	UPhysicsSkMeshComponent* m_MeshParentActor;
 protected:
 	FName m_NameParentBonePortPoint;
+	TEnumAsByte<ECollisionEnabled::Type> m_ParentCollision;
 private:
 	void ConstraintPinPort();
 	void AdjustPinActorTransform();
-	void DisableCollider();
-	void EnableCollider();
 public:
 	UFUNCTION(BlueprintCallable, Category = "Connect Init")
-	void InitPort(UPhysicsConstraintComponent* physicsJoint,USkeletalMeshComponent* parentMesh,E_PinPortType portType = E_PinPortType::ENoneType,FName namePinBone = NAME_None);
+	virtual void InitPort(UPhysicsConstraintComponent* physicsJoint, UPhysicsSkMeshComponent* parentMesh,E_PinPortType portType = E_PinPortType::ENoneType,FName namePinBone = NAME_None);
 	UFUNCTION(BlueprintCallable, Category = "Interact")
-	void Connect(UPinSkMeshComponent* connector);
+	virtual void Connect(UPinSkMeshComponent* connector);
 	UFUNCTION(BlueprintCallable, Category = "Interact")
-	bool Disconnect();
+	virtual bool Disconnect();
 	UFUNCTION(BlueprintCallable, Category = "Interact")
 	bool IsConnected();
 	UFUNCTION(BlueprintCallable, Category = "Interact")
@@ -52,8 +61,12 @@ public:
 protected:
 	virtual void BeginPlay() override;
 public:
+	void DisableCollider();
+	void EnableCollider();
+	bool SetAimTracePoint(FVector& tracedImpactPoint);
+	bool GetBlockMoveOnConnnect();
 	FName GetMovePointWant();
-	USkeletalMeshComponent* GetParentSkMesh();
+	UPhysicsSkMeshComponent* GetParentSkMesh();
 
 	FORCEINLINE E_PinPortType _inline_GetPortType() const
 	{

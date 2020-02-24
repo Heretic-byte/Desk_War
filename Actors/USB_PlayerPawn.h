@@ -9,7 +9,7 @@
 #include "Actors/USB_PhysicsPawn.h"
 #include "Components/PhysicsMovement.h"
 #include "USB_PlayerPawn.generated.h"
-class UPortSkMeshComponent;
+class UPhysicsSkMeshComponent;
 class APlayerController;
 
 UCLASS(BlueprintType)
@@ -20,20 +20,36 @@ public:
 	AUSB_PlayerPawn(const FObjectInitializer& objInit);
 protected:
 	FVector m_CamOffset;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Body")
+	FName m_NamePinConnectSocket;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Body")
+	FName m_NamePinConnectStartSocket;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Body")
+	FName m_NamePinConnectPushPointSocket;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
 	float m_fPortTraceRange;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
+	float m_fConnectHorizontalAngle;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
+	float m_fEjectionPower;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
+	float m_fBlockMoveTimeWhenEject;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
+	float m_fHeadChangeCD;
+	float m_fHeadChangeCDTimer;
+	bool m_bCanConnectDist;
 protected://component
-	UPROPERTY(VisibleAnywhere,BlueprintReadWrite,Category="Movement")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly,Category="Movement")
 	UPhysicsMovement* m_Movement;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Camera")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
 	USceneComponent* m_CamRoot;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Camera")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
 	UCameraComponent* m_MainCam;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Camera")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
 	UUSB_SpringArm* m_MainSpringArm;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "USB_Action")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "USB_Action")
 	UActionManagerComponent* m_ActionManager;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "USB_Body")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "USB_Body")
 	USkeletalMeshComponent* m_MeshFaceSk;
 	UPROPERTY(VisibleAnywhere, Category = "USB_Body")
 	APlayerController* m_PlayerCon;
@@ -41,9 +57,9 @@ private:
 	UPROPERTY()
 	TArray<AActor*> m_AryTraceIgnoreActors;
 	UPROPERTY()
-	USkeletalMeshComponent* m_CurrentHead;
+	UPhysicsSkMeshComponent* m_CurrentHead;
 	UPROPERTY()
-	USkeletalMeshComponent* m_CurrentTail;
+	UPhysicsSkMeshComponent* m_CurrentTail;
 	UPROPERTY()
 	UPinSkMeshComponent* m_CurrentHeadPin;
 	UPROPERTY()
@@ -75,11 +91,15 @@ private://construct
 	void CreateCameraFamily();
 	void CreateSkFaceMesh();
 private:
-	void SetHeadTail(USkeletalMeshComponent* headWant, USkeletalMeshComponent* tailWant);
+	void SetHeadTail(UPhysicsSkMeshComponent* headWant, UPhysicsSkMeshComponent* tailWant);
 	void MoveForward(float v);
 	void MoveRight(float v);
 	void RotateYaw(float v);
 	void RotatePitch(float v);
+private:
+	void GetPortCenterTracePoint(FVector & startPoint, FVector & endPoint, float length);
+	bool CheckPortVerticalAngle(UPortSkMeshComponent * port);
+	bool CheckPortHorizontalAngle(UPortSkMeshComponent * port);
 protected:
 	bool TryConnect();
 	bool TryDisconnect();
@@ -90,6 +110,8 @@ protected:
 	void InitTraceIgnoreAry();
 	void TickTracePortable();
 public:
+	void BlockMovement();
+	void UnblockMovement();
 	virtual void Tick(float DeltaTime) override;
 private:
 	FORCEINLINE UPrimitiveComponent* _inline_GetHead()
