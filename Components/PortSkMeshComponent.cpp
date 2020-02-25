@@ -76,16 +76,8 @@ UPhysicsSkMeshComponent * UPortSkMeshComponent::GetParentSkMesh()
 void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)
 {
 	m_ConnectedPin = connector;
-	AdjustPinActorTransform();
 	ConstraintPinPort();
 	m_OnConnected.Broadcast(m_ConnectedPin);
-}
-
-void UPortSkMeshComponent::AdjustPinActorTransform()
-{
-	FRotator ConnectRot = m_ConnectedPin->GetComponentRotation();
-	//GetParentSkMesh()->SetWorldLocation(m_ConnectedPin->GetBoneLocation("PinPoint", EBoneSpaces::WorldSpace), false, nullptr, ETeleportType::TeleportPhysics);
-	GetParentSkMesh()->SetWorldRotation(ConnectRot, false, nullptr, ETeleportType::TeleportPhysics);
 }
 
 void UPortSkMeshComponent::ConstraintPinPort()

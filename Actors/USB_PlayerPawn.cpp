@@ -30,6 +30,15 @@ AUSB_PlayerPawn::AUSB_PlayerPawn(const FObjectInitializer& objInit):Super(objIni
 	CreateSkFaceMesh();
 
 	m_ActionManager = CreateDefaultSubobject<UActionManagerComponent>("ActionManager00");
+
+	m_AryPhysicsBody.Reserve(10);
+	for (auto* Sphere : m_ArySpineColls)
+	{
+		m_AryPhysicsBody.Emplace(Sphere);
+	}
+	m_AryPhysicsBody.Emplace(m_PinUSB);
+	m_AryPhysicsBody.Emplace(m_Pin5Pin);
+
 }
 
 void AUSB_PlayerPawn::BeginPlay()
@@ -92,8 +101,7 @@ void AUSB_PlayerPawn::CreateCameraFamily()
 {
 	m_CamRoot = CreateDefaultSubobject<USceneComponent>(TEXT("CamRoot"));
 	m_CamRoot->SetupAttachment(m_PinUSB);
-	m_CamOffset = FVector(3.5f, 0.f, 0.f);
-	m_CamRoot->SetRelativeLocation(m_CamOffset);
+	m_CamRoot->SetRelativeLocation(FVector(3.5f, 0.f, 0.f));
 
 	m_MainSpringArm = CreateDefaultSubobject<UUSB_SpringArm>(TEXT("Spring00"));
 	m_MainSpringArm->SetupAttachment(m_CamRoot);
@@ -240,6 +248,15 @@ bool AUSB_PlayerPawn::CheckPortHorizontalAngle(UPortSkMeshComponent * port)
 	return UKismetMathLibrary::Acos(Dot) <= m_fConnectHorizontalAngle;
 }
 
+void AUSB_PlayerPawn::SetPhysicsVelocityAllBody(FVector linearV)
+{
+	for (auto* Phy : m_AryPhysicsBody)
+	{
+		Phy->SetPhysicsLinearVelocity(linearV);
+		Phy->SetPhysicsAngularVelocity(linearV);
+	}
+}
+
 bool AUSB_PlayerPawn::TryConnect(UPortSkMeshComponent* portWant)
 {
 	auto* Head = Cast<UPinSkMeshComponent>(GetHead());
@@ -260,11 +277,8 @@ bool AUSB_PlayerPawn::TryConnect(UPortSkMeshComponent* portWant)
 	{
 		AddTraceIgnoreActor(portWant->GetOwner());
 		SetHeadTail(portWant->GetParentSkMesh(), m_CurrentTail);
+		m_AryPhysicsBody.Emplace(portWant->GetParentSkMesh());
 
-		if (portWant->GetBlockMoveOnConnnect())
-		{
-			BlockMovement();
-		}
 	}
 
 	return Result;
@@ -295,6 +309,7 @@ bool AUSB_PlayerPawn::TryDisconnect()
 	}
 
 	RemoveTraceIgnoreActor(Tail->GetPortConnected()->GetOwner());
+	m_AryPhysicsBody.Remove(Tail->GetPortConnected());
 	Tail->Disconnect();
 	SetHeadTail(m_CurrentHead, Tail);
 	UnblockMovement();
@@ -350,15 +365,7 @@ void AUSB_PlayerPawn::ConnectShot()
 
 	BlockInput(true);
 
-	GetHead()->SetPhysicsLinearVelocity(FVector(0,0,0));
-	GetHead()->SetPhysicsAngularVelocity(FVector(0, 0, 0));
-	for (auto* Sphere : m_ArySpineColls)
-	{
-		Sphere->SetPhysicsLinearVelocity(FVector(0, 0, 0));
-		Sphere->SetPhysicsAngularVelocity(FVector(0, 0, 0));
-	}
-	GetTail()->SetPhysicsLinearVelocity(FVector(0, 0, 0));
-	GetTail()->SetPhysicsAngularVelocity(FVector(0, 0, 0));
+	SetPhysicsVelocityAllBody(FVector(0, 0, 0));
 
 	auto* Port = m_CurrentFocusedPort;
 	Port->DisablePhysics();
@@ -378,10 +385,15 @@ void AUSB_PlayerPawn::ConnectShot()
 	
 	PushAction->m_OnActionComplete.BindLambda(
 		[=]()
+	{
+		TryConnect(Port);
+		BlockInput(false);
+		Port->EnablePhysics();
+		if (Port->GetBlockMoveOnConnnect())
 		{
-			BlockInput(false);
-			TryConnect(Port);
-		});
+			BlockMovement();
+		}
+	});
 
 	Sequence->m_OnActionKilled.BindLambda(
 		[=]()

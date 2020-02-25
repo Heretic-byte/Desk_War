@@ -45,7 +45,6 @@ protected:
 	FName m_NameParentBonePortPoint;
 private:
 	void ConstraintPinPort();
-	void AdjustPinActorTransform();
 public:
 	UFUNCTION(BlueprintCallable, Category = "Connect Init")
 	virtual void InitPort(UPhysicsConstraintComponent* physicsJoint, UPhysicsSkMeshComponent* parentMesh,E_PinPortType portType = E_PinPortType::ENoneType,FName namePinBone = NAME_None);

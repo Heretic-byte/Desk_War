@@ -19,7 +19,6 @@ class DESK_WAR_API AUSB_PlayerPawn : public AUSB_PhysicsPawn
 public:
 	AUSB_PlayerPawn(const FObjectInitializer& objInit);
 protected:
-	FVector m_CamOffset;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Body")
 	FName m_NamePinConnectSocket;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Body")
@@ -38,6 +37,8 @@ protected:
 	float m_fHeadChangeCD;
 	float m_fHeadChangeCDTimer;
 	bool m_bCanConnectDist;
+	UPROPERTY()
+	TArray<UPrimitiveComponent*> m_AryPhysicsBody;
 protected://component
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly,Category="Movement")
 	UPhysicsMovement* m_Movement;
@@ -97,13 +98,14 @@ private:
 	void RotateYaw(float v);
 	void RotatePitch(float v);
 private:
+	bool CheckConnectTransform();
 	bool CheckPortVerticalAngle(UPortSkMeshComponent * port);
 	bool CheckPortHorizontalAngle(UPortSkMeshComponent * port);
 	UCActionBaseInterface* MoveForReadyConnect(UPortSkMeshComponent * portWant);
 	UCActionBaseInterface* RotateForConnect(UPortSkMeshComponent * portWant);
 	UCActionBaseInterface* MoveForPushConnection(UPortSkMeshComponent * portWant);
 protected:
-	bool CheckConnectTransform();
+	void SetPhysicsVelocityAllBody(FVector linearV);
 	bool TryConnect(UPortSkMeshComponent* portWant);
 	bool TryDisconnect();
 	void BlockInput(bool tIsBlock);
