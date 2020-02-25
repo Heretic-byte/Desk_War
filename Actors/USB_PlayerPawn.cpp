@@ -306,11 +306,13 @@ void AUSB_PlayerPawn::BlockInput(bool tIsBlock)
 	if (!tIsBlock)
 	{
 		EnableInput(m_PlayerCon);
+		m_Movement->SetBlockMoveTimer(0.f);
 	}
 	else
 	{
 		
 		DisableInput(m_PlayerCon);
+		m_Movement->SetBlockMoveTimer(-1.f);
 	}
 }
 
@@ -349,11 +351,14 @@ void AUSB_PlayerPawn::ConnectShot()
 	BlockInput(true);
 
 	GetHead()->SetPhysicsLinearVelocity(FVector(0,0,0));
+	GetHead()->SetPhysicsAngularVelocity(FVector(0, 0, 0));
 	for (auto* Sphere : m_ArySpineColls)
 	{
 		Sphere->SetPhysicsLinearVelocity(FVector(0, 0, 0));
+		Sphere->SetPhysicsAngularVelocity(FVector(0, 0, 0));
 	}
 	GetTail()->SetPhysicsLinearVelocity(FVector(0, 0, 0));
+	GetTail()->SetPhysicsAngularVelocity(FVector(0, 0, 0));
 
 	auto* Port = m_CurrentFocusedPort;
 	Port->DisablePhysics();
@@ -374,9 +379,8 @@ void AUSB_PlayerPawn::ConnectShot()
 	PushAction->m_OnActionComplete.BindLambda(
 		[=]()
 		{
-			TryConnect(Port);
-			GetHead()->ResetAllBodiesSimulatePhysics();
 			BlockInput(false);
+			TryConnect(Port);
 		});
 
 	Sequence->m_OnActionKilled.BindLambda(
@@ -490,7 +494,6 @@ void AUSB_PlayerPawn::TickTracePortable()
 		}
 	}
 	m_bCanConnectDist = false;
-	//m_ActionManager->RemoveAllActions();
 	m_CurrentFocusedPort = nullptr;
 }
 

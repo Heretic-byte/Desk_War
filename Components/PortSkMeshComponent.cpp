@@ -84,7 +84,7 @@ void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)
 void UPortSkMeshComponent::AdjustPinActorTransform()
 {
 	FRotator ConnectRot = m_ConnectedPin->GetComponentRotation();
-	GetParentSkMesh()->SetWorldLocation(m_ConnectedPin->GetBoneLocation("PinPoint", EBoneSpaces::WorldSpace), false, nullptr, ETeleportType::TeleportPhysics);
+	//GetParentSkMesh()->SetWorldLocation(m_ConnectedPin->GetBoneLocation("PinPoint", EBoneSpaces::WorldSpace), false, nullptr, ETeleportType::TeleportPhysics);
 	GetParentSkMesh()->SetWorldRotation(ConnectRot, false, nullptr, ETeleportType::TeleportPhysics);
 }
 
