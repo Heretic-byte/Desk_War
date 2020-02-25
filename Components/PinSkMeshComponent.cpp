@@ -48,7 +48,6 @@ bool UPinSkMeshComponent::Connect(UPortSkMeshComponent * port)
 
 	m_OnConnectedPortOwner.Broadcast(m_PortOwner);
 	m_OnConnectedPort.Broadcast(m_PortConnected);
-
 	
 	return true;
 }

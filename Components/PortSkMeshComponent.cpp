@@ -22,7 +22,6 @@ UPortSkMeshComponent::UPortSkMeshComponent(const FObjectInitializer & objInit)
 	}
 
 	SetCollisionProfileName("Port");
-	m_ParentCollision = ECollisionEnabled::PhysicsOnly;
 }
 
 void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, UPhysicsSkMeshComponent* parentMesh,E_PinPortType portType, FName namePinBone)
@@ -76,13 +75,9 @@ UPhysicsSkMeshComponent * UPortSkMeshComponent::GetParentSkMesh()
 
 void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)
 {
-	PRINTF("Connect in Port");
 	m_ConnectedPin = connector;
 	AdjustPinActorTransform();
-	GetParentSkMesh()->ResetAllBodiesSimulatePhysics();
-	ResetAllBodiesSimulatePhysics();
 	ConstraintPinPort();
-
 	m_OnConnected.Broadcast(m_ConnectedPin);
 }
 
@@ -109,9 +104,7 @@ bool UPortSkMeshComponent::Disconnect()
 	m_ParentPhysicsConst->BreakConstraint();
 	m_ConnectedPin = nullptr;
 
-	//FVector WantDir= GetWorld()->GetFirstPlayerController()->GetRootComponent()->GetForwardVector() *-1.f;
 	m_MeshParentActor->AddImpulse(m_MeshParentActor->GetForwardVector()*m_fEjectPower);
-	//GetController()->GetRootComponent()->GetForwardVector()
 	return true;
 }
 
@@ -120,15 +113,14 @@ bool UPortSkMeshComponent::IsConnected()
 	return m_ConnectedPin;
 }
 
-void UPortSkMeshComponent::DisableCollider()
+void UPortSkMeshComponent::DisablePhysics()
 {
-	m_ParentCollision = m_MeshParentActor->GetCollisionEnabled();
-	m_MeshParentActor->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	m_MeshParentActor->SetSimulatePhysics(false);
 }
 
-void UPortSkMeshComponent::EnableCollider()
+void UPortSkMeshComponent::EnablePhysics()
 {
-	m_MeshParentActor->SetCollisionEnabled(m_ParentCollision);
+	m_MeshParentActor->SetSimulatePhysics(true);
 }
 
 E_PinPortType UPortSkMeshComponent::GetPortType() const

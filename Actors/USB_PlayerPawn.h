@@ -74,9 +74,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "USB_Action")
 	bool RemoveTraceIgnoreActor(AActor* actorWant);
 	UFUNCTION(BlueprintCallable, Category = "USB_Getter")
-	UPrimitiveComponent* GetHead();
+	UPhysicsSkMeshComponent* GetHead();
 	UFUNCTION(BlueprintCallable, Category = "USB_Getter")
-	UPrimitiveComponent* GetTail();
+	UPhysicsSkMeshComponent* GetTail();
 	UFUNCTION(BlueprintCallable, Category = "USB_Action")
 	void ConnectShot();
 	UFUNCTION(BlueprintCallable, Category = "USB_Action")
@@ -97,11 +97,14 @@ private:
 	void RotateYaw(float v);
 	void RotatePitch(float v);
 private:
-	void GetPortCenterTracePoint(FVector & startPoint, FVector & endPoint, float length);
 	bool CheckPortVerticalAngle(UPortSkMeshComponent * port);
 	bool CheckPortHorizontalAngle(UPortSkMeshComponent * port);
+	UCActionBaseInterface* MoveForReadyConnect(UPortSkMeshComponent * portWant);
+	UCActionBaseInterface* RotateForConnect(UPortSkMeshComponent * portWant);
+	UCActionBaseInterface* MoveForPushConnection(UPortSkMeshComponent * portWant);
 protected:
-	bool TryConnect();
+	bool CheckConnectTransform();
+	bool TryConnect(UPortSkMeshComponent* portWant);
 	bool TryDisconnect();
 	void BlockInput(bool tIsBlock);
 	void AddIgnoreActorsToQuery(FCollisionQueryParams& queryParam);
@@ -114,19 +117,19 @@ public:
 	void UnblockMovement();
 	virtual void Tick(float DeltaTime) override;
 private:
-	FORCEINLINE UPrimitiveComponent* _inline_GetHead()
+	FORCEINLINE UPhysicsSkMeshComponent* _inline_GetHead()
 	{
 		return m_CurrentHead;
 	}
-	FORCEINLINE UPrimitiveComponent* _inline_GetTail()
+	FORCEINLINE UPhysicsSkMeshComponent* _inline_GetTail()
 	{
 		return m_CurrentTail;
 	}
-	FORCEINLINE UPrimitiveComponent* _inline_GetHeadPin()
+	FORCEINLINE UPhysicsSkMeshComponent* _inline_GetHeadPin()
 	{
 		return m_CurrentHeadPin;
 	}
-	FORCEINLINE UPrimitiveComponent* _inline_GetTailPin()
+	FORCEINLINE UPhysicsSkMeshComponent* _inline_GetTailPin()
 	{
 		return m_CurrentTailPin;
 	}

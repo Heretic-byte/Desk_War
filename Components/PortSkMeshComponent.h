@@ -43,7 +43,6 @@ protected:
 	UPhysicsSkMeshComponent* m_MeshParentActor;
 protected:
 	FName m_NameParentBonePortPoint;
-	TEnumAsByte<ECollisionEnabled::Type> m_ParentCollision;
 private:
 	void ConstraintPinPort();
 	void AdjustPinActorTransform();
@@ -61,8 +60,8 @@ public:
 protected:
 	virtual void BeginPlay() override;
 public:
-	void DisableCollider();
-	void EnableCollider();
+	void DisablePhysics();
+	void EnablePhysics();
 	bool SetAimTracePoint(FVector& tracedImpactPoint);
 	bool GetBlockMoveOnConnnect();
 	FName GetMovePointWant();
