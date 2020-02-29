@@ -49,6 +49,15 @@ void AUSB_PlayerPawn::BeginPlay()
 	InitTraceIgnoreAry();
 }
 
+void AUSB_PlayerPawn::MoveTo(FVector destWant)
+{
+}
+
+USceneComponent * AUSB_PlayerPawn::GetFocusedPortTarget()
+{
+	return m_CurrentFocusedPort->GetParentSkMesh();
+}
+
 void AUSB_PlayerPawn::InitPlayerPawn()
 {
 	m_bCanConnectDist = false;
@@ -253,7 +262,8 @@ void AUSB_PlayerPawn::SetPhysicsVelocityAllBody(FVector linearV)
 	for (auto* Phy : m_AryPhysicsBody)
 	{
 		Phy->SetPhysicsLinearVelocity(linearV);
-		Phy->SetPhysicsAngularVelocity(linearV);
+		Phy->SetPhysicsAngularVelocityInDegrees(linearV);
+		//Phy->SetAllPhysicsPosition();
 	}
 }
 
@@ -368,27 +378,34 @@ void AUSB_PlayerPawn::ConnectShot()
 	SetPhysicsVelocityAllBody(FVector(0, 0, 0));
 
 	auto* Port = m_CurrentFocusedPort;
-	Port->DisablePhysics();
+	//Port->DisablePhysics();
+	Port->DisblePhysicsCollision();
 
 	m_ActionManager->RemoveAllActions();
 
 	auto* Sequence = UCActionFactory::MakeSequenceAction();
 
-	Sequence->AddAction(MoveForReadyConnect(m_CurrentFocusedPort));
+	auto* MoveAction = MoveForReadyConnect(m_CurrentFocusedPort);
 
-	Sequence->AddAction(RotateForConnect(m_CurrentFocusedPort));
+	Sequence->AddAction(MoveAction);
+
+	MoveAction->m_OnActionComplete.BindLambda(
+		[=]()
+	{
+		//SetPhysicsVelocityAllBody(FVector(0, 0, 0));
+	});
+
+	//Sequence->AddAction(RotateForConnect(m_CurrentFocusedPort));
 
 	auto* PushAction = MoveForPushConnection(m_CurrentFocusedPort);
 
-	Sequence->AddAction(PushAction);
+	//Sequence->AddAction(PushAction);
 
-	
 	PushAction->m_OnActionComplete.BindLambda(
 		[=]()
 	{
-		TryConnect(Port);
+		//TryConnect(Port);//둘의 콜리전끄고 하니까 효과있긴함
 		BlockInput(false);
-		Port->EnablePhysics();
 		if (Port->GetBlockMoveOnConnnect())
 		{
 			BlockMovement();
@@ -425,9 +442,9 @@ bool AUSB_PlayerPawn::CheckConnectTransform()
 
 UCActionBaseInterface* AUSB_PlayerPawn::MoveForReadyConnect(UPortSkMeshComponent * portWant)
 {
-	FVector Dest = portWant->GetSocketLocation(m_NamePinConnectStartSocket);
+	FVector Dest = portWant->GetSocketLocation(m_NamePinConnectStartSocket) + (GetHead()->GetComponentLocation() - GetHead()->GetBoneLocation("PinPoint"));
 
-	auto* MoveAction = UCActionFactory::MakeMoveComponentToAction(GetHead(), Dest, 0.5f, ETimingFunction::EaseInCube);
+	auto* MoveAction = UCActionFactory::MakePhysicsVelocityMove(GetHead(), Dest, 0.5f, ETimingFunction::EaseInCube,"PinPoint");
 
 	return MoveAction;
 }
@@ -445,7 +462,7 @@ UCActionBaseInterface* AUSB_PlayerPawn::MoveForPushConnection(UPortSkMeshCompone
 {
 	FVector Dest = portWant->GetSocketLocation(m_NamePinConnectPushPointSocket);
 
-	auto* MoveAction = UCActionFactory::MakeMoveComponentToAction(GetHead(), Dest, 0.3f, ETimingFunction::EaseInCube);
+	auto* MoveAction = UCActionFactory::MakePhysicsVelocityMove(GetHead(), Dest, 0.3f, ETimingFunction::EaseInCube,"PushPoint");
 
 	return MoveAction;
 }
@@ -471,11 +488,17 @@ void AUSB_PlayerPawn::StopJumping()
 	m_Movement->StopJumping();
 }
 
+void AUSB_PlayerPawn::FollowMoveTo(USceneComponent * sceneWant)
+{
+}
+
 void AUSB_PlayerPawn::TickTracePortable()
 {
 	FHitResult HitResult;
 	FVector StartTrace = GetHead()->GetComponentLocation();
+	FVector Forward = GetHead()->GetForwardVector();
 	FVector EndTrace = (GetHead()->GetForwardVector()* m_fPortTraceRange) + StartTrace;
+	EndTrace.Z = 0.f;
 
 	FCollisionQueryParams QueryParams;
 	AddIgnoreActorsToQuery(QueryParams);

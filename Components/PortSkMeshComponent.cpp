@@ -10,7 +10,7 @@ UPortSkMeshComponent::UPortSkMeshComponent(const FObjectInitializer & objInit)
 {
 	m_bBlockMoveOnConnected = false;
 	m_NameWantMovePoint = "PortPoint";
-	m_NameParentBonePortPoint = FName(TEXT("PortPoint"));
+	m_NameParentBonePortPoint = "PortPoint";
 	m_PortType = E_PinPortType::ENoneType;
 	m_fEjectPower = 999.f;
 	m_fConnectableDistSqr = 25.f;
@@ -82,7 +82,7 @@ void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)
 
 void UPortSkMeshComponent::ConstraintPinPort()
 {
-	m_ParentPhysicsConst->SetConstrainedComponents(m_ConnectedPin, m_ConnectedPin->GetNameConnectPoint(), m_MeshParentActor, m_NameParentBonePortPoint);//Mesh
+	m_ParentPhysicsConst->SetConstrainedComponents(m_ConnectedPin, m_ConnectedPin->GetNameConnectPoint(), m_MeshParentActor, m_NameParentBonePortPoint);
 }
 
 
@@ -113,6 +113,16 @@ void UPortSkMeshComponent::DisablePhysics()
 void UPortSkMeshComponent::EnablePhysics()
 {
 	m_MeshParentActor->SetSimulatePhysics(true);
+}
+
+void UPortSkMeshComponent::EnablePhysicsCollision()
+{
+	m_MeshParentActor->SetCollisionResponseToChannel(ECollisionChannel::ECC_PhysicsBody, ECollisionResponse::ECR_Block);
+}
+
+void UPortSkMeshComponent::DisblePhysicsCollision()
+{
+	m_MeshParentActor->SetCollisionResponseToChannel(ECollisionChannel::ECC_PhysicsBody, ECollisionResponse::ECR_Ignore);
 }
 
 E_PinPortType UPortSkMeshComponent::GetPortType() const

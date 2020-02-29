@@ -86,6 +86,12 @@ public:
 	void Jump();
 	UFUNCTION(BlueprintCallable, Category = "USB_Action")
 	void StopJumping();
+	UFUNCTION(BlueprintCallable, Category = "USB_Action")
+	void FollowMoveTo(USceneComponent* sceneWant);
+	UFUNCTION(BlueprintCallable, Category = "USB_Action")
+	void MoveTo(FVector destWant);
+	UFUNCTION(BlueprintCallable, Category = "USB_Action")
+	USceneComponent* GetFocusedPortTarget();
 private://construct
 	void InitPlayerPawn();
 	void CreatePhysicMovement();
