@@ -12,7 +12,7 @@ UPinSkMeshComponent::UPinSkMeshComponent(const FObjectInitializer& objInit) :Sup
 {
 	m_PortConnected = nullptr;
 	m_PortOwner = nullptr;
-	m_NameNeckBone = FName(TEXT("Root"));
+	m_NameNeckBone = FName(TEXT("NeckPoint"));
 	m_NamePinBone = FName(TEXT("PinPoint"));
 	m_NameVelocityPivotBone = FName(TEXT("PinPoint"));
 	m_Pintype = E_PinPortType::ENoneType;

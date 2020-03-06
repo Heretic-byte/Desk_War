@@ -32,18 +32,20 @@ AUSB_PlayerPawn::AUSB_PlayerPawn(const FObjectInitializer& objInit):Super(objIni
 	m_ActionManager = CreateDefaultSubobject<UActionManagerComponent>("ActionManager00");
 
 	m_AryPhysicsBody.Reserve(10);
-	for (auto* Sphere : m_ArySpineColls)
-	{
-		m_AryPhysicsBody.Emplace(Sphere);
-	}
-	m_AryPhysicsBody.Emplace(m_PinUSB);
-	m_AryPhysicsBody.Emplace(m_Pin5Pin);
+
+
 
 }
 
 void AUSB_PlayerPawn::BeginPlay()
 {
 	Super::BeginPlay();
+	for (auto* Sphere : m_ArySpineColls)
+	{
+		AddPhysicsBody(Sphere);
+	}
+	AddPhysicsBody(m_PinUSB);
+	AddPhysicsBody(m_Pin5Pin);
 	m_PlayerCon = Cast<APlayerController>(GetController());
 	SetHeadTail(m_CurrentHead, m_CurrentTail);
 	InitTraceIgnoreAry();
@@ -71,9 +73,7 @@ void AUSB_PlayerPawn::InitPlayerPawn()
 	AutoPossessPlayer = EAutoReceiveInput::Player0;
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 
-	m_NamePinConnectSocket = "ConnectPoint";
-	m_NamePinConnectStartSocket = "ConnectStart";
-	m_NamePinConnectPushPointSocket = "PushPoint";
+	
 
 	m_CurrentHead = m_PinUSB;
 	m_CurrentTail = m_Pin5Pin;
@@ -90,8 +90,6 @@ void AUSB_PlayerPawn::CreatePhysicMovement()
 
 	m_Movement->SetUpdatePhysicsMovement(m_CurrentHead, m_CurrentTail);
 
-	m_Movement->SetDamping(0.01f, 1.f);
-
 	m_Movement->m_fMovingForce=38000.f;
 	m_Movement->m_fGroundCastBoxSize = 10.f;
 	m_Movement->m_fGroundCastOffset = -20.f;
@@ -102,8 +100,6 @@ void AUSB_PlayerPawn::CreatePhysicMovement()
 
 	m_Movement->m_bDebugShowForwardCast = false;
 
-	m_Movement->m_NameLinearVeloHeadBone = "PinPoint";
-	m_Movement->m_NameLinearVeloTailBone = "PinPoint";
 }
 
 void AUSB_PlayerPawn::CreateCameraFamily()
@@ -145,7 +141,7 @@ void AUSB_PlayerPawn::CreateSkFaceMesh()
 		m_MeshFaceSk->SetSkeletalMesh(FoundSkMesh.Object);
 	}
 
-	m_MeshFaceSk->SetRelativeLocation(FVector(-0.165f,0, 0.93f));
+	m_MeshFaceSk->SetRelativeLocation(FVector(-28.f,0, 0.8f));
 	m_MeshFaceSk->SetRelativeScale3D(FVector(2.64f, 2.64f, 2.64f));
 }
 
@@ -257,13 +253,24 @@ bool AUSB_PlayerPawn::CheckPortHorizontalAngle(UPortSkMeshComponent * port)
 	return UKismetMathLibrary::Acos(Dot) <= m_fConnectHorizontalAngle;
 }
 
+void AUSB_PlayerPawn::AddPhysicsBody(UPrimitiveComponent * wantP)
+{
+	m_AryPhysicsBody.Emplace(wantP);
+	m_fTotalMass += wantP->GetMass();
+}
+
+void AUSB_PlayerPawn::RemovePhysicsBody(UPrimitiveComponent * wantP)
+{
+	m_fTotalMass -= wantP->GetMass();
+	m_AryPhysicsBody.Remove(wantP);
+}
+
 void AUSB_PlayerPawn::SetPhysicsVelocityAllBody(FVector linearV)
 {
 	for (auto* Phy : m_AryPhysicsBody)
 	{
 		Phy->SetPhysicsLinearVelocity(linearV);
 		Phy->SetPhysicsAngularVelocityInDegrees(linearV);
-		//Phy->SetAllPhysicsPosition();
 	}
 }
 
@@ -287,8 +294,7 @@ bool AUSB_PlayerPawn::TryConnect(UPortSkMeshComponent* portWant)
 	{
 		AddTraceIgnoreActor(portWant->GetOwner());
 		SetHeadTail(portWant->GetParentSkMesh(), m_CurrentTail);
-		m_AryPhysicsBody.Emplace(portWant->GetParentSkMesh());
-
+		AddPhysicsBody(portWant->GetParentSkMesh());
 	}
 
 	return Result;
@@ -319,7 +325,7 @@ bool AUSB_PlayerPawn::TryDisconnect()
 	}
 
 	RemoveTraceIgnoreActor(Tail->GetPortConnected()->GetOwner());
-	m_AryPhysicsBody.Remove(Tail->GetPortConnected());
+	RemovePhysicsBody(Tail->GetPortConnected());
 	Tail->Disconnect();
 	SetHeadTail(m_CurrentHead, Tail);
 	UnblockMovement();
@@ -373,12 +379,11 @@ void AUSB_PlayerPawn::ConnectShot()
 		return;
 	}
 
-	BlockInput(true);
+	//BlockInput(true);
 
-	SetPhysicsVelocityAllBody(FVector(0, 0, 0));
+	//SetPhysicsVelocityAllBody(FVector(0, 0, 0));
 
 	auto* Port = m_CurrentFocusedPort;
-	//Port->DisablePhysics();
 	Port->DisblePhysicsCollision();
 
 	m_ActionManager->RemoveAllActions();
@@ -392,6 +397,7 @@ void AUSB_PlayerPawn::ConnectShot()
 	MoveAction->m_OnActionComplete.BindLambda(
 		[=]()
 	{
+		Port->DisblePhysicsCollision();
 		//SetPhysicsVelocityAllBody(FVector(0, 0, 0));
 	});
 
@@ -399,12 +405,17 @@ void AUSB_PlayerPawn::ConnectShot()
 
 	auto* PushAction = MoveForPushConnection(m_CurrentFocusedPort);
 
-	//Sequence->AddAction(PushAction);
+	Sequence->AddAction(PushAction);
 
 	PushAction->m_OnActionComplete.BindLambda(
 		[=]()
 	{
-		//TryConnect(Port);//둘의 콜리전끄고 하니까 효과있긴함
+		FVector Dest = Port->_inline_GetConnectPoint() + (GetHead()->GetComponentLocation() - GetHead()->GetSocketLocation("PinPoint"));
+		//SetPhysicsVelocityAllBody(FVector(0, 0, 0));
+		FRotator ConnectRot = Port->GetComponentRotation();
+		GetHead()->SetWorldLocation(Dest, false, nullptr, ETeleportType::TeleportPhysics);
+		GetHead()->SetWorldRotation(ConnectRot,false,nullptr,ETeleportType::TeleportPhysics);
+		TryConnect(Port);
 		BlockInput(false);
 		if (Port->GetBlockMoveOnConnnect())
 		{
@@ -415,7 +426,7 @@ void AUSB_PlayerPawn::ConnectShot()
 	Sequence->m_OnActionKilled.BindLambda(
 		[=]()
 	{
-		Port->EnablePhysics();
+		Port->EnablePhysicsCollision();
 		BlockInput(false);
 	});
 
@@ -442,9 +453,8 @@ bool AUSB_PlayerPawn::CheckConnectTransform()
 
 UCActionBaseInterface* AUSB_PlayerPawn::MoveForReadyConnect(UPortSkMeshComponent * portWant)
 {
-	FVector Dest = portWant->GetSocketLocation(m_NamePinConnectStartSocket) + (GetHead()->GetComponentLocation() - GetHead()->GetBoneLocation("PinPoint"));
-
-	auto* MoveAction = UCActionFactory::MakePhysicsVelocityMove(GetHead(), Dest, 0.5f, ETimingFunction::EaseInCube,"PinPoint");
+	FVector Dest = portWant->_inline_GetConnectReadyPoint();
+	auto* MoveAction = UCActionFactory::MakeFollowMoveComponentToAction(GetHead(), portWant, 1.5f,NAME_None, "ConnectStart", ETimingFunction::Linear,ETeleportType::TeleportPhysics);
 
 	return MoveAction;
 }
@@ -453,17 +463,16 @@ UCActionBaseInterface* AUSB_PlayerPawn::RotateForConnect(UPortSkMeshComponent * 
 {
 	FRotator ConnectRot = portWant->GetComponentRotation();
 
-	auto* Action = UCActionFactory::MakeRotateComponentToAction(GetHead(), ConnectRot, 0.2f, ETimingFunction::Linear);
+	auto* Action = UCActionFactory::MakeRotateComponentToAction(GetHead(), ConnectRot, 0.2f, ETimingFunction::Linear,ETeleportType::TeleportPhysics);
 
 	return Action;
 }
 
 UCActionBaseInterface* AUSB_PlayerPawn::MoveForPushConnection(UPortSkMeshComponent * portWant)
 {
-	FVector Dest = portWant->GetSocketLocation(m_NamePinConnectPushPointSocket);
+	FVector Dest = portWant->_inline_GetConnectPoint() +(GetHead()->GetComponentLocation() - GetHead()->GetSocketLocation("PinPoint"));
 
-	auto* MoveAction = UCActionFactory::MakePhysicsVelocityMove(GetHead(), Dest, 0.3f, ETimingFunction::EaseInCube,"PushPoint");
-
+	auto* MoveAction = UCActionFactory::MakeFollowMoveComponentToAction(GetHead(), portWant, 0.3f,"PinPoint","PortPoint", ETimingFunction::EaseInCube, ETeleportType::TeleportPhysics);
 	return MoveAction;
 }
 
@@ -498,21 +507,13 @@ void AUSB_PlayerPawn::TickTracePortable()
 	FVector StartTrace = GetHead()->GetComponentLocation();
 	FVector Forward = GetHead()->GetForwardVector();
 	FVector EndTrace = (GetHead()->GetForwardVector()* m_fPortTraceRange) + StartTrace;
-	EndTrace.Z = 0.f;
 
 	FCollisionQueryParams QueryParams;
 	AddIgnoreActorsToQuery(QueryParams);
 
-	DrawDebugLine(
-		GetWorld(),
-		StartTrace,
-		EndTrace,
-		FColor(255, 0, 0),
-		false, -1, 0,
-		6.333
-	);
-
-	if (GetWorld()->LineTraceSingleByChannel(HitResult, StartTrace, EndTrace, ECC_GameTraceChannel9, QueryParams))
+	DrawDebugLine(GetWorld(), StartTrace, EndTrace, FColor(255, 0, 120), false, -1.f, 0.1f);
+	
+	if (GetWorld()->SweepSingleByChannel(HitResult, StartTrace, EndTrace, FQuat::Identity, ECC_GameTraceChannel9, FCollisionShape::MakeSphere(3.f), QueryParams))
 	{
 		if (!HitResult.GetActor())
 		{

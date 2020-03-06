@@ -34,7 +34,7 @@ protected://components
 	USplineComponent* m_SpineSpline;
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Spine_Physics")
-	UStaticMesh* m_SpineMesh;
+	UStaticMesh* m_MeshSpine;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Spine_Physics")
 	UPhysicalMaterial* m_SpineFriction;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Spine_Physics")
@@ -58,10 +58,7 @@ protected:
 	float m_fMaxAngularVelocity;
 private:
 	int m_nSphereSpineCount;
-	UPROPERTY(EditDefaultsOnly, Category = "Spine_Physics")
-	UPhysicsAsset* m_paHead;
-	UPROPERTY(EditDefaultsOnly, Category = "Spine_Physics")
-	UPhysicsAsset* m_paTail;
+
 public:
 	UFUNCTION(BlueprintCallable, Category = "Init")
 	virtual void InitUSB() ;

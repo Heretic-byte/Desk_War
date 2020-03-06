@@ -39,10 +39,6 @@ private:
 	float m_fAddTraceMultipleLength;
 public:
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement")
-	FName m_NameLinearVeloHeadBone;
-	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement")
-	FName m_NameLinearVeloTailBone;
-	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement")
 	bool m_bDebugShowForwardCast;
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
 	float m_fGroundCastBoxSize;
@@ -53,15 +49,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement_Rotate")
 	FRotator m_RotationRate;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
-	float m_fAngularDampingForPhysicsAsset;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
 	float m_WalkableSlopeAngle;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
 	float m_WalkableSlopeHeight;
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement_Jump", meta = (ClampMin = "0", UIMin = "0"))
 	float m_fJumpZVelocity;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
-	float m_fLinearDampingForPhysicsAsset;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement_Jump", meta = (ClampMin = "0", UIMin = "0"))
 	float m_fMaxHoldTime;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement_Jump", meta = (ClampMin = "0", UIMin = "0"))

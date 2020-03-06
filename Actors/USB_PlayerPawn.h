@@ -19,12 +19,7 @@ class DESK_WAR_API AUSB_PlayerPawn : public AUSB_PhysicsPawn
 public:
 	AUSB_PlayerPawn(const FObjectInitializer& objInit);
 protected:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Body")
-	FName m_NamePinConnectSocket;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Body")
-	FName m_NamePinConnectStartSocket;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Body")
-	FName m_NamePinConnectPushPointSocket;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
 	float m_fPortTraceRange;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
@@ -39,6 +34,7 @@ protected:
 	bool m_bCanConnectDist;
 	UPROPERTY()
 	TArray<UPrimitiveComponent*> m_AryPhysicsBody;
+	float m_fTotalMass;
 protected://component
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly,Category="Movement")
 	UPhysicsMovement* m_Movement;
@@ -110,6 +106,9 @@ private:
 	UCActionBaseInterface* MoveForReadyConnect(UPortSkMeshComponent * portWant);
 	UCActionBaseInterface* RotateForConnect(UPortSkMeshComponent * portWant);
 	UCActionBaseInterface* MoveForPushConnection(UPortSkMeshComponent * portWant);
+private:
+	void AddPhysicsBody(UPrimitiveComponent* wantP);
+	void RemovePhysicsBody(UPrimitiveComponent* wantP);
 protected:
 	void SetPhysicsVelocityAllBody(FVector linearV);
 	bool TryConnect(UPortSkMeshComponent* portWant);
@@ -124,7 +123,11 @@ public:
 	void BlockMovement();
 	void UnblockMovement();
 	virtual void Tick(float DeltaTime) override;
-private:
+public:
+	FORCEINLINE float GetTotalMass()
+	{
+		return m_fTotalMass;
+	}
 	FORCEINLINE UPhysicsSkMeshComponent* _inline_GetHead()
 	{
 		return m_CurrentHead;

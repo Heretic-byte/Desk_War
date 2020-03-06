@@ -11,6 +11,9 @@ UPortSkMeshComponent::UPortSkMeshComponent(const FObjectInitializer & objInit)
 	m_bBlockMoveOnConnected = false;
 	m_NameWantMovePoint = "PortPoint";
 	m_NameParentBonePortPoint = "PortPoint";
+	m_NamePortConnectSocket = "PortPoint";
+	m_NamePortConnectStartSocket = "ConnectStart";
+	m_NamePortConnectPushPointSocket = "PushPoint";
 	m_PortType = E_PinPortType::ENoneType;
 	m_fEjectPower = 999.f;
 	m_fConnectableDistSqr = 25.f;
@@ -82,7 +85,7 @@ void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)
 
 void UPortSkMeshComponent::ConstraintPinPort()
 {
-	m_ParentPhysicsConst->SetConstrainedComponents(m_ConnectedPin, m_ConnectedPin->GetNameConnectPoint(), m_MeshParentActor, m_NameParentBonePortPoint);
+	m_ParentPhysicsConst->SetConstrainedComponents(m_ConnectedPin, NAME_None, m_MeshParentActor, m_NameParentBonePortPoint);
 }
 
 
@@ -97,6 +100,8 @@ bool UPortSkMeshComponent::Disconnect()
 	m_ConnectedPin = nullptr;
 
 	m_MeshParentActor->AddImpulse(m_MeshParentActor->GetForwardVector()*m_fEjectPower);
+
+	EnablePhysicsCollision();
 	return true;
 }
 

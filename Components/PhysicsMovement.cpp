@@ -18,8 +18,6 @@ UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 	m_fMovingForce = 5000.f;
 	m_bOnGround = false;
 	m_bPressedJump = false;
-	m_fAngularDampingForPhysicsAsset = 1.f;
-	m_fLinearDampingForPhysicsAsset = 1.f;
 	m_fGroundCastOffset = -45.f;
 	m_RotationRate = FRotator(180.f,180.f,500.f);
 	m_bDebugShowForwardCast = false;
@@ -34,7 +32,6 @@ UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 void UPhysicsMovement::BeginPlay()
 {
 	Super::BeginPlay();
-
 	UWorld* World = GetWorld();
 	if (World)
 	{
@@ -110,13 +107,6 @@ void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent
 		m_MovingTarget->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 		m_MovingTarget->SetSimulatePhysics(true);
 	}
-
-	if (m_MovingTarget->GetBodyInstance())
-	{
-		m_MovingTarget->SetAngularDamping(m_fAngularDampingForPhysicsAsset);
-		m_MovingTarget->SetLinearDamping(m_fLinearDampingForPhysicsAsset);
-		m_MovingTarget->GetBodyInstance()->UpdateDampingProperties();
-	}
 }
 
 void UPhysicsMovement::SetDamping(float fLinDamp, float fAngDamp)
@@ -125,13 +115,11 @@ void UPhysicsMovement::SetDamping(float fLinDamp, float fAngDamp)
 	{
 		return;
 	}
-	m_fLinearDampingForPhysicsAsset = fLinDamp;
-	m_fAngularDampingForPhysicsAsset = fAngDamp;
 
 	if (m_MovingTarget->GetBodyInstance())
 	{
-		m_MovingTarget->SetAngularDamping(m_fAngularDampingForPhysicsAsset);
-		m_MovingTarget->SetLinearDamping(m_fLinearDampingForPhysicsAsset);
+		m_MovingTarget->SetAngularDamping(fAngDamp);
+		m_MovingTarget->SetLinearDamping(fLinDamp);
 		m_MovingTarget->GetBodyInstance()->UpdateDampingProperties();
 	}
 }
@@ -141,7 +129,6 @@ void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	FVector InputDir = ConsumeInputVector();
 	m_Acceleration = ScaleInputAccel(InputDir);
-
 	if (m_bBlockMove)
 	{
 		m_fBlockMoveTimer += DeltaTime;
@@ -168,12 +155,7 @@ void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
 		return;
 	}
 	CheckJumpInput(DeltaTime);
-
-	if (TickCheckCanMoveForward())
-	{
-		TickMovement(DeltaTime);
-	}
-	
+	TickMovement(DeltaTime);
 	ClearJumpInput(DeltaTime);
 }
 
@@ -283,7 +265,7 @@ bool UPhysicsMovement::TickCheckCanMoveForward()
 
 void UPhysicsMovement::TickCastGround()
 {
-	FVector TraceStart = m_MovingTarget->GetBoneLocation(m_NameLinearVeloHeadBone);
+	FVector TraceStart = m_MovingTarget->GetComponentLocation();
 	TraceStart.Z -= m_fGroundCastBoxSize;
 
 	FVector TraceEnd = TraceStart;
@@ -304,12 +286,22 @@ void UPhysicsMovement::TickCastGround()
 
 	m_bOnGround=GetWorld()->SweepSingleByChannel(m_GroundHitResult,TraceStart,TraceEnd,FQuat(FVector(0.f, 0.f, -1.f), PI * 0.25f),ECollisionChannel::ECC_Visibility,BoxShape,QueryParam);
 
+	if (m_bOnGround)
+	{
+		PRINTF("IsGround True");
+	}
+	else
+	{
+		PRINTF("IsGround false");
+	}
+
 	if (!m_bOnGround)
 	{
 		m_GroundHitResult.Reset(1.f, false);
 
 		m_bOnGround =GetWorld()->SweepSingleByChannel(m_GroundHitResult,TraceStart,TraceEnd,FQuat::Identity,ECollisionChannel::ECC_Visibility,BoxShape,QueryParam);
 	}
+	
 }
 
 void UPhysicsMovement::UpdateComponentVelocity()
@@ -321,7 +313,7 @@ void UPhysicsMovement::UpdateComponentVelocity()
 	FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
 	
 	Velocity.Z = CurrentV.Z;
-	m_MovingTarget->SetPhysicsLinearVelocity(Velocity, false, m_NameLinearVeloHeadBone);
+	m_MovingTarget->SetPhysicsLinearVelocity(Velocity);
 }
 
 bool UPhysicsMovement::IsGround() const
@@ -407,10 +399,11 @@ bool UPhysicsMovement::DoJump()
 	if (CanJump())
 	{
 		FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
-		CurrentV.Z = FMath::Max(CurrentV.Z, m_fJumpZVelocity);
+		CurrentV.Z = FMath::Max(m_fJumpZVelocity, m_fJumpZVelocity);
+		FVector CurrentV2 = m_MovingTargetTail->GetPhysicsLinearVelocity();
+		CurrentV2.Z = FMath::Max(m_fJumpZVelocity, m_fJumpZVelocity);
 		m_MovingTarget->SetPhysicsLinearVelocity(CurrentV);
-		m_MovingTargetTail->SetPhysicsLinearVelocity(CurrentV);
-		//m_MovingTargetTail->SetPhysicsLinearVelocity(CurrentV,false,m_NameLinearVeloTailBone);
+		m_MovingTargetTail->SetPhysicsLinearVelocity(CurrentV2);
 		m_nJumpCurrentCount++;
 		return true;
 	}
