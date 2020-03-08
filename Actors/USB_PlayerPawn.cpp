@@ -385,6 +385,7 @@ void AUSB_PlayerPawn::ConnectShot()
 
 	auto* Port = m_CurrentFocusedPort;
 	Port->DisblePhysicsCollision();
+	//Port->DisablePhysics();
 
 	m_ActionManager->RemoveAllActions();
 
@@ -397,11 +398,9 @@ void AUSB_PlayerPawn::ConnectShot()
 	MoveAction->m_OnActionComplete.BindLambda(
 		[=]()
 	{
-		Port->DisblePhysicsCollision();
-		//SetPhysicsVelocityAllBody(FVector(0, 0, 0));
 	});
 
-	//Sequence->AddAction(RotateForConnect(m_CurrentFocusedPort));
+	Sequence->AddAction(RotateForConnect(m_CurrentFocusedPort));
 
 	auto* PushAction = MoveForPushConnection(m_CurrentFocusedPort);
 
@@ -410,11 +409,9 @@ void AUSB_PlayerPawn::ConnectShot()
 	PushAction->m_OnActionComplete.BindLambda(
 		[=]()
 	{
-		FVector Dest = Port->_inline_GetConnectPoint() + (GetHead()->GetComponentLocation() - GetHead()->GetSocketLocation("PinPoint"));
-		//SetPhysicsVelocityAllBody(FVector(0, 0, 0));
+		SetPhysicsVelocityAllBody(FVector(0, 0, 0));
 		FRotator ConnectRot = Port->GetComponentRotation();
-		GetHead()->SetWorldLocation(Dest, false, nullptr, ETeleportType::TeleportPhysics);
-		GetHead()->SetWorldRotation(ConnectRot,false,nullptr,ETeleportType::TeleportPhysics);
+		GetHead()->SetWorldRotation(ConnectRot,false,nullptr,ETeleportType::ResetPhysics);
 		TryConnect(Port);
 		BlockInput(false);
 		if (Port->GetBlockMoveOnConnnect())

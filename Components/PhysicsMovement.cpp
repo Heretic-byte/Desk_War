@@ -286,15 +286,6 @@ void UPhysicsMovement::TickCastGround()
 
 	m_bOnGround=GetWorld()->SweepSingleByChannel(m_GroundHitResult,TraceStart,TraceEnd,FQuat(FVector(0.f, 0.f, -1.f), PI * 0.25f),ECollisionChannel::ECC_Visibility,BoxShape,QueryParam);
 
-	if (m_bOnGround)
-	{
-		PRINTF("IsGround True");
-	}
-	else
-	{
-		PRINTF("IsGround false");
-	}
-
 	if (!m_bOnGround)
 	{
 		m_GroundHitResult.Reset(1.f, false);

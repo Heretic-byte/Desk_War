@@ -79,13 +79,15 @@ UPhysicsSkMeshComponent * UPortSkMeshComponent::GetParentSkMesh()
 void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)
 {
 	m_ConnectedPin = connector;
+	m_MeshParentActor->ResetAllBodiesSimulatePhysics();
 	ConstraintPinPort();
 	m_OnConnected.Broadcast(m_ConnectedPin);
 }
 
 void UPortSkMeshComponent::ConstraintPinPort()
 {
-	m_ParentPhysicsConst->SetConstrainedComponents(m_ConnectedPin, NAME_None, m_MeshParentActor, m_NameParentBonePortPoint);
+	//if (m_MeshParentActor->AttachToComponent(m_ConnectedPin, FAttachmentTransformRules(EAttachmentRule::KeepWorld, true)))
+	m_ParentPhysicsConst->SetConstrainedComponents(m_ConnectedPin, NAME_None, m_MeshParentActor, NAME_None);
 }
 
 
