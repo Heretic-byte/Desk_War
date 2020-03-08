@@ -37,7 +37,10 @@ private:
 	float m_fBlockMoveTime;
 	float m_fBlockMoveTimer;
 	float m_fAddTraceMultipleLength;
+	float m_CurrentPawnMass;
 public:
+	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement")
+	float m_MaxVelocity;
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement")
 	bool m_bDebugShowForwardCast;
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
@@ -103,7 +106,7 @@ private:
 	void TickMovement(float delta);
 	virtual void SetUpdatedComponent(USceneComponent* NewUpdatedComponent) override;
 public:
-	void SetUpdatePhysicsMovement(UPhysicsSkMeshComponent* headUpdatedCompo, UPhysicsSkMeshComponent* tailUpdatedCompo);
+	void SetUpdatePhysicsMovement(UPhysicsSkMeshComponent* headUpdatedCompo, UPhysicsSkMeshComponent* tailUpdatedCompo,float mass);
 	void SetCastingLength(UPhysicsSkMeshComponent * headUpdatedCompo);
 	void SetTraceIgnoreActorAry(TArray<AActor*>* aryWant);
 	void SetDamping(float fLinDamp, float fAngDamp);

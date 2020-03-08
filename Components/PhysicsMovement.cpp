@@ -11,7 +11,7 @@
 
 UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 {
-
+	m_CurrentPawnMass = 1.f;
 	m_bBlockMove = false;
 	m_MovingTarget = nullptr;
 	m_fJumpZVelocity = 540.f;
@@ -58,11 +58,12 @@ void UPhysicsMovement::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
-void UPhysicsMovement::SetUpdatePhysicsMovement(UPhysicsSkMeshComponent * headUpdatedCompo, UPhysicsSkMeshComponent * tailUpdatedCompo)
+void UPhysicsMovement::SetUpdatePhysicsMovement(UPhysicsSkMeshComponent * headUpdatedCompo, UPhysicsSkMeshComponent * tailUpdatedCompo,float mass)
 {
 	SetCastingLength(headUpdatedCompo);;
 	SetUpdatedComponent(headUpdatedCompo);
 	m_MovingTargetTail = tailUpdatedCompo;
+	m_CurrentPawnMass = mass;
 }
 
 void UPhysicsMovement::SetCastingLength(UPhysicsSkMeshComponent * headUpdatedCompo)
@@ -140,6 +141,14 @@ void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 		return;
 	}
 	TickRotate(DeltaTime);
+	TickCastGround();
+	if (m_bBlockMove)
+	{
+		return;
+	}
+	CheckJumpInput(DeltaTime);
+	TickMovement(DeltaTime);
+	ClearJumpInput(DeltaTime); 
 }
 
 void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
@@ -149,14 +158,14 @@ void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
 		return;
 	}
 
-	TickCastGround();
+	/*TickCastGround();
 	if (m_bBlockMove)
 	{
 		return;
 	}
 	CheckJumpInput(DeltaTime);
 	TickMovement(DeltaTime);
-	ClearJumpInput(DeltaTime);
+	ClearJumpInput(DeltaTime);*/
 }
 
 void UPhysicsMovement::TickMovement(float delta)
@@ -301,10 +310,14 @@ void UPhysicsMovement::UpdateComponentVelocity()
 	{
 		return;
 	}
-	FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
-	
-	Velocity.Z = CurrentV.Z;
-	m_MovingTarget->SetPhysicsLinearVelocity(Velocity);
+	//이걸 속력제한을 두자
+	//근데 그럼 힘의 방향이 안변하잔아
+	float CurrentV = m_MovingTarget->GetPhysicsLinearVelocity().Size();
+	PRINTF("CurrentV: %f", CurrentV);
+
+	//Velocity.Z = CurrentV.Z;
+	m_MovingTarget->AddForce(m_CurrentPawnMass*Velocity);
+	PRINTF("Total: %f", (m_CurrentPawnMass*Velocity).Size());
 }
 
 bool UPhysicsMovement::IsGround() const

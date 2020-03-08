@@ -88,7 +88,7 @@ void AUSB_PlayerPawn::CreatePhysicMovement()
 {
 	m_Movement = CreateDefaultSubobject<UPhysicsMovement>(TEXT("Movement00"));
 
-	m_Movement->SetUpdatePhysicsMovement(m_CurrentHead, m_CurrentTail);
+	m_Movement->SetUpdatePhysicsMovement(m_CurrentHead, m_CurrentTail,GetTotalMass());
 
 	m_Movement->m_fMovingForce=38000.f;
 	m_Movement->m_fGroundCastBoxSize = 10.f;
@@ -154,7 +154,7 @@ void AUSB_PlayerPawn::SetHeadTail(UPhysicsSkMeshComponent * headWant, UPhysicsSk
 	m_CurrentHeadPin = m_CurrentTailPin;
 	m_CurrentTailPin = HeadPin;
 
-	m_Movement->SetUpdatePhysicsMovement(m_CurrentHead, m_CurrentTail);
+	m_Movement->SetUpdatePhysicsMovement(m_CurrentHead, m_CurrentTail,GetTotalMass());
 	
 	m_CamRoot->AttachToComponent(m_CurrentHead,FAttachmentTransformRules::KeepRelativeTransform);
 }
