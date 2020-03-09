@@ -87,7 +87,7 @@ void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)
 void UPortSkMeshComponent::ConstraintPinPort()
 {
 	//if (m_MeshParentActor->AttachToComponent(m_ConnectedPin, FAttachmentTransformRules(EAttachmentRule::KeepWorld, true)))
-	m_ParentPhysicsConst->SetConstrainedComponents(m_ConnectedPin, NAME_None, m_MeshParentActor, NAME_None);
+	m_ParentPhysicsConst->SetConstrainedComponents(m_MeshParentActor, NAME_None, m_ConnectedPin, NAME_None);
 }
 
 
