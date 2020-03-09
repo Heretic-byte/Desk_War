@@ -21,7 +21,12 @@ public:
 	UPROPERTY()
 	UPhysicsSkMeshComponent* m_MovingTargetTail;
 
+	UPhysicsSkMeshComponent* TestTarget;
+
 	TArray<AActor*>* m_ptrAryTraceIgnoreActors;
+
+	UFUNCTION()
+	void Test(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 private:
 	FVector m_InputNormal;
 	FVector m_Acceleration;

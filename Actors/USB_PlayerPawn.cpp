@@ -384,8 +384,8 @@ void AUSB_PlayerPawn::ConnectShot()
 	//SetPhysicsVelocityAllBody(FVector(0, 0, 0));
 
 	auto* Port = m_CurrentFocusedPort;
-	Port->DisblePhysicsCollision();
 	//Port->DisablePhysics();
+	Port->DisablePhysics();
 
 	m_ActionManager->RemoveAllActions();
 
@@ -418,6 +418,8 @@ void AUSB_PlayerPawn::ConnectShot()
 		{
 			BlockMovement();
 		}
+		
+		
 	});
 
 	Sequence->m_OnActionKilled.BindLambda(

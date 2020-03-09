@@ -88,10 +88,10 @@ void AUSB_PhysicsPawn::InitUSB()
 		PRINTF("Spine Count 0");
 		return;
 	}
-	SpawnSpineColls();
-	InitSplineComponent();
-	InitSplineMesh();
-	InitPhysicsConstraints();
+	//SpawnSpineColls();
+	//InitSplineComponent();
+	//InitSplineMesh();
+	//InitPhysicsConstraints();
 }
 
 int AUSB_PhysicsPawn::SetTailLocation()

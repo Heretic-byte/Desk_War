@@ -82,6 +82,13 @@ void UPhysicsMovement::SetTraceIgnoreActorAry(TArray<AActor*>* aryWant)
 
 void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent)
 {
+	TestTarget = m_MovingTarget;
+	if (TestTarget)
+	{
+		TestTarget->OnComponentHit.Clear();
+		TestTarget->OnComponentHit.AddDynamic(this,&UPhysicsMovement::Test);
+	}
+
 	if (NewUpdatedComponent)
 	{
 		m_MovingTarget = Cast<UPhysicsSkMeshComponent>(NewUpdatedComponent);
@@ -148,7 +155,7 @@ void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 	}
 	CheckJumpInput(DeltaTime);
 	TickMovement(DeltaTime);
-	ClearJumpInput(DeltaTime); 
+	ClearJumpInput(DeltaTime);
 }
 
 void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
@@ -315,12 +322,20 @@ void UPhysicsMovement::UpdateComponentVelocity()
 	//이걸 속력제한을 두자
 	//근데 그럼 힘의 방향이 안변하잔아
 	//또 프레임에 문제있는듯
+	//일단 Force방식의 문제가 프레임마다 차이 생겨버림
+	m_MovingTarget->AddForce(m_CurrentPawnMass*Velocity);
+
 	float CurrentV = m_MovingTarget->GetPhysicsLinearVelocity().Size();
 	PRINTF("Velocity: %f", CurrentV);
 
-	//Velocity.Z = CurrentV.Z;
-	m_MovingTarget->AddForce(m_CurrentPawnMass*Velocity);
-	PRINTF("AddForce: %f", (m_CurrentPawnMass*Velocity).Size());
+	if (CurrentV > m_MaxVelocity)
+	{
+		auto V= m_MovingTarget->GetPhysicsLinearVelocity() *m_MaxVelocity / CurrentV;
+	//m_MovingTarget->SetPhysicsLinearVelocity(V);
+
+	
+	}
+
 }
 
 bool UPhysicsMovement::IsGround() const
@@ -333,6 +348,12 @@ FVector UPhysicsMovement::ScaleInputAccel(const FVector inputPure)
 	m_InputNormal = inputPure.GetClampedToMaxSize(1.f);
 
 	return GetMaxForce() *m_InputNormal;
+}
+
+void UPhysicsMovement::Test(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+	PRINTF("TESTDid");
+	TestTarget->SetPhysicsLinearVelocity(m_MovingTarget->GetPhysicsLinearVelocity());
 }
 
 void UPhysicsMovement::Jump()

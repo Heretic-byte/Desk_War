@@ -7,6 +7,7 @@ UPhysicsSkMeshComponent::UPhysicsSkMeshComponent(const FObjectInitializer& objIn
 	:Super(objInit)
 {
 	m_fMeshRadiusMultiple = 1.f;
+
 }
 
 float UPhysicsSkMeshComponent::GetMeshRadiusMultiple()
