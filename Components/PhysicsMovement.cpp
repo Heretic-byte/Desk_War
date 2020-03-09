@@ -170,6 +170,8 @@ void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
 
 void UPhysicsMovement::TickMovement(float delta)
 {
+	//0.016
+	//0.008
 	if (m_Acceleration.SizeSquared2D() <1)//maybe square better?
 	{
 		return;
@@ -312,12 +314,13 @@ void UPhysicsMovement::UpdateComponentVelocity()
 	}
 	//이걸 속력제한을 두자
 	//근데 그럼 힘의 방향이 안변하잔아
+	//또 프레임에 문제있는듯
 	float CurrentV = m_MovingTarget->GetPhysicsLinearVelocity().Size();
-	PRINTF("CurrentV: %f", CurrentV);
+	PRINTF("Velocity: %f", CurrentV);
 
 	//Velocity.Z = CurrentV.Z;
 	m_MovingTarget->AddForce(m_CurrentPawnMass*Velocity);
-	PRINTF("Total: %f", (m_CurrentPawnMass*Velocity).Size());
+	PRINTF("AddForce: %f", (m_CurrentPawnMass*Velocity).Size());
 }
 
 bool UPhysicsMovement::IsGround() const
