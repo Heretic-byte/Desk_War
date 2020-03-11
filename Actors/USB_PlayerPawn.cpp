@@ -51,13 +51,19 @@ void AUSB_PlayerPawn::BeginPlay()
 	InitTraceIgnoreAry();
 }
 
-void AUSB_PlayerPawn::MoveTo(FVector destWant)
-{
-}
-
 USceneComponent * AUSB_PlayerPawn::GetFocusedPortTarget()
 {
 	return m_CurrentFocusedPort->GetParentSkMesh();
+}
+
+void AUSB_PlayerPawn::ZoomIn()
+{
+	m_MainSpringArm->ZoomIn();
+}
+
+void AUSB_PlayerPawn::ZoomOut()
+{
+	m_MainSpringArm->ZoomOut();
 }
 
 void AUSB_PlayerPawn::InitPlayerPawn()
@@ -73,8 +79,6 @@ void AUSB_PlayerPawn::InitPlayerPawn()
 	AutoPossessPlayer = EAutoReceiveInput::Player0;
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 
-	
-
 	m_CurrentHead = m_PinUSB;
 	m_CurrentTail = m_Pin5Pin;
 	m_CurrentHeadPin = m_PinUSB;
@@ -82,6 +86,9 @@ void AUSB_PlayerPawn::InitPlayerPawn()
 	m_fPortTraceRange = 77.f;
 	m_fHeadChangeCD = 0.5f;
 	m_fHeadChangeCDTimer = 0.f;
+	
+	m_fConnectReadyDuration = 5.f;
+	m_fConnectPushDuration = 0.3f;
 }
 
 void AUSB_PlayerPawn::CreatePhysicMovement()
@@ -180,6 +187,8 @@ void AUSB_PlayerPawn::SetupPlayerInputComponent(UInputComponent * PlayerInputCom
 	PlayerInputComponent->BindAction(FName("Jump"), EInputEvent::IE_Released, this, &AUSB_PlayerPawn::StopJumping);
 	PlayerInputComponent->BindAction(FName("HeadChange"), EInputEvent::IE_Pressed, this, &AUSB_PlayerPawn::ChangeHeadTail);
 	PlayerInputComponent->BindAction(FName("Disconnect"), EInputEvent::IE_Pressed, this, &AUSB_PlayerPawn::DisconnectShot);
+	PlayerInputComponent->BindAction(FName("ZoomIn"), EInputEvent::IE_Pressed, this, &AUSB_PlayerPawn::ZoomIn);
+	PlayerInputComponent->BindAction(FName("ZoomOut"), EInputEvent::IE_Pressed, this, &AUSB_PlayerPawn::ZoomOut);
 }
 
 void AUSB_PlayerPawn::InitTraceIgnoreAry()
@@ -384,50 +393,59 @@ void AUSB_PlayerPawn::ConnectShot()
 	//SetPhysicsVelocityAllBody(FVector(0, 0, 0));
 
 	auto* Port = m_CurrentFocusedPort;
-	Port->DisblePhysicsCollision();
-	//Port->DisablePhysics();
+	//Port->DisblePhysicsCollision();
+	Port->DisablePhysics();
+	GetHead()->SetSimulatePhysics(false);
 
 	m_ActionManager->RemoveAllActions();
 
-	auto* Sequence = UCActionFactory::MakeSequenceAction();
+	auto* HeadMovingSequence = UCActionFactory::MakeSequenceAction();
 
-	auto* MoveAction = MoveForReadyConnect(m_CurrentFocusedPort);
+	auto* HeadMoveAction = HeadMoveForReadyConnect();
 
-	Sequence->AddAction(MoveAction);
+	HeadMovingSequence->AddAction(HeadMoveAction);
 
-	MoveAction->m_OnActionComplete.BindLambda(
+	HeadMoveAction->m_OnActionComplete.BindLambda(
 		[=]()
 	{
+
 	});
 
-	Sequence->AddAction(RotateForConnect(m_CurrentFocusedPort));
+	//Sequence->AddAction(RotateForConnect(m_CurrentFocusedPort));
 
-	auto* PushAction = MoveForPushConnection(m_CurrentFocusedPort);
+	auto* PushAction = HeadMoveForPushConnection();
 
-	Sequence->AddAction(PushAction);
+	HeadMovingSequence->AddAction(PushAction);
 
 	PushAction->m_OnActionComplete.BindLambda(
 		[=]()
 	{
 		SetPhysicsVelocityAllBody(FVector(0, 0, 0));
+
 		FRotator ConnectRot = Port->GetComponentRotation();
-		GetHead()->SetWorldRotation(ConnectRot,false,nullptr,ETeleportType::ResetPhysics);
+
+		GetHead()->SetWorldRotation(ConnectRot,false,nullptr,ETeleportType::TeleportPhysics);
+
 		TryConnect(Port);
+
 		BlockInput(false);
+
 		if (Port->GetBlockMoveOnConnnect())
 		{
 			BlockMovement();
 		}
 	});
 
-	Sequence->m_OnActionKilled.BindLambda(
+	HeadMovingSequence->m_OnActionKilled.BindLambda(
 		[=]()
 	{
-		Port->EnablePhysicsCollision();
+		//Port->EnablePhysicsCollision();
 		BlockInput(false);
 	});
 
-	m_ActionManager->RunAction(Sequence);
+	m_ActionManager->RunAction(HeadMovingSequence);
+	m_ActionManager->RunAction(RotateForConnect());
+
 }
 
 bool AUSB_PlayerPawn::CheckConnectTransform()
@@ -448,28 +466,40 @@ bool AUSB_PlayerPawn::CheckConnectTransform()
 	return true;
 }
 
-UCActionBaseInterface* AUSB_PlayerPawn::MoveForReadyConnect(UPortSkMeshComponent * portWant)
+UCActionBaseInterface* AUSB_PlayerPawn::HeadMoveForReadyConnect()
 {
-	FVector Dest = portWant->_inline_GetConnectReadyPoint();
-	auto* MoveAction = UCActionFactory::MakeFollowMoveComponentToAction(GetHead(), portWant, 1.5f,NAME_None, "ConnectStart", ETimingFunction::Linear,ETeleportType::TeleportPhysics);
+	auto* MoveAction = UCActionFactory::MakeFollowMoveComponentToAction(GetHead(), m_CurrentFocusedPort, m_fConnectReadyDuration,NAME_None, "ConnectStart", ETimingFunction::Linear,ETeleportType::TeleportPhysics);
 
 	return MoveAction;
 }
 
-UCActionBaseInterface* AUSB_PlayerPawn::RotateForConnect(UPortSkMeshComponent * portWant)
+UCActionBaseInterface* AUSB_PlayerPawn::RotateForConnect()
 {
-	FRotator ConnectRot = portWant->GetComponentRotation();
-
-	auto* Action = UCActionFactory::MakeRotateComponentToAction(GetHead(), ConnectRot, 0.2f, ETimingFunction::Linear,ETeleportType::TeleportPhysics);
+	auto* Action = UCActionFactory::MakeFollowRotateComponentToAction(GetHead(), m_CurrentFocusedPort, m_fConnectReadyDuration, ETimingFunction::Linear,ETeleportType::TeleportPhysics);
 
 	return Action;
 }
 
-UCActionBaseInterface* AUSB_PlayerPawn::MoveForPushConnection(UPortSkMeshComponent * portWant)
+UCActionBaseInterface* AUSB_PlayerPawn::HeadMoveForPushConnection()
 {
-	FVector Dest = portWant->_inline_GetConnectPoint() +(GetHead()->GetComponentLocation() - GetHead()->GetSocketLocation("PinPoint"));
+	auto* MoveAction = UCActionFactory::MakeFollowMoveComponentToAction(GetHead(), m_CurrentFocusedPort, m_fConnectPushDuration,"PinPoint","PortPoint", ETimingFunction::EaseInCube, ETeleportType::TeleportPhysics);
 
-	auto* MoveAction = UCActionFactory::MakeFollowMoveComponentToAction(GetHead(), portWant, 0.3f,"PinPoint","PortPoint", ETimingFunction::EaseInCube, ETeleportType::TeleportPhysics);
+	return MoveAction;
+}
+
+UCActionBaseInterface * AUSB_PlayerPawn::TailMoveForReadyConnect()
+{
+	FVector ForceWant = m_CurrentFocusedPort->GetComponentLocation() - GetTail()->GetComponentLocation();
+	ForceWant.Normalize();
+
+	auto* MoveAction = UCActionFactory::MakeAddForceMoveComponentToAction(GetTail(), ForceWant*3800.f, m_fConnectReadyDuration);
+	return MoveAction;
+}
+
+UCActionBaseInterface * AUSB_PlayerPawn::TailMoveForPushConnection()
+{
+	auto* MoveAction = UCActionFactory::MakeFollowMoveComponentToAction(GetTail(), m_CurrentFocusedPort, m_fConnectReadyDuration, NAME_None, "ConnectStart", ETimingFunction::Linear, ETeleportType::TeleportPhysics);
+
 	return MoveAction;
 }
 
@@ -477,7 +507,7 @@ void AUSB_PlayerPawn::DisconnectShot()
 {
 	if (TryDisconnect())
 	{
-		FVector ImpulseDir = _inline_GetTailPin()->GetForwardVector() * 1.f * m_fEjectionPower;
+		FVector ImpulseDir = _inline_GetTailPin()->GetForwardVector() * m_fEjectionPower;
 		m_Movement->AddImpulse(ImpulseDir);
 		m_Movement->SetBlockMoveTimer(m_fBlockMoveTimeWhenEject);
 		m_PlayerCon->PlayerCameraManager->PlayCameraShake(UEjectionCamShake::StaticClass(),1.0f);
@@ -494,9 +524,6 @@ void AUSB_PlayerPawn::StopJumping()
 	m_Movement->StopJumping();
 }
 
-void AUSB_PlayerPawn::FollowMoveTo(USceneComponent * sceneWant)
-{
-}
 
 void AUSB_PlayerPawn::TickTracePortable()
 {

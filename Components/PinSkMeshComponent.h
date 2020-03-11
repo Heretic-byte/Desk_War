@@ -20,7 +20,7 @@ enum class E_PinPortType :uint8
 };
 
 class UPortSkMeshComponent;
-UCLASS(ClassGroup = (Custom), hidecategories = Object, config = Engine, editinlinenew, meta = (BlueprintSpawnableComponent),BlueprintType)
+UCLASS(ClassGroup = (Custom), hidecategories = Object, config = Engine, editinlinenew, meta = (BlueprintSpawnableComponent),BlueprintType, Blueprintable)
 class DESK_WAR_API UPinSkMeshComponent : public UPhysicsSkMeshComponent
 {
 	GENERATED_BODY()

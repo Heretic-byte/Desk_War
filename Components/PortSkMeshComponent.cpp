@@ -79,7 +79,8 @@ UPhysicsSkMeshComponent * UPortSkMeshComponent::GetParentSkMesh()
 void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)
 {
 	m_ConnectedPin = connector;
-	m_MeshParentActor->ResetAllBodiesSimulatePhysics();
+	m_MeshParentActor->SetPhysicsAngularVelocityInDegrees(FVector(0,0,0));
+	m_MeshParentActor->SetPhysicsLinearVelocity(FVector(0, 0, 0));
 	ConstraintPinPort();
 	m_OnConnected.Broadcast(m_ConnectedPin);
 }
@@ -124,12 +125,12 @@ void UPortSkMeshComponent::EnablePhysics()
 
 void UPortSkMeshComponent::EnablePhysicsCollision()
 {
-	m_MeshParentActor->SetCollisionResponseToChannel(ECollisionChannel::ECC_PhysicsBody, ECollisionResponse::ECR_Block);
+	m_MeshParentActor->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Block);
 }
 
 void UPortSkMeshComponent::DisblePhysicsCollision()
 {
-	m_MeshParentActor->SetCollisionResponseToChannel(ECollisionChannel::ECC_PhysicsBody, ECollisionResponse::ECR_Ignore);
+	m_MeshParentActor->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
 }
 
 E_PinPortType UPortSkMeshComponent::GetPortType() const

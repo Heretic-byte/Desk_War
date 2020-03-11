@@ -49,7 +49,7 @@ void AUSB_PhysicsPawn::CreatePinUSB()
 
 	check(FoundMeshPinUSB.Object);
 	m_PinUSB->SetSkeletalMesh(FoundMeshPinUSB.Object);
-	m_PinUSB->SetCollisionProfileName("PhysicsActor");
+	m_PinUSB->SetCollisionProfileName("USBActor");
 	m_PinUSB->bEditableWhenInherited = true;
 	m_PinUSB->SetUseCCD(true);
 }
@@ -63,7 +63,7 @@ void AUSB_PhysicsPawn::CreatePin4Pin()
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FoundMeshPort4Pin(TEXT("SkeletalMesh'/Game/Meshes/Characters/Player_USB/SK_USB_Tail.SK_USB_Tail'"));
 	check(FoundMeshPort4Pin.Object);
 	m_Pin5Pin->SetSkeletalMesh(FoundMeshPort4Pin.Object);
-	m_Pin5Pin->SetCollisionProfileName("PhysicsActor");
+	m_Pin5Pin->SetCollisionProfileName("USBActor");
 	m_Pin5Pin->RelativeLocation = FVector(-93.f, 0.f, 0.f);
 	m_Pin5Pin->RelativeRotation = FRotator(0.f, 180.f, 0.f);
 	m_Pin5Pin->bEditableWhenInherited = true;
@@ -128,7 +128,7 @@ void AUSB_PhysicsPawn::SpawnSpineColls()
 		FVector SphereLocation(Offset, 0, 0);
 
 		auto* SphereSpawned = AddSceneComponent<USphereComponent>(USphereComponent::StaticClass(), RootComponent, FTransform());
-		SphereSpawned->SetCollisionProfileName("PhysicsActor");
+		SphereSpawned->SetCollisionProfileName("USBActor");
 		SphereSpawned->SetSphereRadius(m_fLineRadius);
 		SphereSpawned->SetMassOverrideInKg(NAME_None, m_fCollMass);
 		SphereSpawned->SetAngularDamping(m_fSpineAngularDamping);
@@ -250,6 +250,7 @@ void AUSB_PhysicsPawn::InitPhysicsConstraints()
 	UsbPhyCon->SetLinearYLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 	UsbPhyCon->SetLinearZLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 
+	//UsbPhyCon->SetDisableCollision(true);
 	UsbPhyCon->SetConstrainedComponents(m_PinUSB, NAME_None, m_ArySpineColls[0], NAME_None);//Mesh
 
 	FVector CollLocTemp = m_ArySpineColls[0]->GetComponentLocation();
@@ -266,12 +267,12 @@ void AUSB_PhysicsPawn::InitPhysicsConstraints()
 		SpinePhyCon->SetLinearXLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 		SpinePhyCon->SetLinearYLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 		SpinePhyCon->SetLinearZLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
-
+		//SpinePhyCon->SetDisableCollision(true);
 
 		SpinePhyCon->SetWorldLocation((CollLocTemp + m_ArySpineColls[i]->GetComponentLocation()) / 2.f, false, nullptr, ETeleportType::ResetPhysics);
 		CollLocTemp = m_ArySpineColls[i]->GetComponentLocation();
 
-		SpinePhyCon->SetConstrainedComponents(m_ArySpineColls[i], NAME_None, m_ArySpineColls[i - 1], NAME_None);
+		SpinePhyCon->SetConstrainedComponents(m_ArySpineColls[i - 1], NAME_None, m_ArySpineColls[i], NAME_None);
 	}
 
 	UPhysicsConstraintComponent* Pin4PhyCon = AddPhysicsConstraint(FTransform());
@@ -282,7 +283,8 @@ void AUSB_PhysicsPawn::InitPhysicsConstraints()
 	Pin4PhyCon->SetLinearXLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 	Pin4PhyCon->SetLinearYLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 	Pin4PhyCon->SetLinearZLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
-	Pin4PhyCon->SetConstrainedComponents(m_Pin5Pin, NAME_None, m_ArySpineColls[m_ArySpineColls.Num() - 1], NAME_None);
+	//Pin4PhyCon->SetDisableCollision(true);
+	Pin4PhyCon->SetConstrainedComponents(m_ArySpineColls[m_ArySpineColls.Num() - 1], NAME_None,m_Pin5Pin, NAME_None);
 }
 
 void AUSB_PhysicsPawn::BeginPlay()

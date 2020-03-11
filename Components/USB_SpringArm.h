@@ -13,12 +13,17 @@ UCLASS(ClassGroup = Camera, meta = (BlueprintSpawnableComponent), hideCategories
 class DESK_WAR_API UUSB_SpringArm : public USceneComponent
 {
 	GENERATED_UCLASS_BODY()
+	
 private:
-	float m_fLocZTemp;
 	FVector m_LastTarget;
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera)
+	FRotator m_RotOffset;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera)
+	float m_fWheelZoomSpeed;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera)
 	float m_fMinimumArmLength;
+	float m_fMaximumArmLength;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera)
 	float m_fCamZoomInSpeed;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera)
@@ -68,7 +73,11 @@ public:
 	FVector PreviousDesiredLoc;
 	FVector PreviousArmOrigin;
 	FRotator PreviousDesiredRot;
+public:
+	void ZoomIn();
+	void ZoomOut();
 	virtual void OnRegister() override;
+	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void PostLoad() override;
 	virtual void ApplyWorldOffset(const FVector& InOffset, bool bWorldShift) override;
@@ -81,6 +90,6 @@ protected:
 	FQuat RelativeSocketRotation;
 protected:
 	virtual void UpdateDesiredArmLocation(bool bDoTrace, bool bDoLocationLag, bool bDoRotationLag, float DeltaTime);
-	virtual FVector BlendLocations(const FHitResult& hitLocation, const FVector& DesiredArmLocation, const FVector& TraceHitLocation, float DeltaTime);
-	FVector SelectTargetLocation(const FHitResult& hitLocation, const FHitResult& armOriginForMin);
+	virtual FVector BlendLocations(const FVector& DesiredArmLocation, const FVector& TraceHitLocation, bool bHitSomething, float DeltaTime, const FHitResult& hit);
+	FVector ClampTargetLocation(const FVector& traceLoc, const FHitResult& hit);
 };

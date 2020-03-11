@@ -1,4 +1,5 @@
 #include "USB_SpringArm.h"
+#include "Datas/USB_Macros.h"
 #include "GameFramework/Pawn.h"
 #include "CollisionQueryParams.h"
 #include "WorldCollision.h"
@@ -15,7 +16,7 @@ UUSB_SpringArm::UUSB_SpringArm(const FObjectInitializer& ObjectInitializer)
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.TickGroup = TG_PostPhysics;
-
+	m_fWheelZoomSpeed = 10.f;
 	bAutoActivate = true;
 	bTickInEditor = true;
 	bUsePawnControlRotation = false;
@@ -38,8 +39,14 @@ UUSB_SpringArm::UUSB_SpringArm(const FObjectInitializer& ObjectInitializer)
 	CameraRotationLagSpeed = 10.f;
 	CameraLagMaxTimeStep = 1.f / 60.f;
 	CameraLagMaxDistance = 0.f;
-
+	//m_fMaximumArmLength = 1000.f;
 	UnfixedCameraPosition = FVector::ZeroVector;
+}
+
+void UUSB_SpringArm::BeginPlay()
+{
+	Super::BeginPlay();
+	m_fMaximumArmLength = TargetArmLength;
 }
 
 FRotator UUSB_SpringArm::GetTargetRotation() const
@@ -61,6 +68,8 @@ FRotator UUSB_SpringArm::GetTargetRotation() const
 	// If inheriting rotation, check options for which components to inherit
 	if (!bAbsoluteRotation)
 	{
+		
+
 		if (!bInheritPitch)
 		{
 			DesiredRot.Pitch = RelativeRotation.Pitch;
@@ -77,7 +86,7 @@ FRotator UUSB_SpringArm::GetTargetRotation() const
 		}
 	}
 
-	return DesiredRot;
+	return DesiredRot + m_RotOffset;
 }
 
 void UUSB_SpringArm::UpdateDesiredArmLocation(bool bDoTrace, bool bDoLocationLag, bool bDoRotationLag, float DeltaTime)
@@ -176,18 +185,12 @@ void UUSB_SpringArm::UpdateDesiredArmLocation(bool bDoTrace, bool bDoLocationLag
 		bIsCameraFixed = true;
 		FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(SpringArm), false, GetOwner());
 
-		FHitResult HitStartLoc;//Mine
-		GetWorld()->SweepSingleByChannel(HitStartLoc, GetComponentLocation(), DesiredLoc, FQuat::Identity, ProbeChannel, FCollisionShape::MakeSphere(ProbeSize), QueryParams);
-		FHitResult HitStartOrigin;//Original
-		GetWorld()->SweepSingleByChannel(HitStartOrigin, ArmOrigin, DesiredLoc, FQuat::Identity, ProbeChannel, FCollisionShape::MakeSphere(ProbeSize), QueryParams);
-
-		FVector Loc = GetComponentLocation();
+		FHitResult Result;
+		GetWorld()->SweepSingleByChannel(Result, ArmOrigin, DesiredLoc, FQuat::Identity, ProbeChannel, FCollisionShape::MakeSphere(ProbeSize), QueryParams);
 
 		UnfixedCameraPosition = DesiredLoc;
 
-		m_fLocZTemp = DesiredLoc.Z;
-
-		ResultLoc = BlendLocations(HitStartLoc, DesiredLoc, SelectTargetLocation(HitStartLoc, HitStartOrigin), DeltaTime);
+		ResultLoc = BlendLocations(DesiredLoc, Result.Location, Result.bBlockingHit, DeltaTime, Result);
 
 		if (ResultLoc == DesiredLoc)
 		{
@@ -201,47 +204,44 @@ void UUSB_SpringArm::UpdateDesiredArmLocation(bool bDoTrace, bool bDoLocationLag
 		UnfixedCameraPosition = ResultLoc;
 	}
 
+
 	// Form a transform for new world transform for camera
 	FTransform WorldCamTM(DesiredRot, ResultLoc);
 	// Convert to relative to component
 	FTransform RelCamTM = WorldCamTM.GetRelativeTransform(GetComponentTransform());
-
+	
 	m_LastTarget = ResultLoc;
+
 	// Update socket location/rotation
 	RelativeSocketLocation = RelCamTM.GetLocation();
 	RelativeSocketRotation = RelCamTM.GetRotation();
 
 	UpdateChildTransforms();
+
 }
 
 
 
-FVector UUSB_SpringArm::BlendLocations(const FHitResult & hitLocation, const FVector & DesiredArmLocation, const FVector & TraceHitLocation, float DeltaTime)
+FVector UUSB_SpringArm::BlendLocations(const FVector& DesiredArmLocation, const FVector& TraceHitLocation, bool bHitSomething, float DeltaTime, const FHitResult& hit)
 {
-	if (hitLocation.bBlockingHit)
+	if (!bHitSomething)
 	{
-		return UKismetMathLibrary::VInterpTo(m_LastTarget, TraceHitLocation, DeltaTime, m_fCamZoomInSpeed);
+		return DesiredArmLocation;
 	}
 
-	//m_LastTarget.X = DesiredArmLocation.X;
-	//m_LastTarget.Y = DesiredArmLocation.Y;
-	//return UKismetMathLibrary::VInterpTo(m_LastTarget, DesiredArmLocation, DeltaTime, m_fCamZoomInSpeed*2.f);
-
-	return DesiredArmLocation;
+	auto LerpedLocation= UKismetMathLibrary::VInterpTo(m_LastTarget, TraceHitLocation, DeltaTime,m_fCamZoomInSpeed);
+	return LerpedLocation;
+	//return ClampTargetLocation(LerpedLocation,hit);
 }
 
-FVector UUSB_SpringArm::SelectTargetLocation(const FHitResult & hitLocation, const FHitResult & armOriginForMin)
+FVector UUSB_SpringArm::ClampTargetLocation(const FVector& traceLoc,const FHitResult& hit)
 {
-	if (hitLocation.bBlockingHit)
+	if (m_fMinimumArmLength > hit.Distance)//왜안되는지 모르겠다.
 	{
-
-		if (m_fMinimumArmLength > hitLocation.Distance)//최소거리 미도달시
-		{
-
-			return FVector(hitLocation.Location.X, hitLocation.Location.Y, hitLocation.Location.Z + m_fMinimumArmLength);
-		}
+		return FVector(traceLoc.X, traceLoc.Y, traceLoc.Z + m_fMinimumArmLength);
 	}
-	return hitLocation.Location;
+
+	return traceLoc;
 }
 
 
@@ -250,6 +250,26 @@ void UUSB_SpringArm::ApplyWorldOffset(const FVector & InOffset, bool bWorldShift
 	Super::ApplyWorldOffset(InOffset, bWorldShift);
 	PreviousDesiredLoc += InOffset;
 	PreviousArmOrigin += InOffset;
+}
+
+void UUSB_SpringArm::ZoomIn()
+{
+	TargetArmLength -= m_fWheelZoomSpeed;
+
+	if (TargetArmLength < m_fMinimumArmLength)
+	{
+		TargetArmLength = m_fMinimumArmLength;
+	}
+}
+
+void UUSB_SpringArm::ZoomOut()
+{
+	TargetArmLength += m_fWheelZoomSpeed;
+
+	if (TargetArmLength > m_fMaximumArmLength)
+	{
+		TargetArmLength = m_fMaximumArmLength;
+	}
 }
 
 void UUSB_SpringArm::OnRegister()
@@ -263,6 +283,7 @@ void UUSB_SpringArm::OnRegister()
 	// Set initial location (without lag).
 	UpdateDesiredArmLocation(false, false, false, 0.f);
 }
+
 
 void UUSB_SpringArm::PostLoad()
 {

@@ -12,14 +12,17 @@
 class UPhysicsSkMeshComponent;
 class APlayerController;
 
-UCLASS(BlueprintType)
+UCLASS(BlueprintType, Blueprintable)
 class DESK_WAR_API AUSB_PlayerPawn : public AUSB_PhysicsPawn
 {
 	GENERATED_BODY()
 public:
 	AUSB_PlayerPawn(const FObjectInitializer& objInit);
 protected:
-	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
+	float m_fConnectReadyDuration;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
+	float m_fConnectPushDuration;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
 	float m_fPortTraceRange;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
@@ -83,11 +86,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "USB_Action")
 	void StopJumping();
 	UFUNCTION(BlueprintCallable, Category = "USB_Action")
-	void FollowMoveTo(USceneComponent* sceneWant);
-	UFUNCTION(BlueprintCallable, Category = "USB_Action")
-	void MoveTo(FVector destWant);
-	UFUNCTION(BlueprintCallable, Category = "USB_Action")
 	USceneComponent* GetFocusedPortTarget();
+	UFUNCTION(BlueprintCallable, Category = "USB_Action")
+	void ZoomIn();
+	UFUNCTION(BlueprintCallable, Category = "USB_Action")
+	void ZoomOut();
 private://construct
 	void InitPlayerPawn();
 	void CreatePhysicMovement();
@@ -103,9 +106,11 @@ private:
 	bool CheckConnectTransform();
 	bool CheckPortVerticalAngle(UPortSkMeshComponent * port);
 	bool CheckPortHorizontalAngle(UPortSkMeshComponent * port);
-	UCActionBaseInterface* MoveForReadyConnect(UPortSkMeshComponent * portWant);
-	UCActionBaseInterface* RotateForConnect(UPortSkMeshComponent * portWant);
-	UCActionBaseInterface* MoveForPushConnection(UPortSkMeshComponent * portWant);
+	UCActionBaseInterface* HeadMoveForReadyConnect();
+	UCActionBaseInterface* RotateForConnect();
+	UCActionBaseInterface* HeadMoveForPushConnection();
+	UCActionBaseInterface* TailMoveForReadyConnect();
+	UCActionBaseInterface* TailMoveForPushConnection();
 private:
 	void AddPhysicsBody(UPrimitiveComponent* wantP);
 	void RemovePhysicsBody(UPrimitiveComponent* wantP);
