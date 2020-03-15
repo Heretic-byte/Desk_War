@@ -17,10 +17,11 @@ public:
 	UPhysicsMovement(const FObjectInitializer& objInit);
 public:
 	UPROPERTY()
+	UPhysicsSkMeshComponent* m_Head;
+	UPROPERTY()
 	UPhysicsSkMeshComponent* m_MovingTarget;
 	UPROPERTY()
 	UPhysicsSkMeshComponent* m_MovingTargetTail;
-
 	TArray<AActor*>* m_ptrAryTraceIgnoreActors;
 private:
 	FVector m_InputNormal;
@@ -37,6 +38,7 @@ private:
 	float m_fBlockMoveTime;
 	float m_fBlockMoveTimer;
 	float m_fAddTraceMultipleLength;
+	float m_fInitHeadMass;
 public:
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement")
 	bool m_bDebugShowForwardCast;
@@ -107,6 +109,7 @@ public:
 	void SetCastingLength(UPhysicsSkMeshComponent * headUpdatedCompo);
 	void SetTraceIgnoreActorAry(TArray<AActor*>* aryWant);
 	void SetDamping(float fLinDamp, float fAngDamp);
+	void SetInitHeadMass(float massHead);
 public:
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	void PhysSceneStep(FPhysScene* PhysScene, float DeltaTime);

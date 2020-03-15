@@ -78,6 +78,7 @@ UPhysicsSkMeshComponent * UPortSkMeshComponent::GetParentSkMesh()
 
 void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)
 {
+	//DisblePhysicsCollision();
 	m_ConnectedPin = connector;
 	m_MeshParentActor->SetPhysicsAngularVelocityInDegrees(FVector(0,0,0));
 	m_MeshParentActor->SetPhysicsLinearVelocity(FVector(0, 0, 0));

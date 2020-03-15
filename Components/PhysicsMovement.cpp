@@ -11,7 +11,7 @@
 
 UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 {
-
+	m_fInitHeadMass = 1.f;
 	m_bBlockMove = false;
 	m_MovingTarget = nullptr;
 	m_fJumpZVelocity = 540.f;
@@ -124,6 +124,11 @@ void UPhysicsMovement::SetDamping(float fLinDamp, float fAngDamp)
 	}
 }
 
+void UPhysicsMovement::SetInitHeadMass(float massHead)
+{
+	m_fInitHeadMass = massHead;
+}
+
 void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -140,6 +145,8 @@ void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 		return;
 	}
 	TickRotate(DeltaTime);
+	CheckJumpInput(DeltaTime);
+	ClearJumpInput(DeltaTime);
 }
 
 void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
@@ -154,9 +161,9 @@ void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
 	{
 		return;
 	}
-	CheckJumpInput(DeltaTime);
+	
 	TickMovement(DeltaTime);
-	ClearJumpInput(DeltaTime);
+	
 }
 
 void UPhysicsMovement::TickMovement(float delta)
@@ -389,13 +396,20 @@ bool UPhysicsMovement::DoJump()
 {
 	if (CanJump())
 	{
+		//머리와 꼬리가 같은 포스를 받게?
 		FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
-		CurrentV.Z = FMath::Max(m_fJumpZVelocity, m_fJumpZVelocity);
-		FVector CurrentV2 = m_MovingTargetTail->GetPhysicsLinearVelocity();
-		CurrentV2.Z = FMath::Max(m_fJumpZVelocity, m_fJumpZVelocity);
+		CurrentV.Z = FMath::Max(m_fJumpZVelocity, CurrentV.Z);
+		
+		float CurrentMass = m_MovingTarget->GetBodyInstance()->GetBodyMass();
+
 		m_MovingTarget->SetPhysicsLinearVelocity(CurrentV);
-		m_MovingTargetTail->SetPhysicsLinearVelocity(CurrentV2);
+		//m_Head->SetPhysicsLinearVelocity(CurrentV*3.f);
+		m_MovingTargetTail->SetPhysicsLinearVelocity(CurrentV);
+
 		m_nJumpCurrentCount++;
+		//1860
+		PRINTF("Force Did : %f",(CurrentMass*CurrentV).Size());
+
 		return true;
 	}
 

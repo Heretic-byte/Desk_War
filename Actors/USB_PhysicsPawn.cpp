@@ -261,9 +261,9 @@ void AUSB_PhysicsPawn::InitPhysicsConstraints()
 
 		UPhysicsConstraintComponent* SpinePhyCon = AddPhysicsConstraint(FTransform());
 
-		SpinePhyCon->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Limited, 30.f);//35
-		SpinePhyCon->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Limited, 20.f);//20
-		SpinePhyCon->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Limited, 5.f);//20
+		SpinePhyCon->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Limited, 18.f);//35
+		SpinePhyCon->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Limited, 12.f);//20
+		SpinePhyCon->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Limited, 3.f);//20
 		SpinePhyCon->SetLinearXLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 		SpinePhyCon->SetLinearYLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 		SpinePhyCon->SetLinearZLimit(ELinearConstraintMotion::LCM_Locked, 0.f);

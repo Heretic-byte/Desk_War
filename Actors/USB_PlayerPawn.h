@@ -104,8 +104,6 @@ private:
 	void RotatePitch(float v);
 private:
 	bool CheckConnectTransform();
-	bool CheckPortVerticalAngle(UPortSkMeshComponent * port);
-	bool CheckPortHorizontalAngle(UPortSkMeshComponent * port);
 	UCActionBaseInterface* HeadMoveForReadyConnect();
 	UCActionBaseInterface* RotateForConnect();
 	UCActionBaseInterface* HeadMoveForPushConnection();

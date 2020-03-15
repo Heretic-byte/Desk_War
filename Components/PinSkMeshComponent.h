@@ -32,6 +32,8 @@ public:
 	UPinSkMeshComponent(const FObjectInitializer& objInit);
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Body_Bones")
+	FRotator m_ConnectableRotation;
+	UPROPERTY(EditDefaultsOnly, Category = "Body_Bones")
 	FName m_NameNeckBone;
 	UPROPERTY(EditDefaultsOnly, Category = "Body_Bones")
 	FName m_NamePinBone;
@@ -77,5 +79,8 @@ public:
 	{
 		return m_PortConnected;
 	}
-
+	FORCEINLINE FRotator& GetConnectableRot()
+	{
+		return m_ConnectableRotation;
+	}
 };

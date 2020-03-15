@@ -10,6 +10,10 @@
 
 UPinSkMeshComponent::UPinSkMeshComponent(const FObjectInitializer& objInit) :Super(objInit)
 {
+	m_ConnectableRotation.Yaw = 30.f;
+	m_ConnectableRotation.Roll = 5.f;
+	m_ConnectableRotation.Pitch = 5.f;
+
 	m_PortConnected = nullptr;
 	m_PortOwner = nullptr;
 	m_NameNeckBone = FName(TEXT("NeckPoint"));
@@ -41,7 +45,7 @@ bool UPinSkMeshComponent::Connect(UPortSkMeshComponent * port)
 	{
 		return false;
 	}
-	
+	//SetEnableGravity(false);
 	m_PortConnected = port;
 	m_PortOwner = m_PortConnected->GetOwner();
 	m_PortConnected->Connect(this);
@@ -61,7 +65,7 @@ bool UPinSkMeshComponent::Disconnect()
 
 	m_PortConnected = nullptr;
 	m_PortOwner = nullptr;
-
+	//SetEnableGravity(true);
 	return true;
 }
 

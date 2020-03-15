@@ -20,6 +20,7 @@ void APortPawn::CreateMesh()
 {
 	m_Mesh = CreateDefaultSubobject<UPhysicsSkMeshComponent>(MeshComponentName);
 	m_Mesh->SetupAttachment(RootComponent);
+	//RootComponent = m_Mesh;
 	m_Mesh->SetCollisionProfileName("PhysicsActor");
 	m_Mesh->SetSimulatePhysics(true);
 	m_Mesh->SetMeshRadiusMultiple(1.2f);
@@ -28,7 +29,7 @@ void APortPawn::CreateMesh()
 void APortPawn::CreatePhyCon()
 {
 	m_PhyConPort = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("PhyCon00"));
-	m_PhyConPort->SetupAttachment(RootComponent);
+	m_PhyConPort->SetupAttachment(m_Mesh);
 	m_PhyConPort->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Locked, 0.f);
 	m_PhyConPort->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Locked, 0.f);
 	m_PhyConPort->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Locked, 0.f);
