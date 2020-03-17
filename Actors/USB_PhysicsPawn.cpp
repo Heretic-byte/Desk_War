@@ -241,16 +241,14 @@ void AUSB_PhysicsPawn::InitPhysicsConstraints()
 	m_PinUSB->SetPhysicsMaxAngularVelocityInDegrees(m_fMaxAngularVelocity);
 	m_Pin5Pin->SetPhysicsMaxAngularVelocityInDegrees(m_fMaxAngularVelocity);
 
-	UPhysicsConstraintComponent* UsbPhyCon = AddPhysicsConstraint(FTransform());
-	UsbPhyCon->SetWorldLocation(m_PinUSB->GetNeckLoc(), false, nullptr, ETeleportType::ResetPhysics);
-	UsbPhyCon->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Locked, 0.f);
-	UsbPhyCon->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Locked, 0.f);
-	UsbPhyCon->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Locked, 0.f);
+	UPhysicsConstraintComponent* UsbPhyCon = AddPhysicsConstraint(m_PinUSB);
+	UsbPhyCon->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Locked, 0);
+	UsbPhyCon->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Locked, 0);
+	UsbPhyCon->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Locked, 0);
 	UsbPhyCon->SetLinearXLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 	UsbPhyCon->SetLinearYLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 	UsbPhyCon->SetLinearZLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 
-	//UsbPhyCon->SetDisableCollision(true);
 	UsbPhyCon->SetConstrainedComponents(m_PinUSB, NAME_None, m_ArySpineColls[0], NAME_None);//Mesh
 
 	FVector CollLocTemp = m_ArySpineColls[0]->GetComponentLocation();
@@ -259,31 +257,27 @@ void AUSB_PhysicsPawn::InitPhysicsConstraints()
 	{
 		m_ArySpineColls[i]->SetSimulatePhysics(true);
 
-		UPhysicsConstraintComponent* SpinePhyCon = AddPhysicsConstraint(FTransform());
+		UPhysicsConstraintComponent* SpinePhyCon = AddPhysicsConstraint(m_ArySpineColls[i - 1]);
 
-		SpinePhyCon->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Limited, 18.f);//35
-		SpinePhyCon->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Limited, 12.f);//20
-		SpinePhyCon->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Limited, 3.f);//20
+		SpinePhyCon->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Limited, 5.f);//35
+		SpinePhyCon->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Limited, 5.f);//20
+		SpinePhyCon->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Limited, 2.f);//20
 		SpinePhyCon->SetLinearXLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 		SpinePhyCon->SetLinearYLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 		SpinePhyCon->SetLinearZLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
-		//SpinePhyCon->SetDisableCollision(true);
 
-		SpinePhyCon->SetWorldLocation((CollLocTemp + m_ArySpineColls[i]->GetComponentLocation()) / 2.f, false, nullptr, ETeleportType::ResetPhysics);
 		CollLocTemp = m_ArySpineColls[i]->GetComponentLocation();
 
 		SpinePhyCon->SetConstrainedComponents(m_ArySpineColls[i - 1], NAME_None, m_ArySpineColls[i], NAME_None);
 	}
 
-	UPhysicsConstraintComponent* Pin4PhyCon = AddPhysicsConstraint(FTransform());
-	Pin4PhyCon->SetWorldLocation(m_Pin5Pin->GetNeckLoc(), false, nullptr, ETeleportType::ResetPhysics);
-	Pin4PhyCon->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Locked, 0.f);
-	Pin4PhyCon->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Locked, 0.f);
-	Pin4PhyCon->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Locked, 0.f);
+	UPhysicsConstraintComponent* Pin4PhyCon = AddPhysicsConstraint(m_ArySpineColls[m_ArySpineColls.Num() - 1]);
+	Pin4PhyCon->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Locked, 0);
+	Pin4PhyCon->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Locked, 0);
+	Pin4PhyCon->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Limited, 0);
 	Pin4PhyCon->SetLinearXLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 	Pin4PhyCon->SetLinearYLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 	Pin4PhyCon->SetLinearZLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
-	//Pin4PhyCon->SetDisableCollision(true);
 	Pin4PhyCon->SetConstrainedComponents(m_ArySpineColls[m_ArySpineColls.Num() - 1], NAME_None,m_Pin5Pin, NAME_None);
 }
 
@@ -307,9 +301,9 @@ void AUSB_PhysicsPawn::SetUpActorComponent(UActorComponent * compo)
 	AddInstanceComponent(compo);
 }
 
-UPhysicsConstraintComponent * AUSB_PhysicsPawn::AddPhysicsConstraint(const FTransform trans)
+UPhysicsConstraintComponent * AUSB_PhysicsPawn::AddPhysicsConstraint(USceneComponent* parent)
 {
-	auto* Compo = AddSceneComponent<UPhysicsConstraintComponent>(UPhysicsConstraintComponent::StaticClass(), RootComponent, trans);
+	auto* Compo = AddSceneComponent<UPhysicsConstraintComponent>(UPhysicsConstraintComponent::StaticClass(), parent, FTransform());
 	return Compo;
 }
 

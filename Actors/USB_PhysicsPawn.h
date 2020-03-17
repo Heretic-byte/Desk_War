@@ -86,7 +86,7 @@ private:
 	void SetUpSceneComponent(USceneComponent * compo, USceneComponent* parent, FTransform trans);
 	void SetUpActorComponent(UActorComponent * compo);
 public:
-	UPhysicsConstraintComponent* AddPhysicsConstraint(const FTransform trans);
+	UPhysicsConstraintComponent* AddPhysicsConstraint(USceneComponent* parent);
 	template <typename component>
 	FORCEINLINE component* AddSceneComponent(TSubclassOf<component> templateWant, USceneComponent* parent, FTransform trans)
 	{
