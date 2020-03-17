@@ -259,9 +259,9 @@ void AUSB_PhysicsPawn::InitPhysicsConstraints()
 
 		UPhysicsConstraintComponent* SpinePhyCon = AddPhysicsConstraint(m_ArySpineColls[i - 1]);
 
-		SpinePhyCon->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Limited, 5.f);//35
-		SpinePhyCon->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Limited, 5.f);//20
-		SpinePhyCon->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Limited, 2.f);//20
+		SpinePhyCon->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Locked, 0);//35
+		SpinePhyCon->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Locked, 0);//20
+		SpinePhyCon->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Locked, 0);//20
 		SpinePhyCon->SetLinearXLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 		SpinePhyCon->SetLinearYLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 		SpinePhyCon->SetLinearZLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
@@ -274,7 +274,7 @@ void AUSB_PhysicsPawn::InitPhysicsConstraints()
 	UPhysicsConstraintComponent* Pin4PhyCon = AddPhysicsConstraint(m_ArySpineColls[m_ArySpineColls.Num() - 1]);
 	Pin4PhyCon->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Locked, 0);
 	Pin4PhyCon->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Locked, 0);
-	Pin4PhyCon->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Limited, 0);
+	Pin4PhyCon->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Locked, 0);
 	Pin4PhyCon->SetLinearXLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 	Pin4PhyCon->SetLinearYLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 	Pin4PhyCon->SetLinearZLimit(ELinearConstraintMotion::LCM_Locked, 0.f);

@@ -404,7 +404,7 @@ bool UPhysicsMovement::DoJump()
 
 		m_MovingTarget->SetPhysicsLinearVelocity(CurrentV);
 		//m_Head->SetPhysicsLinearVelocity(CurrentV*3.f);
-		//m_MovingTargetTail->SetPhysicsLinearVelocity(CurrentV);
+		m_MovingTargetTail->SetPhysicsLinearVelocity(CurrentV);
 
 		m_nJumpCurrentCount++;
 		//1860
