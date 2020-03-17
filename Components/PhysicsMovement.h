@@ -15,9 +15,7 @@ class DESK_WAR_API UPhysicsMovement : public UPawnMovementComponent
 	GENERATED_BODY()
 public:
 	UPhysicsMovement(const FObjectInitializer& objInit);
-public:
-	UPROPERTY()
-	UPhysicsSkMeshComponent* m_Head;
+private:
 	UPROPERTY()
 	UPhysicsSkMeshComponent* m_MovingTarget;
 	UPROPERTY()

@@ -78,7 +78,6 @@ UPhysicsSkMeshComponent * UPortSkMeshComponent::GetParentSkMesh()
 
 void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)
 {
-	//DisblePhysicsCollision();
 	m_ConnectedPin = connector;
 	m_MeshParentActor->SetPhysicsAngularVelocityInDegrees(FVector(0,0,0));
 	m_MeshParentActor->SetPhysicsLinearVelocity(FVector(0, 0, 0));
@@ -88,7 +87,6 @@ void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)
 
 void UPortSkMeshComponent::ConstraintPinPort()
 {
-	//if (m_MeshParentActor->AttachToComponent(m_ConnectedPin, FAttachmentTransformRules(EAttachmentRule::KeepWorld, true)))
 	m_ParentPhysicsConst->SetConstrainedComponents(m_MeshParentActor, NAME_None, m_ConnectedPin, NAME_None);
 }
 
@@ -103,9 +101,9 @@ bool UPortSkMeshComponent::Disconnect()
 	m_ParentPhysicsConst->BreakConstraint();
 	m_ConnectedPin = nullptr;
 
-	m_MeshParentActor->AddImpulse(m_MeshParentActor->GetForwardVector()*m_fEjectPower);
+	m_MeshParentActor->AddImpulse(GetForwardVector()*m_fEjectPower);
 
-	EnablePhysicsCollision();
+	//EnablePhysicsCollision();
 	return true;
 }
 

@@ -396,19 +396,20 @@ bool UPhysicsMovement::DoJump()
 {
 	if (CanJump())
 	{
-		//머리와 꼬리가 같은 포스를 받게?
 		FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
 		CurrentV.Z = FMath::Max(m_fJumpZVelocity, CurrentV.Z);
 		
-		float CurrentMass = m_MovingTarget->GetBodyInstance()->GetBodyMass();
+		float CurrentTargetMass = m_MovingTarget->GetBodyInstance()->GetBodyMass();
+		float TargetTailMassRate = CurrentTargetMass / m_fInitHeadMass;
 
-		m_MovingTarget->SetPhysicsLinearVelocity(CurrentV);
-		//m_Head->SetPhysicsLinearVelocity(CurrentV*3.f);
-		m_MovingTargetTail->SetPhysicsLinearVelocity(CurrentV);
+		float CurrentTailMass = m_MovingTargetTail->GetBodyInstance()->GetBodyMass();
+		float TargetMassRate = CurrentTailMass / m_fInitHeadMass;
+
+
+		m_MovingTarget->SetPhysicsLinearVelocity(CurrentV * TargetMassRate);
+		m_MovingTargetTail->SetPhysicsLinearVelocity(CurrentV * TargetTailMassRate);
 
 		m_nJumpCurrentCount++;
-		//1860
-		PRINTF("Force Did : %f",(CurrentMass*CurrentV).Size());
 
 		return true;
 	}

@@ -50,7 +50,6 @@ void AUSB_PlayerPawn::BeginPlay()
 	SetHeadTail(m_CurrentHead, m_CurrentTail);
 	InitTraceIgnoreAry();
 	m_Movement->SetInitHeadMass(m_CurrentHead->GetBodyInstance()->GetBodyMass());
-	m_Movement->m_Head = m_CurrentHead;
 }
 
 USceneComponent * AUSB_PlayerPawn::GetFocusedPortTarget()
@@ -384,13 +383,8 @@ void AUSB_PlayerPawn::ConnectShot()
 	{
 		return;
 	}
-	//되고 안되고 조건문은 여기있어야함
-	//몇개는 핀이가져야 잘못된 삽입에 패널티를 줌
 
-
-	//BlockInput(true);
-
-	//SetPhysicsVelocityAllBody(FVector(0, 0, 0));
+	BlockInput(true);
 
 	auto* Port = m_CurrentFocusedPort;
 	Port->DisblePhysicsCollision();
@@ -419,7 +413,7 @@ void AUSB_PlayerPawn::ConnectShot()
 		TryConnect(Port);
 
 		//일단은 이거문제로 추정
-		//Port->EnablePhysicsCollision();
+		Port->EnablePhysicsCollision();
 
 		BlockInput(false);
 
