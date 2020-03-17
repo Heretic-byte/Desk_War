@@ -11,6 +11,7 @@
 
 UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 {
+	m_bUsingAutoMove = false;
 	m_fInitHeadMass = 1.f;
 	m_bBlockMove = false;
 	m_MovingTarget = nullptr;
@@ -56,6 +57,15 @@ void UPhysicsMovement::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	}
 
 	Super::EndPlay(EndPlayReason);
+}
+
+void UPhysicsMovement::SetAutoMoveTimer(FVector dirWant, float timeWant)
+{
+	m_AutoMoveDir = dirWant;
+
+	SetBlockMoveTimer(timeWant);
+
+	m_bUsingAutoMove = true;
 }
 
 void UPhysicsMovement::SetUpdatePhysicsMovement(UPhysicsSkMeshComponent * headUpdatedCompo, UPhysicsSkMeshComponent * tailUpdatedCompo)
@@ -132,18 +142,40 @@ void UPhysicsMovement::SetInitHeadMass(float massHead)
 void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	FVector InputDir = ConsumeInputVector();
-	m_Acceleration = ScaleInputAccel(InputDir);
+
+	FVector InputDir;
+
 	if (m_bBlockMove)
 	{
 		m_fBlockMoveTimer += DeltaTime;
+
 		if (0<m_fBlockMoveTime&&m_fBlockMoveTimer > m_fBlockMoveTime)
 		{
 			m_fBlockMoveTimer = 0.f;
 			m_bBlockMove = false;
+
+			if (m_bUsingAutoMove)
+			{
+				m_bUsingAutoMove = false;
+				m_AutoMoveDir = FVector::ZeroVector;
+				m_OnAutoMoveEnd.Broadcast();
+			}
 		}
-		return;
+
+		if (m_bUsingAutoMove)
+		{
+			InputDir = m_AutoMoveDir;
+		}
+		else
+		{
+			return;
+		}
 	}
+	else
+	{
+		InputDir= ConsumeInputVector();
+	}
+	SetAccelerationByDir(InputDir);
 	TickRotate(DeltaTime);
 	CheckJumpInput(DeltaTime);
 	ClearJumpInput(DeltaTime);
@@ -157,10 +189,6 @@ void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
 	}
 
 	TickCastGround();
-	if (m_bBlockMove)
-	{
-		return;
-	}
 	
 	TickMovement(DeltaTime);
 	
@@ -319,11 +347,11 @@ bool UPhysicsMovement::IsGround() const
 	return m_bOnGround;
 }
 
-FVector UPhysicsMovement::ScaleInputAccel(const FVector inputPure)
+void UPhysicsMovement::SetAccelerationByDir(const FVector inputPure)
 {
 	m_InputNormal = inputPure.GetClampedToMaxSize(1.f);
 
-	return GetMaxForce() *m_InputNormal;
+	m_Acceleration= GetMaxForce() *m_InputNormal;
 }
 
 void UPhysicsMovement::Jump()

@@ -34,7 +34,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
 	float m_fHeadChangeCD;
 	float m_fHeadChangeCDTimer;
-	bool m_bCanConnectDist;
 	UPROPERTY()
 	TArray<UPrimitiveComponent*> m_AryPhysicsBody;
 	float m_fTotalMass;
@@ -117,6 +116,8 @@ protected:
 	bool TryConnect(UPortSkMeshComponent* portWant);
 	bool TryDisconnect();
 	void BlockInput(bool tIsBlock);
+	void DisableMove();
+	void EnableMove();
 	void AddIgnoreActorsToQuery(FCollisionQueryParams& queryParam);
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void BeginPlay() override;

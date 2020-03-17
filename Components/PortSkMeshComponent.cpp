@@ -5,6 +5,7 @@
 #include "Datas/USB_Macros.h"
 #include "UObject/ConstructorHelpers.h"
 #include "GameFramework/PlayerController.h"
+#include "DrawDebugHelpers.h"
 
 UPortSkMeshComponent::UPortSkMeshComponent(const FObjectInitializer & objInit)
 {
@@ -46,19 +47,6 @@ void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, 
 void UPortSkMeshComponent::BeginPlay()
 {
 	Super::BeginPlay();
-}
-
-bool UPortSkMeshComponent::SetAimTracePoint(FVector & tracedImpactPoint)
-{
-	FVector PortLoc = GetComponentLocation();
-	FVector TracedImpactLoc= tracedImpactPoint;
-	float DistSqr = FVector::DistSquared(PortLoc, TracedImpactLoc);
-	PortLoc.X = 0.f;
-	TracedImpactLoc.X = 0.f;
-
-	float DistSqrForBlink = FVector::DistSquared(PortLoc, TracedImpactLoc);
-
-	return DistSqr < m_fConnectableDistSqr;
 }
 
 bool UPortSkMeshComponent::GetBlockMoveOnConnnect()

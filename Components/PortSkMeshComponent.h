@@ -69,7 +69,6 @@ public:
 	void EnablePhysics();
 	void EnablePhysicsCollision();
 	void DisblePhysicsCollision();
-	bool SetAimTracePoint(FVector& tracedImpactPoint);
 	bool GetBlockMoveOnConnnect();
 	FName GetMovePointWant();
 	UPhysicsSkMeshComponent* GetParentSkMesh();

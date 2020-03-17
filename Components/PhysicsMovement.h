@@ -22,6 +22,9 @@ private:
 	UPhysicsSkMeshComponent* m_MovingTargetTail;
 	TArray<AActor*>* m_ptrAryTraceIgnoreActors;
 private:
+	FVoidVoid m_OnAutoMoveEnd;
+private:
+	FVector m_AutoMoveDir;
 	FVector m_InputNormal;
 	FVector m_Acceleration;
 	bool m_bOnGround;
@@ -29,6 +32,7 @@ private:
 	FHitResult m_GroundHitResult;
 	//jump
 	bool m_bWasJumping;
+	bool m_bUsingAutoMove;
 	bool m_bBlockMove;
 	float m_fJumpKeyHoldTime;
 	int m_nJumpCurrentCount;
@@ -81,7 +85,7 @@ public:
 	void SetBlockMoveTimer(float wantBlockTime);
 private:
 	virtual void UpdateComponentVelocity() override;
-	FVector ScaleInputAccel(const FVector inputPure) ;
+	void SetAccelerationByDir(const FVector inputPure);
 	float GetAxisDeltaRotation(float InAxisRotationRate, float DeltaTime) const;
 	FRotator GetDeltaRotation(float DeltaTime) const;
 	FRotator ComputeOrientToMovementRotation(const FRotator& CurrentRotation, FRotator& DeltaRotation) const;
@@ -103,6 +107,7 @@ private:
 	void TickMovement(float delta);
 	virtual void SetUpdatedComponent(USceneComponent* NewUpdatedComponent) override;
 public:
+	void SetAutoMoveTimer(FVector dirWant, float timeWant);
 	void SetUpdatePhysicsMovement(UPhysicsSkMeshComponent* headUpdatedCompo, UPhysicsSkMeshComponent* tailUpdatedCompo);
 	void SetCastingLength(UPhysicsSkMeshComponent * headUpdatedCompo);
 	void SetTraceIgnoreActorAry(TArray<AActor*>* aryWant);
