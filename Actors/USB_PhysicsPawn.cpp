@@ -28,15 +28,8 @@ AUSB_PhysicsPawn::AUSB_PhysicsPawn(const FObjectInitializer& objInit):Super(objI
 
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	CreatePinUSB();
-	CreatePin4Pin();
+	CreatePin5Pin();
 	CreateSpline();
-
-	static ConstructorHelpers::FObjectFinder<UPhysicalMaterial> FoundUSBPhyMat(TEXT("PhysicalMaterial'/Game/PhysicsMaterial/PM_USB_Main.PM_USB_Main'"));
-	if (FoundUSBPhyMat.Succeeded())
-	{
-		m_PinFriction = FoundUSBPhyMat.Object;
-	}
-
 }
 
 void AUSB_PhysicsPawn::CreatePinUSB()
@@ -52,9 +45,10 @@ void AUSB_PhysicsPawn::CreatePinUSB()
 	m_PinUSB->SetCollisionProfileName("USBActor");
 	m_PinUSB->bEditableWhenInherited = true;
 	m_PinUSB->SetUseCCD(true);
+	m_PinUSB->SetSimulatePhysics(true);
 }
 
-void AUSB_PhysicsPawn::CreatePin4Pin()
+void AUSB_PhysicsPawn::CreatePin5Pin()
 {
 	m_Pin5Pin = CreateDefaultSubobject<UPinSkMeshComponent>(TEXT("m_Pin_5Pin_00"));
 	m_Pin5Pin->SetupAttachment(RootComponent);
@@ -68,6 +62,7 @@ void AUSB_PhysicsPawn::CreatePin4Pin()
 	m_Pin5Pin->RelativeRotation = FRotator(0.f, 180.f, 0.f);
 	m_Pin5Pin->bEditableWhenInherited = true;
 	m_Pin5Pin->SetUseCCD(true);
+	m_Pin5Pin->SetSimulatePhysics(true);
 }
 
 void AUSB_PhysicsPawn::CreateSpline()
@@ -96,7 +91,6 @@ void AUSB_PhysicsPawn::InitUSB()
 
 int AUSB_PhysicsPawn::SetTailLocation()
 {
-	m_Pin5Pin->SetSimulatePhysics(false);
 	FVector SocketUSB = m_PinUSB->GetNeckLoc();
 	FVector Socket4Pin = m_Pin5Pin->GetNeckLoc();
 
@@ -146,7 +140,6 @@ void AUSB_PhysicsPawn::SpawnSpineColls()
 
 void AUSB_PhysicsPawn::InitSplineComponent()
 {
-
 	m_SpineSpline->ClearSplinePoints();
 	m_SpineSpline->AddSplinePoint(m_PinUSB->GetNeckLoc(), ESplineCoordinateSpace::Type::World, false);
 	
@@ -230,21 +223,13 @@ void AUSB_PhysicsPawn::UpdateSplineMesh()
 
 void AUSB_PhysicsPawn::InitPhysicsConstraints()
 {
-	m_PinUSB->SetPhysMaterialOverride(m_PinFriction);
-	m_Pin5Pin->SetPhysMaterialOverride(m_PinFriction);
-
-	m_PinUSB->SetSimulatePhysics(true);
-	m_Pin5Pin->SetSimulatePhysics(true);
-	m_ArySpineColls[0]->SetSimulatePhysics(true);
-	m_ArySpineColls[m_ArySpineColls.Num() - 1]->SetSimulatePhysics(true);
-
 	m_PinUSB->SetPhysicsMaxAngularVelocityInDegrees(m_fMaxAngularVelocity);
 	m_Pin5Pin->SetPhysicsMaxAngularVelocityInDegrees(m_fMaxAngularVelocity);
 
 	UPhysicsConstraintComponent* UsbPhyCon = AddPhysicsConstraint(m_PinUSB);
-	UsbPhyCon->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Locked, 0);
-	UsbPhyCon->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Locked, 0);
-	UsbPhyCon->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Locked, 0);
+	UsbPhyCon->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Limited, 25.f);
+	UsbPhyCon->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Limited, 25.f);
+	UsbPhyCon->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Limited, 25.f);
 	UsbPhyCon->SetLinearXLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 	UsbPhyCon->SetLinearYLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 	UsbPhyCon->SetLinearZLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
@@ -255,13 +240,11 @@ void AUSB_PhysicsPawn::InitPhysicsConstraints()
 
 	for (int i = 1; i < m_ArySpineColls.Num(); i++)
 	{
-		m_ArySpineColls[i]->SetSimulatePhysics(true);
-
 		UPhysicsConstraintComponent* SpinePhyCon = AddPhysicsConstraint(m_ArySpineColls[i - 1]);
 
-		SpinePhyCon->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Locked, 0);//35
-		SpinePhyCon->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Locked, 0);//20
-		SpinePhyCon->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Locked, 0);//20
+		SpinePhyCon->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Locked, 10);//35
+		SpinePhyCon->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Locked, 10);//20
+		SpinePhyCon->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Locked, 10);//20
 		SpinePhyCon->SetLinearXLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 		SpinePhyCon->SetLinearYLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
 		SpinePhyCon->SetLinearZLimit(ELinearConstraintMotion::LCM_Locked, 0.f);

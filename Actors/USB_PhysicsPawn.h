@@ -37,8 +37,6 @@ protected:
 	UStaticMesh* m_MeshSpine;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Spine_Physics")
 	UPhysicalMaterial* m_SpineFriction;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Spine_Physics")
-	UPhysicalMaterial* m_PinFriction;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TArray<USphereComponent*> m_ArySpineColls;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
@@ -78,7 +76,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 private:
 	void CreatePinUSB();
-	void CreatePin4Pin();
+	void CreatePin5Pin();
 	void CreateSpline();
 	void UpdateSplinePoint();
 	void UpdateSplineMesh();
