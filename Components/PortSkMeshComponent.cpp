@@ -9,6 +9,10 @@
 
 UPortSkMeshComponent::UPortSkMeshComponent(const FObjectInitializer & objInit)
 {
+	m_fFailImpulsePower = 10000.f;
+	m_ConnectableRotation.Yaw = 30.f;
+	m_ConnectableRotation.Roll = 5.f;
+	m_ConnectableRotation.Pitch = 5.f;
 	m_bBlockMoveOnConnected = false;
 	m_NameWantMovePoint = "PortPoint";
 	m_NameParentBonePortPoint = "PortPoint";
@@ -28,6 +32,11 @@ UPortSkMeshComponent::UPortSkMeshComponent(const FObjectInitializer & objInit)
 	SetCollisionProfileName("Port");
 }
 
+void UPortSkMeshComponent::BeginPlay()
+{
+	Super::BeginPlay();
+}
+
 void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, UPhysicsSkMeshComponent* parentMesh,E_PinPortType portType, FName namePinBone)
 {
 	m_ParentPhysicsConst = physicsJoint;
@@ -44,9 +53,21 @@ void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, 
 	}
 }
 
-void UPortSkMeshComponent::BeginPlay()
+bool UPortSkMeshComponent::CheckConnectTransform(UPinSkMeshComponent * connector)
 {
-	Super::BeginPlay();
+	FRotator PortRot = GetComponentRotation();
+	FRotator PinRot = connector->GetComponentRotation();
+
+	float PitchDiff = FMath::Abs(PortRot.Pitch - PinRot.Pitch);
+	bool PitchCheck = PitchDiff <= m_ConnectableRotation.Pitch;
+
+	float RollDiff = FMath::Abs(PortRot.Roll - PinRot.Roll);
+	bool RollCheck = RollDiff <= m_ConnectableRotation.Roll;
+
+	float YawDiff = FMath::Abs(PortRot.Yaw - PinRot.Yaw);
+	bool YawCheck = YawDiff <= m_ConnectableRotation.Yaw;
+
+	return PitchCheck && RollCheck&&YawCheck;
 }
 
 bool UPortSkMeshComponent::GetBlockMoveOnConnnect()
@@ -64,11 +85,10 @@ UPhysicsSkMeshComponent * UPortSkMeshComponent::GetParentSkMesh()
 	return m_MeshParentActor;
 }
 
-void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)
+void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)//should call last
 {
 	m_ConnectedPin = connector;
-	m_MeshParentActor->SetPhysicsAngularVelocityInDegrees(FVector(0,0,0));
-	m_MeshParentActor->SetPhysicsLinearVelocity(FVector(0, 0, 0));
+	
 	ConstraintPinPort();
 	m_OnConnected.Broadcast(m_ConnectedPin);
 }
@@ -77,7 +97,6 @@ void UPortSkMeshComponent::ConstraintPinPort()
 {
 	m_ParentPhysicsConst->SetConstrainedComponents(m_MeshParentActor, NAME_None, m_ConnectedPin, NAME_None);
 }
-
 
 bool UPortSkMeshComponent::Disconnect()
 {
@@ -91,7 +110,6 @@ bool UPortSkMeshComponent::Disconnect()
 
 	m_MeshParentActor->AddImpulse(GetForwardVector()*m_fEjectPower);
 
-	//EnablePhysicsCollision();
 	return true;
 }
 
@@ -100,15 +118,6 @@ bool UPortSkMeshComponent::IsConnected()
 	return m_ConnectedPin;
 }
 
-void UPortSkMeshComponent::DisablePhysics()
-{
-	m_MeshParentActor->SetSimulatePhysics(false);
-}
-
-void UPortSkMeshComponent::EnablePhysics()
-{
-	m_MeshParentActor->SetSimulatePhysics(true);
-}
 
 void UPortSkMeshComponent::EnablePhysicsCollision()
 {
@@ -124,4 +133,12 @@ E_PinPortType UPortSkMeshComponent::GetPortType() const
 {
 	return _inline_GetPortType();
 }
+
+void UPortSkMeshComponent::FailConnection(const FHitResult & hitResult)
+{
+	EnablePhysicsCollision();
+	
+	m_MeshParentActor->AddImpulseAtLocation((GetUpVector()+GetForwardVector())*m_fFailImpulsePower, hitResult.ImpactPoint);
+}
+
 

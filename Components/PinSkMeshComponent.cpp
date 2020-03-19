@@ -10,10 +10,7 @@
 
 UPinSkMeshComponent::UPinSkMeshComponent(const FObjectInitializer& objInit) :Super(objInit)
 {
-	m_ConnectableRotation.Yaw = 30.f;
-	m_ConnectableRotation.Roll = 5.f;
-	m_ConnectableRotation.Pitch = 5.f;
-
+	m_fFailImpulsePower = 10000.f;
 	m_PortConnected = nullptr;
 	m_PortOwner = nullptr;
 	m_NameNeckBone = FName(TEXT("NeckPoint"));
@@ -45,10 +42,8 @@ bool UPinSkMeshComponent::Connect(UPortSkMeshComponent * port)
 	{
 		return false;
 	}
-	//SetEnableGravity(false);
 	m_PortConnected = port;
 	m_PortOwner = m_PortConnected->GetOwner();
-	m_PortConnected->Connect(this);
 
 	m_OnConnectedPortOwner.Broadcast(m_PortOwner);
 	m_OnConnectedPort.Broadcast(m_PortConnected);
@@ -65,7 +60,6 @@ bool UPinSkMeshComponent::Disconnect()
 
 	m_PortConnected = nullptr;
 	m_PortOwner = nullptr;
-	//SetEnableGravity(true);
 	return true;
 }
 
@@ -74,8 +68,6 @@ void UPinSkMeshComponent::BeginPlay()
 	Super::BeginPlay();
 	SetPinType(m_Pintype);
 }
-
-
 
 bool UPinSkMeshComponent::CheckTypeMatch(E_PinPortType portsType)
 {
@@ -90,6 +82,13 @@ void UPinSkMeshComponent::SetNeckName(FName nameWant)
 void UPinSkMeshComponent::SetVelocityPivotName(FName nameWant)
 {
 	m_NameVelocityPivotBone = nameWant;
+}
+
+void UPinSkMeshComponent::FailConnection(const FHitResult & hitResult)
+{
+	AddImpulseAtLocation((GetUpVector()+ GetForwardVector() * -1.f)*m_fFailImpulsePower,hitResult.ImpactPoint);
+
+
 }
 
 

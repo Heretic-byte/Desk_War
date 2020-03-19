@@ -51,11 +51,13 @@ void APortPawn::CreatePort()
 {
 	m_MeshPort = CreateDefaultSubobject<UPortSkMeshComponent>(MeshPortComponentName);
 	m_MeshPort->SetupAttachment(m_Mesh);
-	m_MeshPort->InitPort(m_PhyConPort, m_Mesh);
+	
 }
 
 void APortPawn::BeginPlay()
 {
 	Super::BeginPlay();
-
+	m_MeshPort->InitPort(m_PhyConPort, m_Mesh);
+	m_MeshPort->m_OnConnected.AddUObject(this,&APortPawn::PortConnected);
+	m_MeshPort->m_OnDisconnected.AddUObject(this, &APortPawn::PortDisConnected);
 }

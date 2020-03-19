@@ -11,7 +11,7 @@
 #include "USB_PlayerPawn.generated.h"
 class UPhysicsSkMeshComponent;
 class APlayerController;
-
+class UPortSkMeshComponent;
 UCLASS(BlueprintType, Blueprintable)
 class DESK_WAR_API AUSB_PlayerPawn : public AUSB_PhysicsPawn
 {
@@ -19,6 +19,12 @@ class DESK_WAR_API AUSB_PlayerPawn : public AUSB_PhysicsPawn
 public:
 	AUSB_PlayerPawn(const FObjectInitializer& objInit);
 protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
+	float m_fMaxConnectRotTime;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
+	float m_fMinConnectRotTime;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
+	float m_fDefaultFailImpulsePower;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
 	float m_fConnectReadyDuration;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
@@ -37,6 +43,7 @@ protected:
 	UPROPERTY()
 	TArray<UPrimitiveComponent*> m_AryPhysicsBody;
 	float m_fTotalMass;
+	bool m_bBlockHeadChange;
 protected://component
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly,Category="Movement")
 	UPhysicsMovement* m_Movement;
@@ -60,12 +67,17 @@ private:
 	UPROPERTY()
 	UPhysicsSkMeshComponent* m_CurrentTail;
 	UPROPERTY()
-	UPinSkMeshComponent* m_CurrentHeadPin;
-	UPROPERTY()
-	UPinSkMeshComponent* m_CurrentTailPin;
-	UPROPERTY()
 	UPortSkMeshComponent* m_CurrentFocusedPort;
+private:
+	UPROPERTY()
+	UPinSkMeshComponent* m_CurrentTryConnectingPin;
+	UPROPERTY()
+	UPortSkMeshComponent* m_CurrentTryConnectingPort;
 public:
+	UFUNCTION(BlueprintCallable, Category = "Connection")
+	void TryConnect(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, 
+		int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult);
+	
 	UFUNCTION(BlueprintCallable, Category = "USB_Action")
 	void ChangeHeadTail();
 	UFUNCTION(BlueprintCallable, Category = "USB_Action")
@@ -102,30 +114,27 @@ private:
 	void RotateYaw(float v);
 	void RotatePitch(float v);
 private:
-	bool CheckConnectTransform();
-	UCActionBaseInterface* HeadMoveForReadyConnect();
-	UCActionBaseInterface* RotateForConnect();
-	UCActionBaseInterface* HeadMoveForPushConnection();
-	UCActionBaseInterface* TailMoveForReadyConnect();
-	UCActionBaseInterface* TailMoveForPushConnection();
-private:
 	void AddPhysicsBody(UPrimitiveComponent* wantP);
 	void RemovePhysicsBody(UPrimitiveComponent* wantP);
 protected:
+	void SuccessConnection();
+	void FailConnection(const FHitResult & hitResult);
 	void SetPhysicsVelocityAllBody(FVector linearV);
-	bool TryConnect(UPortSkMeshComponent* portWant);
 	bool TryDisconnect();
 	void BlockInput(bool tIsBlock);
-	void DisableMove();
-	void EnableMove();
 	void AddIgnoreActorsToQuery(FCollisionQueryParams& queryParam);
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void BeginPlay() override;
 	void InitTraceIgnoreAry();
 	void TickTracePortable();
+	void ConnectChargingEnd();
 public:
-	void BlockMovement();
-	void UnblockMovement();
+	void EnableInputMove();
+	void DisableInputMove(float timer);
+	void EnableAutoMove(FVector wantDir,float timer);
+	void DisableAutoMove();
+	void EnableAutoRotate(FRotator wantRot,float timer);
+	void DisableAutoRotate();
 	virtual void Tick(float DeltaTime) override;
 public:
 	FORCEINLINE float GetTotalMass()
@@ -139,13 +148,5 @@ public:
 	FORCEINLINE UPhysicsSkMeshComponent* _inline_GetTail()
 	{
 		return m_CurrentTail;
-	}
-	FORCEINLINE UPhysicsSkMeshComponent* _inline_GetHeadPin()
-	{
-		return m_CurrentHeadPin;
-	}
-	FORCEINLINE UPhysicsSkMeshComponent* _inline_GetTailPin()
-	{
-		return m_CurrentTailPin;
 	}
 };

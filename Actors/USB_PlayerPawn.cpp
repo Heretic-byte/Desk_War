@@ -24,6 +24,9 @@
 //분리해야한다
 AUSB_PlayerPawn::AUSB_PlayerPawn(const FObjectInitializer& objInit):Super(objInit)
 {
+	m_fMaxConnectRotTime = 3.f;
+	m_fMinConnectRotTime = 1.f;
+	m_fDefaultFailImpulsePower = 1000.f;
 	InitPlayerPawn();
 	CreatePhysicMovement();
 	CreateCameraFamily();
@@ -34,7 +37,7 @@ AUSB_PlayerPawn::AUSB_PlayerPawn(const FObjectInitializer& objInit):Super(objIni
 	m_AryPhysicsBody.Reserve(10);
 
 
-
+	m_bBlockHeadChange = false;
 }
 
 void AUSB_PlayerPawn::BeginPlay()
@@ -50,6 +53,12 @@ void AUSB_PlayerPawn::BeginPlay()
 	SetHeadTail(m_CurrentHead, m_CurrentTail);
 	InitTraceIgnoreAry();
 	m_Movement->SetInitHeadMass(m_CurrentHead->GetBodyInstance()->GetBodyMass());
+	m_Movement->m_OnAutoMoveEnd.AddUObject(this, &AUSB_PlayerPawn::ConnectChargingEnd);
+	Cast<UPinSkMeshComponent>(m_CurrentHead)->m_fFailImpulsePower = m_fDefaultFailImpulsePower;
+	Cast<UPinSkMeshComponent>(m_CurrentTail)->m_fFailImpulsePower = m_fDefaultFailImpulsePower;
+
+
+
 }
 
 USceneComponent * AUSB_PlayerPawn::GetFocusedPortTarget()
@@ -81,8 +90,6 @@ void AUSB_PlayerPawn::InitPlayerPawn()
 
 	m_CurrentHead = m_PinUSB;
 	m_CurrentTail = m_Pin5Pin;
-	m_CurrentHeadPin = m_PinUSB;
-	m_CurrentTailPin = m_Pin5Pin;
 	m_fPortTraceRange = 77.f;
 	m_fHeadChangeCD = 0.5f;
 	m_fHeadChangeCDTimer = 0.f;
@@ -153,16 +160,16 @@ void AUSB_PlayerPawn::CreateSkFaceMesh()
 
 void AUSB_PlayerPawn::SetHeadTail(UPhysicsSkMeshComponent * headWant, UPhysicsSkMeshComponent * tailWant)
 {
+	m_CurrentHead->OnComponentBeginOverlap.RemoveAll(this);//remove from older
+
 	m_CurrentHead = headWant;
 	m_CurrentTail = tailWant;
-
-	auto* HeadPin = m_CurrentHeadPin;
-	m_CurrentHeadPin = m_CurrentTailPin;
-	m_CurrentTailPin = HeadPin;
 
 	m_Movement->SetUpdatePhysicsMovement(m_CurrentHead, m_CurrentTail);
 	
 	m_CamRoot->AttachToComponent(m_CurrentHead,FAttachmentTransformRules::KeepRelativeTransform);
+
+	m_CurrentHead->OnComponentBeginOverlap.AddDynamic(this,&AUSB_PlayerPawn::TryConnect);
 }
 
 void AUSB_PlayerPawn::AddIgnoreActorsToQuery(FCollisionQueryParams & queryParam)
@@ -212,6 +219,23 @@ void AUSB_PlayerPawn::Tick(float DeltaTime)
 	FVector HeadPos = GetHead()->GetComponentLocation();
 	FVector PortPst = m_CurrentFocusedPort->GetComponentLocation();
 	DrawDebugLine(GetWorld(), HeadPos, PortPst, FColor::Cyan, false, -1, 0.1f);
+
+	if (m_CurrentTryConnectingPin)
+	{
+		PRINTF("Pin Here");
+	}
+	else
+	{
+		PRINTF("Pin No");
+	}
+	if (m_CurrentTryConnectingPort)
+	{
+		PRINTF("Port Here");
+	}
+	else
+	{
+		PRINTF("Port No");
+	}
 }
 
 void AUSB_PlayerPawn::MoveForward(float v)
@@ -247,9 +271,191 @@ void AUSB_PlayerPawn::RotateYaw(float v)
 	AddControllerYawInput(v);
 }
 
+void AUSB_PlayerPawn::ConnectShot()
+{
+	if (m_bBlockHeadChange)
+	{
+		return;
+	}
+
+	if (!m_CurrentFocusedPort)
+	{
+		return;
+	}
+
+	if (m_CurrentFocusedPort->GetPinConnected())
+	{
+		return;
+	}
+
+
+	auto* PinHead = Cast<UPinSkMeshComponent>(GetHead());
+
+	if (!PinHead)
+	{
+		return;
+	}
+
+	if (PinHead->GetPortConnected())
+	{
+		return;
+	}
+
+	m_bBlockHeadChange = true;
+	m_CurrentTryConnectingPin = PinHead;
+	if (m_CurrentTryConnectingPin)
+	{
+		PRINTF("Pin Here");
+	}
+	m_CurrentTryConnectingPort = m_CurrentFocusedPort;
+	if (m_CurrentTryConnectingPort)
+	{
+		PRINTF("Port Here");
+	}
+
+	if (!m_Movement->IsGround())
+	{ 
+		m_Movement->m_OnAutoRotateEnd.RemoveAll(this);
+
+		float Distance = FVector::Dist(PinHead->GetComponentLocation(), m_CurrentFocusedPort->GetComponentLocation());
+		PRINTF("Distance is : %f", Distance);
+		//77 일때 3
+		float Rate = Distance / m_fPortTraceRange;
+		Rate *= m_fMaxConnectRotTime;
+
+		if (Rate < m_fMinConnectRotTime)
+		{
+			Rate = m_fMinConnectRotTime;
+		}
+		PRINTF("RateTime IS : %f", Rate);
+		auto* Pin = m_CurrentTryConnectingPin;
+		auto* Port = m_CurrentTryConnectingPort;
+
+		EnableAutoRotate(m_CurrentFocusedPort->GetComponentRotation(), Rate);
+		m_Movement->m_OnAutoRotateEnd.AddLambda([=]
+		{//실패했는데 얘는 비동기로 계속 불려버리네
+			
+			Pin->SetGenerateOverlapEvents(true);
+			
+			Port->DisblePhysicsCollision();
+			EnableAutoMove(Port->GetForwardVector(), 3.f);
+		});
+		return;
+	}
+	m_CurrentTryConnectingPin->SetGenerateOverlapEvents(true);
+	m_CurrentTryConnectingPort->DisblePhysicsCollision();
+	EnableAutoMove(m_CurrentTryConnectingPin->GetForwardVector(), 3.f);
+	
+}
+
+
+void AUSB_PlayerPawn::TryConnect(UPrimitiveComponent * OverlappedComponent, AActor * OtherActor, UPrimitiveComponent * OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult)
+{
+	PRINTF("TryConnect - Called");
+
+	if (m_CurrentTryConnectingPort != OtherComp)//이따보고 위에 생략 시키자
+	{
+		PRINTF("FailConnect - Port Is Different");
+		FailConnection(SweepResult);
+		return;
+	}
+
+	if (!m_CurrentTryConnectingPort->CheckConnectTransform(m_CurrentTryConnectingPin))
+	{
+		PRINTF("FailConnect - Rotation");
+		FailConnection(SweepResult);
+		return;
+	}
+
+	if (!m_CurrentTryConnectingPin->Connect(m_CurrentTryConnectingPort))
+	{
+		PRINTF("FailConnect - PinType");
+		FailConnection(SweepResult);
+		return;
+	}
+
+	SuccessConnection();
+}
+//움직임 끊기 존재해야함
+void AUSB_PlayerPawn::SuccessConnection()
+{
+	PRINTF("SuccessConnection");
+	m_bBlockHeadChange = false;
+	DisableAutoMove();
+	ConnectChargingEnd();
+	FVector PortPoint = m_CurrentTryConnectingPort->GetSocketLocation("PortPoint");
+	FVector ConnectPoint = PortPoint + (m_CurrentTryConnectingPin->GetComponentLocation() - m_CurrentTryConnectingPin->GetSocketLocation("PinPoint"));
+	FRotator PortRot = m_CurrentTryConnectingPort->GetComponentRotation();
+	m_CurrentTryConnectingPin->SetWorldLocationAndRotationNoPhysics(ConnectPoint, PortRot);
+
+	m_CurrentTryConnectingPort->Connect(m_CurrentTryConnectingPin);
+	AddTraceIgnoreActor(m_CurrentTryConnectingPort->GetOwner());
+	SetHeadTail(m_CurrentTryConnectingPort->GetParentSkMesh(), m_CurrentTail);
+	AddPhysicsBody(m_CurrentTryConnectingPort->GetParentSkMesh());
+	m_CurrentTryConnectingPort = nullptr;
+	m_CurrentTryConnectingPin = nullptr;
+}
+
+void AUSB_PlayerPawn::FailConnection(const FHitResult & hitResult)
+{
+	PRINTF("FailConnection");
+	m_bBlockHeadChange = false;
+	DisableAutoMove();
+	ConnectChargingEnd();
+	m_CurrentTryConnectingPort->FailConnection(hitResult);
+	m_CurrentTryConnectingPin->FailConnection(hitResult);
+	m_CurrentTryConnectingPort = nullptr;
+	m_CurrentTryConnectingPin = nullptr;
+}
+
+void AUSB_PlayerPawn::ConnectChargingEnd()//사실상 실패랑 똑같은데 팅기는것만 없어야함
+{
+	m_bBlockHeadChange = false;
+	m_CurrentTryConnectingPin->SetGenerateOverlapEvents(false);
+	m_CurrentTryConnectingPort->EnablePhysicsCollision();
+}
+
+void AUSB_PlayerPawn::EnableInputMove()
+{
+	m_Movement->EnableInputMove();
+}
+
+void AUSB_PlayerPawn::DisableInputMove(float timer)
+{
+	m_Movement->DisableInputMove(timer);
+}
+
+void AUSB_PlayerPawn::EnableAutoMove(FVector wantDir, float timer)
+{
+	m_Movement->EnableAutoMove(wantDir, timer);
+}
+
+void AUSB_PlayerPawn::DisableAutoMove()
+{
+	m_Movement->DisableAutoMove();
+}
+
+void AUSB_PlayerPawn::EnableAutoRotate(FRotator wantRot, float timer)
+{
+	m_Movement->EnableAutoRotate(wantRot, timer);
+}
+
+void AUSB_PlayerPawn::DisableAutoRotate()
+{
+	m_Movement->DisableAutoRotate();
+}
+
+
+
+
 void AUSB_PlayerPawn::ChangeHeadTail()
 {
 	if (m_fHeadChangeCDTimer < m_fHeadChangeCD)
+	{
+		return;
+	}
+
+	if (m_bBlockHeadChange)
 	{
 		return;
 	}
@@ -278,60 +484,14 @@ void AUSB_PlayerPawn::SetPhysicsVelocityAllBody(FVector linearV)
 	}
 }
 
-void AUSB_PlayerPawn::ConnectShot()
-{
-	if (!m_CurrentFocusedPort)
-	{
-		return;
-	}
-
-	m_Movement->SetAutoMoveTimer(GetHead()->GetForwardVector(), 3.f);
-}
-
-bool AUSB_PlayerPawn::TryConnect(UPortSkMeshComponent* portWant)
-{
-	auto* Head = Cast<UPinSkMeshComponent>(GetHead());
-
-	if (!Head)
-	{
-		return false;
-	}
-
-	if (Head->GetPortConnected())
-	{
-		return false;
-	}
-
-	bool Result= Head->Connect(portWant);
-
-	if (Result)
-	{
-		AddTraceIgnoreActor(portWant->GetOwner());
-		SetHeadTail(portWant->GetParentSkMesh(), m_CurrentTail);
-		AddPhysicsBody(portWant->GetParentSkMesh());
-	}
-
-	return Result;
-}
-
-void AUSB_PlayerPawn::BlockMovement()
-{
-	m_Movement->SetBlockMoveTimer(-1.f);
-}
-
-void AUSB_PlayerPawn::UnblockMovement()
-{
-	m_Movement->SetBlockMoveTimer(0.f);
-}
-
 bool AUSB_PlayerPawn::TryDisconnect()
 {
 	auto* Tail = Cast<UPinSkMeshComponent>(GetTail());
 
-	if (!Tail)
+	/*if (!Tail)
 	{
 		Tail = m_CurrentTailPin;
-	}
+	}*/
 
 	if (!Tail->GetPortConnected())
 	{
@@ -342,7 +502,7 @@ bool AUSB_PlayerPawn::TryDisconnect()
 	RemovePhysicsBody(Tail->GetPortConnected());
 	Tail->Disconnect();
 	SetHeadTail(m_CurrentHead, Tail);
-	UnblockMovement();
+	EnableInputMove();
 	return true;
 }
 
@@ -351,25 +511,11 @@ void AUSB_PlayerPawn::BlockInput(bool tIsBlock)
 	if (!tIsBlock)
 	{
 		EnableInput(m_PlayerCon);
-
-		EnableMove();
 	}
 	else
 	{
-		
 		DisableInput(m_PlayerCon);
-		DisableMove();
 	}
-}
-
-void AUSB_PlayerPawn::DisableMove()
-{
-	m_Movement->SetBlockMoveTimer(-1.f);
-}
-
-void AUSB_PlayerPawn::EnableMove()
-{
-	m_Movement->SetBlockMoveTimer(0.f);
 }
 
 void AUSB_PlayerPawn::AddTraceIgnoreActor(AActor * actorWant)
@@ -392,75 +538,13 @@ UPhysicsSkMeshComponent * AUSB_PlayerPawn::GetTail()
 	return _inline_GetTail();
 }
 
-
-
-bool AUSB_PlayerPawn::CheckConnectTransform()
-{
-	FRotator PortRot = m_CurrentFocusedPort->GetComponentRotation();
-	FRotator PinRot = GetHead()->GetComponentRotation();
-	FRotator& ConnectRot= Cast<UPinSkMeshComponent>(GetHead())->GetConnectableRot();
-
-	float PitchDiff = FMath::Abs(PortRot.Pitch-PinRot.Pitch);
-	bool PitchCheck = PitchDiff <= ConnectRot.Pitch;
-
-	float RollDiff = FMath::Abs(PortRot.Roll - PinRot.Roll);
-	bool RollCheck = RollDiff <= ConnectRot.Roll;
-
-	float YawDiff = FMath::Abs(PortRot.Yaw - PinRot.Yaw);
-	bool YawCheck = YawDiff <= ConnectRot.Yaw;
-
-	return PitchCheck&&RollCheck&&YawCheck;
-}
-
-UCActionBaseInterface* AUSB_PlayerPawn::HeadMoveForReadyConnect()
-{
-	auto* MoveAction = UCActionFactory::MakeFollowMoveComponentToAction(GetHead(), m_CurrentFocusedPort, m_fConnectReadyDuration,NAME_None, "ConnectStart", ETimingFunction::Linear,ETeleportType::TeleportPhysics);
-	MoveAction->m_OnActionTick.BindLambda(
-		[=](float delta)
-	{
-		
-
-	});
-	return MoveAction;
-}
-
-UCActionBaseInterface* AUSB_PlayerPawn::RotateForConnect()
-{
-	auto* Action = UCActionFactory::MakeFollowRotateComponentToAction(GetHead(), m_CurrentFocusedPort, m_fConnectReadyDuration, ETimingFunction::Linear,ETeleportType::TeleportPhysics);
-
-	return Action;
-}
-
-UCActionBaseInterface* AUSB_PlayerPawn::HeadMoveForPushConnection()
-{
-	auto* MoveAction = UCActionFactory::MakeFollowMoveComponentToAction(GetHead(), m_CurrentFocusedPort, m_fConnectPushDuration,"PinPoint","PortPoint", ETimingFunction::EaseInCube, ETeleportType::TeleportPhysics);
-
-	return MoveAction;
-}
-
-UCActionBaseInterface * AUSB_PlayerPawn::TailMoveForReadyConnect()
-{
-	FVector ForceWant = m_CurrentFocusedPort->GetComponentLocation() - GetTail()->GetComponentLocation();
-	ForceWant.Normalize();
-
-	auto* MoveAction = UCActionFactory::MakeAddForceMoveComponentToAction(GetTail(), ForceWant*3800.f, m_fConnectReadyDuration);
-	return MoveAction;
-}
-
-UCActionBaseInterface * AUSB_PlayerPawn::TailMoveForPushConnection()
-{
-	auto* MoveAction = UCActionFactory::MakeFollowMoveComponentToAction(GetTail(), m_CurrentFocusedPort, m_fConnectReadyDuration, NAME_None, "ConnectStart", ETimingFunction::Linear, ETeleportType::TeleportPhysics);
-
-	return MoveAction;
-}
-
 void AUSB_PlayerPawn::DisconnectShot()
 {
 	if (TryDisconnect())
 	{
-		FVector ImpulseDir = _inline_GetTailPin()->GetForwardVector() * m_fEjectionPower;
+		FVector ImpulseDir = GetTail()->GetForwardVector() * m_fEjectionPower;
 		m_Movement->AddImpulse(ImpulseDir);
-		m_Movement->SetBlockMoveTimer(m_fBlockMoveTimeWhenEject);
+		DisableInputMove(m_fBlockMoveTimeWhenEject);
 		m_PlayerCon->PlayerCameraManager->PlayCameraShake(UEjectionCamShake::StaticClass(),1.0f);
 	}
 }
@@ -474,7 +558,6 @@ void AUSB_PlayerPawn::StopJumping()
 {
 	m_Movement->StopJumping();
 }
-
 
 void AUSB_PlayerPawn::TickTracePortable()
 {
@@ -504,5 +587,4 @@ void AUSB_PlayerPawn::TickTracePortable()
 	}
 	m_CurrentFocusedPort = nullptr;
 }
-
 

@@ -21,10 +21,12 @@ private:
 	UPROPERTY()
 	UPhysicsSkMeshComponent* m_MovingTargetTail;
 	TArray<AActor*>* m_ptrAryTraceIgnoreActors;
-private:
+public:
 	FVoidVoid m_OnAutoMoveEnd;
+	FVoidVoid m_OnAutoRotateEnd;
 private:
 	FVector m_AutoMoveDir;
+	FRotator m_AutoRotateRot;
 	FVector m_InputNormal;
 	FVector m_Acceleration;
 	bool m_bOnGround;
@@ -32,15 +34,20 @@ private:
 	FHitResult m_GroundHitResult;
 	//jump
 	bool m_bWasJumping;
-	bool m_bUsingAutoMove;
-	bool m_bBlockMove;
 	float m_fJumpKeyHoldTime;
 	int m_nJumpCurrentCount;
 	float m_fJumpForceTimeRemaining;
-	float m_fBlockMoveTime;
-	float m_fBlockMoveTimer;
 	float m_fAddTraceMultipleLength;
 	float m_fInitHeadMass;
+private://auto move,block move
+	bool m_bAutoMove;
+	bool m_bBlockMove;
+	float m_fBlockMoveTime;
+	float m_fBlockMoveTimer;
+private://auto rot
+	bool m_bAutoRot;
+	float m_fAutoRotTime;
+	float m_fAutoRotTimer;
 public:
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement")
 	bool m_bDebugShowForwardCast;
@@ -81,14 +88,11 @@ public:
 	void AddForce(FVector forceWant);
 	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
 	void AddImpulse(FVector impulseWant);
-public:
-	void SetBlockMoveTimer(float wantBlockTime);
 private:
 	virtual void UpdateComponentVelocity() override;
 	void SetAccelerationByDir(const FVector inputPure);
 	float GetAxisDeltaRotation(float InAxisRotationRate, float DeltaTime) const;
 	FRotator GetDeltaRotation(float DeltaTime) const;
-	FRotator ComputeOrientToMovementRotation(const FRotator& CurrentRotation, FRotator& DeltaRotation) const;
 	void AddIgnoreActorsToQuery(FCollisionQueryParams& queryParam);
 protected:
 	virtual bool IsFalling()  const override;
@@ -103,11 +107,18 @@ private:
 private:
 	bool TickCheckCanMoveForward();
 	void TickCastGround();
-	void TickRotate(float delta);
+	void TickRotate(const FRotator rotateWant,float delta);
 	void TickMovement(float delta);
 	virtual void SetUpdatedComponent(USceneComponent* NewUpdatedComponent) override;
+	FRotator SelectTargetRotation(float delta);
+	bool SetAccel(float DeltaTime);
 public:
-	void SetAutoMoveTimer(FVector dirWant, float timeWant);
+	void EnableInputMove();
+	void DisableInputMove(float timeWant);
+	void EnableAutoMove(FVector dirWant, float timeWant);
+	void DisableAutoMove();
+	void EnableAutoRotate(FRotator rotWant, float timeWant);
+	void DisableAutoRotate();
 	void SetUpdatePhysicsMovement(UPhysicsSkMeshComponent* headUpdatedCompo, UPhysicsSkMeshComponent* tailUpdatedCompo);
 	void SetCastingLength(UPhysicsSkMeshComponent * headUpdatedCompo);
 	void SetTraceIgnoreActorAry(TArray<AActor*>* aryWant);

@@ -46,7 +46,7 @@ void AUSB_PhysicsPawn::CreatePinUSB()
 	m_PinUSB->bEditableWhenInherited = true;
 	m_PinUSB->SetUseCCD(true);
 	m_PinUSB->SetSimulatePhysics(true);
-	m_PinUSB->SetGenerateOverlapEvents(true);
+	//m_PinUSB->SetGenerateOverlapEvents(true);
 }
 
 void AUSB_PhysicsPawn::CreatePin5Pin()
@@ -64,7 +64,7 @@ void AUSB_PhysicsPawn::CreatePin5Pin()
 	m_Pin5Pin->bEditableWhenInherited = true;
 	m_Pin5Pin->SetUseCCD(true);
 	m_Pin5Pin->SetSimulatePhysics(true);
-	m_Pin5Pin->SetGenerateOverlapEvents(true);
+	//m_Pin5Pin->SetGenerateOverlapEvents(true);
 }
 
 void AUSB_PhysicsPawn::CreateSpline()

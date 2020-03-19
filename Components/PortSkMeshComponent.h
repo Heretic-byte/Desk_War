@@ -24,7 +24,12 @@ public:
 public:
 	FPinConnection m_OnConnected;
 	FPinConnection m_OnDisconnected;
+public:
+	UPROPERTY(EditDefaultsOnly, Category = "Body_Bones")
+	float m_fFailImpulsePower;
 protected:
+	UPROPERTY(EditDefaultsOnly, Category = "Connection")
+	FRotator m_ConnectableRotation;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Body")
 	FName m_NamePortConnectSocket;//ConnectPoint?
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Body")
@@ -52,7 +57,7 @@ protected:
 private:
 	void ConstraintPinPort();
 public:
-	UFUNCTION(BlueprintCallable, Category = "Connect Init")
+	UFUNCTION(BlueprintCallable, Category = "Connection")
 	virtual void InitPort(UPhysicsConstraintComponent* physicsJoint, UPhysicsSkMeshComponent* parentMesh,E_PinPortType portType = E_PinPortType::ENoneType,FName namePinBone = NAME_None);
 	UFUNCTION(BlueprintCallable, Category = "Interact")
 	virtual void Connect(UPinSkMeshComponent* connector);
@@ -62,11 +67,12 @@ public:
 	bool IsConnected();
 	UFUNCTION(BlueprintCallable, Category = "Interact")
 	E_PinPortType GetPortType() const;
+
+	void FailConnection(const FHitResult & hitResult);
 protected:
 	virtual void BeginPlay() override;
 public:
-	void DisablePhysics();
-	void EnablePhysics();
+	bool CheckConnectTransform(UPinSkMeshComponent * connector);
 	void EnablePhysicsCollision();
 	void DisblePhysicsCollision();
 	bool GetBlockMoveOnConnnect();
@@ -89,5 +95,10 @@ public:
 	FORCEINLINE FVector _inline_GetPushPoint() const
 	{
 		return GetSocketLocation(m_NamePortConnectPushPointSocket);
+	}
+
+	FORCEINLINE UPinSkMeshComponent* GetPinConnected() const
+	{
+		return m_ConnectedPin;
 	}
 };

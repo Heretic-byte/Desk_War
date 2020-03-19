@@ -231,7 +231,6 @@ FVector UUSB_SpringArm::BlendLocations(const FVector& DesiredArmLocation, const 
 
 	auto LerpedLocation= UKismetMathLibrary::VInterpTo(m_LastTarget, TraceHitLocation, DeltaTime,m_fCamZoomInSpeed);
 	return LerpedLocation;
-	//return ClampTargetLocation(LerpedLocation,hit);
 }
 
 FVector UUSB_SpringArm::ClampTargetLocation(const FVector& traceLoc,const FHitResult& hit)

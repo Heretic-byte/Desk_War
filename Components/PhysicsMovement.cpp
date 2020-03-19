@@ -11,7 +11,8 @@
 
 UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 {
-	m_bUsingAutoMove = false;
+	m_bAutoRot = false;
+	m_bAutoMove = false;
 	m_fInitHeadMass = 1.f;
 	m_bBlockMove = false;
 	m_MovingTarget = nullptr;
@@ -27,6 +28,8 @@ UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 	m_WalkableSlopeAngle = 65.f;
 	m_fBlockMoveTime = 0.f;
 	m_fBlockMoveTimer = 0.f;
+	m_fAutoRotTime = 0.f;
+	m_fAutoRotTimer = 0.f;
 	m_fAddTraceMultipleLength = 1.f;
 }
 
@@ -44,6 +47,30 @@ void UPhysicsMovement::BeginPlay()
 	}
 }
 
+
+void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	SetAccel(DeltaTime);
+	TickRotate(SelectTargetRotation(DeltaTime), DeltaTime);
+	CheckJumpInput(DeltaTime);
+	ClearJumpInput(DeltaTime);
+}
+
+void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
+{
+	if (!PawnOwner || !UpdatedComponent || !GetWorld())
+	{
+		return;
+	}
+
+	TickCastGround();
+
+	TickMovement(DeltaTime);
+
+}
+
+
 void UPhysicsMovement::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	UWorld* World = GetWorld();
@@ -59,13 +86,48 @@ void UPhysicsMovement::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
-void UPhysicsMovement::SetAutoMoveTimer(FVector dirWant, float timeWant)
+void UPhysicsMovement::EnableInputMove()
 {
+	m_bBlockMove = false;
+	m_fBlockMoveTime = 0.f;
+	m_fBlockMoveTimer = 0.f;
+}
+
+void UPhysicsMovement::DisableInputMove(float timeWant)
+{
+	m_bBlockMove = true;
+	m_fBlockMoveTime = timeWant;
+	m_fBlockMoveTimer = 0.f;
+}
+
+void UPhysicsMovement::EnableAutoMove(FVector dirWant, float timeWant)
+{
+	m_bAutoMove = true;
 	m_AutoMoveDir = dirWant;
+	DisableInputMove(timeWant);
+}
 
-	SetBlockMoveTimer(timeWant);
+void UPhysicsMovement::DisableAutoMove()
+{
+	m_bAutoMove = false;
+	m_AutoMoveDir = FVector::ZeroVector;
+	m_OnAutoMoveEnd.Broadcast();
+	EnableInputMove();
+}
 
-	m_bUsingAutoMove = true;
+void UPhysicsMovement::EnableAutoRotate(FRotator rotWant, float timeWant)
+{
+	m_AutoRotateRot = rotWant;
+	m_fAutoRotTime = timeWant;
+	m_fAutoRotTimer = 0.f;
+	m_bAutoRot = true;
+}
+
+void UPhysicsMovement::DisableAutoRotate()
+{
+	m_fAutoRotTime = 0.f;
+	m_fAutoRotTimer = 0.f;
+	m_bAutoRot = false;
 }
 
 void UPhysicsMovement::SetUpdatePhysicsMovement(UPhysicsSkMeshComponent * headUpdatedCompo, UPhysicsSkMeshComponent * tailUpdatedCompo)
@@ -119,6 +181,73 @@ void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent
 	}
 }
 
+FRotator UPhysicsMovement::SelectTargetRotation(float delta)
+{
+	if (m_bAutoRot)
+	{
+		if (m_fAutoRotTime > 0)
+		{
+			m_fAutoRotTimer += delta;
+
+			if (m_fAutoRotTime <= m_fAutoRotTimer)
+			{
+				DisableAutoRotate();
+				m_OnAutoRotateEnd.Broadcast();
+			}
+		}
+		return m_AutoRotateRot;
+	}
+
+	if (m_Acceleration.SizeSquared() < KINDA_SMALL_NUMBER)
+	{
+		return m_MovingTarget->GetComponentRotation();
+	}
+
+	return m_Acceleration.GetSafeNormal().Rotation();
+}
+
+bool UPhysicsMovement::SetAccel(float DeltaTime)
+{
+	FVector InputDir;
+	if (m_bBlockMove)
+	{
+		if (m_fBlockMoveTime > 0.f)
+		{
+			m_fBlockMoveTimer += DeltaTime;
+
+			if (m_fBlockMoveTime <= m_fBlockMoveTimer)//end
+			{
+				if (m_bAutoMove)
+				{
+					DisableAutoMove();
+				}
+				else
+				{
+					EnableInputMove();
+				}
+			}
+		}
+		//inf
+		if (m_bAutoMove)
+		{
+			InputDir = m_AutoMoveDir;
+		}
+		else
+		{
+			return false;
+		}
+	}
+	else
+	{
+		InputDir = ConsumeInputVector();
+	}
+	SetAccelerationByDir(InputDir);
+
+	return true;
+}
+
+
+
 void UPhysicsMovement::SetDamping(float fLinDamp, float fAngDamp)
 {
 	if (!GetWorld())
@@ -139,61 +268,6 @@ void UPhysicsMovement::SetInitHeadMass(float massHead)
 	m_fInitHeadMass = massHead;
 }
 
-void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction)
-{
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	FVector InputDir;
-
-	if (m_bBlockMove)
-	{
-		m_fBlockMoveTimer += DeltaTime;
-
-		if (0<m_fBlockMoveTime&&m_fBlockMoveTimer > m_fBlockMoveTime)
-		{
-			m_fBlockMoveTimer = 0.f;
-			m_bBlockMove = false;
-
-			if (m_bUsingAutoMove)
-			{
-				m_bUsingAutoMove = false;
-				m_AutoMoveDir = FVector::ZeroVector;
-				m_OnAutoMoveEnd.Broadcast();
-			}
-		}
-
-		if (m_bUsingAutoMove)
-		{
-			InputDir = m_AutoMoveDir;
-		}
-		else
-		{
-			return;
-		}
-	}
-	else
-	{
-		InputDir= ConsumeInputVector();
-	}
-	SetAccelerationByDir(InputDir);
-	TickRotate(DeltaTime);
-	CheckJumpInput(DeltaTime);
-	ClearJumpInput(DeltaTime);
-}
-
-void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
-{
-	if (!PawnOwner || !UpdatedComponent || !GetWorld())
-	{
-		return;
-	}
-
-	TickCastGround();
-	
-	TickMovement(DeltaTime);
-	
-}
-
 void UPhysicsMovement::TickMovement(float delta)
 {
 	if (m_Acceleration.SizeSquared2D() <1)//maybe square better?
@@ -209,7 +283,7 @@ void UPhysicsMovement::TickMovement(float delta)
 
 	UpdateComponentVelocity();
 }
-void UPhysicsMovement::TickRotate(float delta)
+void UPhysicsMovement::TickRotate(const FRotator rotateWant,float delta)
 {
 	FRotator CurrentRotation = UpdatedComponent->GetComponentRotation(); // Normalized
 	CurrentRotation.DiagnosticCheckNaN(TEXT("UPhysicsMovement::Rotate(): CurrentRotation"));
@@ -217,9 +291,7 @@ void UPhysicsMovement::TickRotate(float delta)
 	FRotator DeltaRot = GetDeltaRotation(delta);//µ¹¸± °ª
 	DeltaRot.DiagnosticCheckNaN(TEXT("UPhysicsMovement::Rotate(): GetDeltaRotation"));
 
-	FRotator DesiredRotation = CurrentRotation;
-	//
-	DesiredRotation = ComputeOrientToMovementRotation(CurrentRotation,  DeltaRot);
+	FRotator DesiredRotation= rotateWant;
 
 	DesiredRotation.Normalize();
 
@@ -256,17 +328,6 @@ FRotator UPhysicsMovement::GetDeltaRotation(float DeltaTime) const
 float UPhysicsMovement::GetAxisDeltaRotation(float InAxisRotationRate, float DeltaTime) const
 {
 	return (InAxisRotationRate >= 0.f) ? (InAxisRotationRate * DeltaTime) : 360.f;
-}
-
-FRotator UPhysicsMovement::ComputeOrientToMovementRotation(const FRotator& CurrentRotation, FRotator& DeltaRotation) const
-{
-	FVector WantRotate = m_Acceleration;
-
-	if (WantRotate.SizeSquared() < KINDA_SMALL_NUMBER)
-	{
-		return CurrentRotation;
-	}
-	return WantRotate.GetSafeNormal().Rotation();
 }
 
 void UPhysicsMovement::AddIgnoreActorsToQuery(FCollisionQueryParams & queryParam)
@@ -388,19 +449,6 @@ void UPhysicsMovement::AddImpulse(FVector impulseWant)
 	}
 
 	m_MovingTarget->AddImpulse(impulseWant);
-}
-
-void UPhysicsMovement::SetBlockMoveTimer(float wantBlockTime)
-{
-	m_fBlockMoveTimer = 0.f;
-	if (wantBlockTime == 0)
-	{
-		m_fBlockMoveTime = 0.f;
-		m_bBlockMove = false;
-		return;
-	}
-	m_fBlockMoveTime = wantBlockTime;
-	m_bBlockMove = true;
 }
 
 void UPhysicsMovement::CheckJumpInput(float DeltaTime)

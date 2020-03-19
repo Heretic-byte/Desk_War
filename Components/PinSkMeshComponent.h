@@ -30,9 +30,10 @@ public:
 
 public:
 	UPinSkMeshComponent(const FObjectInitializer& objInit);
-protected:
+public:
 	UPROPERTY(EditDefaultsOnly, Category = "Body_Bones")
-	FRotator m_ConnectableRotation;
+	float m_fFailImpulsePower;
+protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Body_Bones")
 	FName m_NameNeckBone;
 	UPROPERTY(EditDefaultsOnly, Category = "Body_Bones")
@@ -59,6 +60,7 @@ public:
 	virtual bool CheckTypeMatch(E_PinPortType portsType);
 	void SetNeckName(FName nameWant);
 	void SetVelocityPivotName(FName nameWant);
+	void FailConnection(const FHitResult & hitResult);
 private:
 	
 	virtual void BeginPlay() override;
@@ -78,9 +80,5 @@ public:
 	FORCEINLINE UPortSkMeshComponent* GetPortConnected()
 	{
 		return m_PortConnected;
-	}
-	FORCEINLINE FRotator& GetConnectableRot()
-	{
-		return m_ConnectableRotation;
 	}
 };
