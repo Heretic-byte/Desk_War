@@ -44,6 +44,8 @@ protected:
 	TArray<UPrimitiveComponent*> m_AryPhysicsBody;
 	float m_fTotalMass;
 	bool m_bBlockHeadChange;
+	bool m_bBlockJump;
+	bool m_bBlockChargeClick;
 protected://component
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly,Category="Movement")
 	UPhysicsMovement* m_Movement;
@@ -68,11 +70,14 @@ private:
 	UPhysicsSkMeshComponent* m_CurrentTail;
 	UPROPERTY()
 	UPortSkMeshComponent* m_CurrentFocusedPort;
+	UPROPERTY()
+	UPinSkMeshComponent* m_CurrentHeadPin;
+	UPROPERTY()
+	UPinSkMeshComponent* m_BaseHeadPin;
+	UPROPERTY()
+	UPinSkMeshComponent* m_BaseTailPin;
 private:
-	UPROPERTY()
-	UPinSkMeshComponent* m_CurrentTryConnectingPin;
-	UPROPERTY()
-	UPortSkMeshComponent* m_CurrentTryConnectingPort;
+	FDelegateHandle m_ConnectChargingHandle;
 public:
 	UFUNCTION(BlueprintCallable, Category = "Connection")
 	void TryConnect(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, 
@@ -117,24 +122,27 @@ private:
 	void AddPhysicsBody(UPrimitiveComponent* wantP);
 	void RemovePhysicsBody(UPrimitiveComponent* wantP);
 protected:
-	void SuccessConnection();
-	void FailConnection(const FHitResult & hitResult);
+	void SuccessConnection(UPortSkMeshComponent* portConnect);
+	void FailConnection(UPortSkMeshComponent* portConnect,const FHitResult & hitResult);
 	void SetPhysicsVelocityAllBody(FVector linearV);
 	bool TryDisconnect();
-	void BlockInput(bool tIsBlock);
 	void AddIgnoreActorsToQuery(FCollisionQueryParams& queryParam);
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void BeginPlay() override;
 	void InitTraceIgnoreAry();
 	void TickTracePortable();
+	void ConnectChargingStart();
 	void ConnectChargingEnd();
 public:
+	void EnableUSBInput();
+	void DisableUSBInput();
 	void EnableInputMove();
 	void DisableInputMove(float timer);
 	void EnableAutoMove(FVector wantDir,float timer);
 	void DisableAutoMove();
 	void EnableAutoRotate(FRotator wantRot,float timer);
 	void DisableAutoRotate();
+public:
 	virtual void Tick(float DeltaTime) override;
 public:
 	FORCEINLINE float GetTotalMass()

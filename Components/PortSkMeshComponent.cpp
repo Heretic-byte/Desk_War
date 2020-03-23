@@ -53,7 +53,7 @@ void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, 
 	}
 }
 
-bool UPortSkMeshComponent::CheckConnectTransform(UPinSkMeshComponent * connector)
+bool UPortSkMeshComponent::CheckConnectTransform(USceneComponent * connector, bool isConnectorGround)
 {
 	FRotator PortRot = GetComponentRotation();
 	FRotator PinRot = connector->GetComponentRotation();
@@ -62,7 +62,7 @@ bool UPortSkMeshComponent::CheckConnectTransform(UPinSkMeshComponent * connector
 	bool PitchCheck = PitchDiff <= m_ConnectableRotation.Pitch;
 
 	float RollDiff = FMath::Abs(PortRot.Roll - PinRot.Roll);
-	bool RollCheck = RollDiff <= m_ConnectableRotation.Roll;
+	bool RollCheck = isConnectorGround ? RollDiff <= m_ConnectableRotation.Roll : true;
 
 	float YawDiff = FMath::Abs(PortRot.Yaw - PinRot.Yaw);
 	bool YawCheck = YawDiff <= m_ConnectableRotation.Yaw;
@@ -87,10 +87,12 @@ UPhysicsSkMeshComponent * UPortSkMeshComponent::GetParentSkMesh()
 
 void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)//should call last
 {
+	DisablePhysicsCollision();
 	m_ConnectedPin = connector;
 	
 	ConstraintPinPort();
 	m_OnConnected.Broadcast(m_ConnectedPin);
+	EnablePhysicsCollision();
 }
 
 void UPortSkMeshComponent::ConstraintPinPort()
@@ -124,7 +126,7 @@ void UPortSkMeshComponent::EnablePhysicsCollision()
 	m_MeshParentActor->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Block);
 }
 
-void UPortSkMeshComponent::DisblePhysicsCollision()
+void UPortSkMeshComponent::DisablePhysicsCollision()
 {
 	m_MeshParentActor->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
 }
@@ -136,8 +138,6 @@ E_PinPortType UPortSkMeshComponent::GetPortType() const
 
 void UPortSkMeshComponent::FailConnection(const FHitResult & hitResult)
 {
-	EnablePhysicsCollision();
-	
 	m_MeshParentActor->AddImpulseAtLocation((GetUpVector()+GetForwardVector())*m_fFailImpulsePower, hitResult.ImpactPoint);
 }
 

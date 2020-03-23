@@ -128,6 +128,7 @@ void UPhysicsMovement::DisableAutoRotate()
 	m_fAutoRotTime = 0.f;
 	m_fAutoRotTimer = 0.f;
 	m_bAutoRot = false;
+	m_OnAutoRotateEnd.Broadcast();
 }
 
 void UPhysicsMovement::SetUpdatePhysicsMovement(UPhysicsSkMeshComponent * headUpdatedCompo, UPhysicsSkMeshComponent * tailUpdatedCompo)
@@ -192,7 +193,6 @@ FRotator UPhysicsMovement::SelectTargetRotation(float delta)
 			if (m_fAutoRotTime <= m_fAutoRotTimer)
 			{
 				DisableAutoRotate();
-				m_OnAutoRotateEnd.Broadcast();
 			}
 		}
 		return m_AutoRotateRot;

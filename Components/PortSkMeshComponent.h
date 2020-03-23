@@ -72,9 +72,9 @@ public:
 protected:
 	virtual void BeginPlay() override;
 public:
-	bool CheckConnectTransform(UPinSkMeshComponent * connector);
+	bool CheckConnectTransform(USceneComponent * connector,bool isConnectorGround);
 	void EnablePhysicsCollision();
-	void DisblePhysicsCollision();
+	void DisablePhysicsCollision();
 	bool GetBlockMoveOnConnnect();
 	FName GetMovePointWant();
 	UPhysicsSkMeshComponent* GetParentSkMesh();
