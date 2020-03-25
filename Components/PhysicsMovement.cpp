@@ -11,6 +11,7 @@
 
 UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 {
+	m_bIsWallBlocking = false;
 	m_bAutoRot = false;
 	m_bAutoMove = false;
 	m_fInitHeadMass = 1.f;
@@ -30,7 +31,8 @@ UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 	m_fBlockMoveTimer = 0.f;
 	m_fAutoRotTime = 0.f;
 	m_fAutoRotTimer = 0.f;
-	m_fAddTraceMultipleLength = 1.f;
+	m_fAdditionalTraceMultipleLength = 1.f;
+	m_fForwardWallCheckCast = 50.f;
 }
 
 void UPhysicsMovement::BeginPlay()
@@ -45,13 +47,17 @@ void UPhysicsMovement::BeginPlay()
 			OnPhysSceneStepHandle = PScene->OnPhysSceneStep.AddUObject(this, &UPhysicsMovement::PhysSceneStep);
 		}
 	}
+	m_fInitDesiredRotRollDelta = m_RotationRate.Roll;
 }
 
 
 void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	TickCastGround();
+	TickCastFlipCheck();
 	SetAccel(DeltaTime);
+	TickCheckCanMoveForward();
 	TickRotate(SelectTargetRotation(DeltaTime), DeltaTime);
 	CheckJumpInput(DeltaTime);
 	ClearJumpInput(DeltaTime);
@@ -64,10 +70,9 @@ void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
 		return;
 	}
 
-	TickCastGround();
-
-	TickMovement(DeltaTime);
-
+	
+	if(!m_bIsWallBlocking)
+		TickMovement(DeltaTime);
 }
 
 
@@ -140,11 +145,11 @@ void UPhysicsMovement::SetUpdatePhysicsMovement(UPhysicsSkMeshComponent * headUp
 
 void UPhysicsMovement::SetCastingLength(UPhysicsSkMeshComponent * headUpdatedCompo)
 {
-	m_fGroundCastOffset /= m_fAddTraceMultipleLength;
-	m_fGroundCastBoxSize /= m_fAddTraceMultipleLength;
-	m_fAddTraceMultipleLength = headUpdatedCompo->GetMeshRadiusMultiple();
-	m_fGroundCastOffset *= m_fAddTraceMultipleLength;
-	m_fGroundCastBoxSize *= m_fAddTraceMultipleLength;
+	//m_fGroundCastOffset /= m_fAddTraceMultipleLength;
+	m_fGroundCastBoxSize /= m_fAdditionalTraceMultipleLength;
+	m_fAdditionalTraceMultipleLength = headUpdatedCompo->GetMeshRadiusMultiple();
+	//m_fGroundCastOffset *= m_fAddTraceMultipleLength;
+	m_fGroundCastBoxSize *= m_fAdditionalTraceMultipleLength;
 }
 
 void UPhysicsMovement::SetTraceIgnoreActorAry(TArray<AActor*>* aryWant)
@@ -202,7 +207,6 @@ FRotator UPhysicsMovement::SelectTargetRotation(float delta)
 	{
 		return m_MovingTarget->GetComponentRotation();
 	}
-
 	return m_Acceleration.GetSafeNormal().Rotation();
 }
 
@@ -269,7 +273,13 @@ void UPhysicsMovement::SetInitHeadMass(float massHead)
 }
 
 void UPhysicsMovement::TickMovement(float delta)
-{
+{	
+	if (m_bBlockMove && !m_bAutoMove)
+	{
+		//only block move
+		return;
+	}
+
 	if (m_Acceleration.SizeSquared2D() <1)//maybe square better?
 	{
 		return;
@@ -340,23 +350,41 @@ bool UPhysicsMovement::IsFalling() const
 	return !IsGround();
 }
 
-bool UPhysicsMovement::TickCheckCanMoveForward()
+void UPhysicsMovement::TickCheckCanMoveForward()
 {
-	float PlayerAngle = m_MovingTarget->GetComponentRotation().Pitch;
-
-	if (PlayerAngle <= 0)
+	if (m_InputNormal.SizeSquared() < KINDA_SMALL_NUMBER)
 	{
-		return true;
+		PRINTF("NoInput");
+		//m_bIsWallBlocking = false;
+		return ;
 	}
+	FVector TraceStart = m_MovingTarget->GetComponentLocation();
+	FVector TraceEnd = TraceStart + (m_fForwardWallCheckCast*m_fAdditionalTraceMultipleLength*m_InputNormal);//groundoffset is minus
 
-	float Angle = 90.f - m_GroundHitResult.ImpactNormal.Rotation().Pitch;
-
-	/*if (m_WalkableSlopeAngle < Angle)
+#if WITH_EDITOR
+	if (m_bDebugShowForwardCast)
 	{
-		return false;
-	}*/
+		DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor(255, 255, 120), false, -1.f, 0.1f);
+	}
+#endif
 
-	return true;
+	FCollisionQueryParams QueryParam;
+	AddIgnoreActorsToQuery(QueryParam);
+	FHitResult HitResult;
+
+	if (GetWorld()->SweepSingleByObjectType(HitResult, TraceStart, TraceEnd, FQuat::Identity, ECollisionChannel::ECC_WorldStatic, FCollisionShape::MakeSphere(1.f), QueryParam))
+	{
+		PRINTF("Blocked");
+		//m_bIsWallBlocking = true;
+		m_Acceleration = FVector::ZeroVector;
+		return ;
+	}
+	else
+	{
+		PRINTF("NotBlocked");
+		//m_bIsWallBlocking = false;
+		return ;
+	}
 }
 
 void UPhysicsMovement::TickCastGround()
@@ -365,7 +393,7 @@ void UPhysicsMovement::TickCastGround()
 	TraceStart.Z -= m_fGroundCastBoxSize;
 
 	FVector TraceEnd = TraceStart;
-	TraceEnd.Z += m_fGroundCastOffset*m_fAddTraceMultipleLength;
+	TraceEnd.Z += m_fGroundCastOffset;
 
 	FCollisionQueryParams QueryParam;
 	AddIgnoreActorsToQuery(QueryParam);
@@ -382,13 +410,38 @@ void UPhysicsMovement::TickCastGround()
 
 	m_bOnGround=GetWorld()->SweepSingleByChannel(m_GroundHitResult,TraceStart,TraceEnd,FQuat(FVector(0.f, 0.f, -1.f), PI * 0.25f),ECollisionChannel::ECC_Visibility,BoxShape,QueryParam);
 
-	if (!m_bOnGround)
+	if (!m_bOnGround)//간혹 실패할경우 각도차이인지 확인
 	{
 		m_GroundHitResult.Reset(1.f, false);
 
-		m_bOnGround =GetWorld()->SweepSingleByChannel(m_GroundHitResult,TraceStart,TraceEnd,FQuat::Identity,ECollisionChannel::ECC_Visibility,BoxShape,QueryParam);
+		m_bOnGround = GetWorld()->SweepSingleByChannel(m_GroundHitResult,TraceStart,TraceEnd,FQuat::Identity,ECollisionChannel::ECC_Visibility,BoxShape,QueryParam);
 	}
-	
+}
+
+void UPhysicsMovement::TickCastFlipCheck()
+{
+	FVector TraceStart = m_MovingTarget->GetComponentLocation();
+	FVector TraceEnd = TraceStart +( m_fGroundCastOffset*m_MovingTarget->GetUpVector());//groundoffset is minus
+
+#if WITH_EDITOR
+	if (m_bDebugShowForwardCast)
+	{
+		DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor(120, 255, 120), false, -1.f, 0.1f);
+	}
+#endif
+	FCollisionQueryParams QueryParam;
+	AddIgnoreActorsToQuery(QueryParam);
+	FHitResult HitResult;
+
+	if (GetWorld()->SweepSingleByChannel(HitResult, TraceStart, TraceEnd, FQuat::Identity, ECollisionChannel::ECC_Visibility, FCollisionShape::MakeSphere(3.f), QueryParam))
+	{
+		m_RotationRate.Roll = 0.f;
+	}
+	else
+	{
+		m_RotationRate.Roll = m_fInitDesiredRotRollDelta;
+	}
+
 }
 
 void UPhysicsMovement::UpdateComponentVelocity()
@@ -449,6 +502,7 @@ void UPhysicsMovement::AddImpulse(FVector impulseWant)
 	}
 
 	m_MovingTarget->AddImpulse(impulseWant);
+	m_MovingTargetTail->AddImpulse(impulseWant);
 }
 
 void UPhysicsMovement::CheckJumpInput(float DeltaTime)

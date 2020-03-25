@@ -37,9 +37,10 @@ private:
 	float m_fJumpKeyHoldTime;
 	int m_nJumpCurrentCount;
 	float m_fJumpForceTimeRemaining;
-	float m_fAddTraceMultipleLength;
+	float m_fAdditionalTraceMultipleLength;
 	float m_fInitHeadMass;
 private://auto move,block move
+	bool m_bIsWallBlocking;
 	bool m_bAutoMove;
 	bool m_bBlockMove;
 	float m_fBlockMoveTime;
@@ -48,14 +49,18 @@ private://auto rot
 	bool m_bAutoRot;
 	float m_fAutoRotTime;
 	float m_fAutoRotTimer;
+private://rotflip
+	float m_fInitDesiredRotRollDelta;
 public:
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement")
 	bool m_bDebugShowForwardCast;
-	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
+	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMin = "1", UIMin = "1"))
 	float m_fGroundCastBoxSize;
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMax = "0", UIMax = "0"))
 	float m_fGroundCastOffset;
-	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
+	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMin = "1", UIMin = "1"))
+	float m_fForwardWallCheckCast;
+	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMin = "1", UIMin = "1"))
 	float m_fMovingForce;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement_Rotate")
 	FRotator m_RotationRate;
@@ -105,8 +110,9 @@ private:
 	bool CanJump() const;
 	bool DoJump();
 private:
-	bool TickCheckCanMoveForward();
+	void TickCheckCanMoveForward();
 	void TickCastGround();
+	void TickCastFlipCheck();
 	void TickRotate(const FRotator rotateWant,float delta);
 	void TickMovement(float delta);
 	virtual void SetUpdatedComponent(USceneComponent* NewUpdatedComponent) override;

@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+
 
 #pragma once
 
@@ -7,17 +7,19 @@
 #include "Camera/CameraComponent.h"
 #include "Components/USB_SpringArm.h"
 #include "Actors/USB_PhysicsPawn.h"
-#include "Components/PhysicsMovement.h"
-#include "USB_PlayerPawn.generated.h"
+#include "Components/USBMovementComponent.h"
+#include "USB_RenewalPawn.generated.h"
+
 class UPhysicsSkMeshComponent;
 class APlayerController;
 class UPortSkMeshComponent;
 UCLASS(BlueprintType, Blueprintable)
-class DESK_WAR_API AUSB_PlayerPawn : public AUSB_PhysicsPawn
+class DESK_WAR_API AUSB_RenewalPawn : public AUSB_PhysicsPawn
 {
 	GENERATED_BODY()
+
 public:
-	AUSB_PlayerPawn(const FObjectInitializer& objInit);
+		AUSB_RenewalPawn(const FObjectInitializer& objInit);
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
 	float m_fMaxConnectRotTime;
@@ -47,8 +49,8 @@ protected:
 	bool m_bBlockJump;
 	bool m_bBlockChargeClick;
 protected://component
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly,Category="Movement")
-	UPhysicsMovement* m_UsbMovement;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
+	UUSBMovementComponent* m_UsbMovement;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
 	USceneComponent* m_CamRoot;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
@@ -57,8 +59,6 @@ protected://component
 	UUSB_SpringArm* m_MainSpringArm;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "USB_Action")
 	UActionManagerComponent* m_ActionManager;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "USB_Body")
-	USkeletalMeshComponent* m_MeshFaceSk;
 	UPROPERTY(VisibleAnywhere, Category = "USB_Body")
 	APlayerController* m_PlayerCon;
 private:
@@ -79,30 +79,16 @@ private:
 private:
 	FDelegateHandle m_ConnectChargingHandle;
 public:
-	UFUNCTION(BlueprintCallable, Category = "Connection")
-	void TryConnect(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, 
-		int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult);
-	
 	UFUNCTION(BlueprintCallable, Category = "USB_Action")
 	void ChangeHeadTail();
-	UFUNCTION(BlueprintCallable, Category = "USB_Action")
-	void AddTraceIgnoreActor(AActor* actorWant);
-	UFUNCTION(BlueprintCallable, Category = "USB_Action")
-	bool RemoveTraceIgnoreActor(AActor* actorWant);
 	UFUNCTION(BlueprintCallable, Category = "USB_Getter")
 	UPhysicsSkMeshComponent* GetHead();
 	UFUNCTION(BlueprintCallable, Category = "USB_Getter")
 	UPhysicsSkMeshComponent* GetTail();
 	UFUNCTION(BlueprintCallable, Category = "USB_Action")
-	void ConnectShot();
-	UFUNCTION(BlueprintCallable, Category = "USB_Action")
-	void DisconnectShot();
-	UFUNCTION(BlueprintCallable, Category = "USB_Action")
 	void Jump();
 	UFUNCTION(BlueprintCallable, Category = "USB_Action")
 	void StopJumping();
-	UFUNCTION(BlueprintCallable, Category = "USB_Action")
-	USceneComponent* GetFocusedPortTarget();
 	UFUNCTION(BlueprintCallable, Category = "USB_Action")
 	void ZoomIn();
 	UFUNCTION(BlueprintCallable, Category = "USB_Action")
@@ -111,37 +97,16 @@ private://construct
 	void InitPlayerPawn();
 	void CreatePhysicMovement();
 	void CreateCameraFamily();
-	void CreateSkFaceMesh();
 private:
 	void SetHeadTail(UPhysicsSkMeshComponent* headWant, UPhysicsSkMeshComponent* tailWant);
 	void MoveForward(float v);
 	void MoveRight(float v);
 	void RotateYaw(float v);
 	void RotatePitch(float v);
-private:
-	void AddPhysicsBody(UPrimitiveComponent* wantP);
-	void RemovePhysicsBody(UPrimitiveComponent* wantP);
 protected:
-	void SuccessConnection(UPortSkMeshComponent* portConnect);
-	void FailConnection(UPortSkMeshComponent* portConnect,const FHitResult & hitResult);
 	void SetPhysicsVelocityAllBody(FVector linearV);
-	bool TryDisconnect();
-	void AddIgnoreActorsToQuery(FCollisionQueryParams& queryParam);
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void BeginPlay() override;
-	void InitTraceIgnoreAry();
-	void TickTracePortable();
-	void ConnectChargingStart();
-	void ConnectChargingEnd();
-public:
-	void EnableUSBInput();
-	void DisableUSBInput();
-	void EnableInputMove();
-	void DisableInputMove(float timer);
-	void EnableAutoMove(FVector wantDir,float timer);
-	void DisableAutoMove();
-	void EnableAutoRotate(FRotator wantRot,float timer);
-	void DisableAutoRotate();
 public:
 	virtual void Tick(float DeltaTime) override;
 public:
