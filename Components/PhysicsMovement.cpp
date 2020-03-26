@@ -54,16 +54,12 @@ void UPhysicsMovement::BeginPlay()
 void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	CheckJumpInput(DeltaTime);
-
-
 	TickCastGround();
 	TickCastFlipCheck();
 	SetAccel(DeltaTime);
 	TickCheckCanMoveForward();
 	TickRotate(SelectTargetRotation(DeltaTime), DeltaTime);
-
-
+	CheckJumpInput(DeltaTime);
 	ClearJumpInput(DeltaTime);
 }
 
@@ -74,26 +70,11 @@ void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
 		return;
 	}
 
-	StartPhysics();
-
+	
 	if(!m_bIsWallBlocking)
 		TickMovement(DeltaTime);
 }
 
-void UPhysicsMovement::StartPhysics()
-{
-	
-}
-
-void UPhysicsMovement::CalculateVelocity()
-{
-	
-}
-
-void UPhysicsMovement::SetMovementMode(EMovementMode moveMode)
-{
-
-}
 
 void UPhysicsMovement::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
@@ -470,6 +451,7 @@ void UPhysicsMovement::UpdateComponentVelocity()
 		return;
 	}
 	FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
+	
 	Velocity.Z = CurrentV.Z;
 	m_MovingTarget->SetPhysicsLinearVelocity(Velocity);
 }

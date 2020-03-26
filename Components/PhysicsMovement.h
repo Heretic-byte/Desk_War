@@ -134,23 +134,4 @@ public:
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	void PhysSceneStep(FPhysScene* PhysScene, float DeltaTime);
 	FDelegateHandle OnPhysSceneStepHandle;
-
-
-
-
-
-
-
-
-
-
-	//renewal
-
-	//tick
-
-	void StartPhysics();
-
-	void CalculateVelocity();
-
-	void SetMovementMode(EMovementMode moveMode);
 };
