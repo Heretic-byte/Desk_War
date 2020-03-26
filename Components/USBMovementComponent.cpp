@@ -2,7 +2,7 @@
 
 
 #include "USBMovementComponent.h"
-
+#include "Components/PhysicsSkMeshComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/PhysicsVolume.h"
 #include "GameFramework/Controller.h"
@@ -31,14 +31,10 @@ UUSBMovementComponent::UUSBMovementComponent(const FObjectInitializer& ObjectIni
 	GravityScale = 1.f;
 	GroundFriction = 8.0f;
 	JumpZVelocity = 420.0f;
-	JumpOffJumpZFactor = 0.5f;
 	RotationRate = FRotator(0.f, 360.0f, 0.0f);
 	SetWalkableFloorZ(0.71f);
 
 	MaxStepHeight = 45.0f;
-	PerchRadiusThreshold = 0.0f;
-	PerchAdditionalHeight = 40.f;
-
 	MaxFlySpeed = 600.0f;
 	MaxWalkSpeed = 400.0f;
 	MaxSwimSpeed = 300.0f;
@@ -59,45 +55,24 @@ UUSBMovementComponent::UUSBMovementComponent(const FObjectInitializer& ObjectIni
 	BrakingDecelerationFalling = 0.f;
 	BrakingDecelerationFlying = 0.f;
 	BrakingDecelerationSwimming = 0.f;
-	LedgeCheckThreshold = 4.0f;
 	Mass = 100.0f;
-	bJustTeleported = true;
 	LastUpdateRotation = FQuat::Identity;
 	LastUpdateVelocity = FVector::ZeroVector;
 	PendingImpulseToApply = FVector::ZeroVector;
 	PendingLaunchVelocity = FVector::ZeroVector;
-	DefaultWaterMovementMode = MOVE_Swimming;
 	DefaultLandMovementMode = MOVE_Walking;
-	GroundMovementMode = MOVE_Walking;
-	MovementMode = GroundMovementMode; // 임의 추가
+	DefaultGroundMovementMode = MOVE_Walking;
+	CurrentMovementMode = DefaultGroundMovementMode; // 임의 추가
 	bForceNextFloorCheck = true;
-	bCanWalkOffLedges = true;
 	bWantsToLeaveNavWalking = false;
 	bSweepWhileNavWalking = true;
 	bNeedsSweepWhileWalkingUpdate = false;
-	StandingDownwardForceScale = 1.0f;
-	InitialPushForceFactor = 500.0f;
-	PushForceFactor = 750000.0f;
-	PushForcePointZOffsetFactor = -0.75f;
-	bPushForceUsingZOffset = false;
-	bPushForceScaledToMass = false;
-	bScalePushForceToVelocity = true;
-
-	TouchForceFactor = 1.0f;
-	bTouchForceScaledToMass = true;
-	MinTouchForce = -1.0f;
-	MaxTouchForce = 250.0f;
-	RepulsionForce = 2.5f;
 
 	bUseControllerDesiredRotation = false;
 
 	bUseSeparateBrakingFriction = false; // Old default behavior.
 
 	bMaintainHorizontalGroundVelocity = true;
-	bImpartBaseVelocityX = true;
-	bImpartBaseVelocityY = true;
-	bImpartBaseVelocityZ = true;
-	bImpartBaseAngularVelocity = true;
 	bAlwaysCheckFloor = true;
 
 	NavAgentProps.bCanJump = true;
@@ -109,9 +84,6 @@ UUSBMovementComponent::UUSBMovementComponent(const FObjectInitializer& ObjectIni
 
 	bRequestedMoveUseAcceleration = true;
 
-	OldBaseQuat = FQuat::Identity;
-	OldBaseLocation = FVector::ZeroVector;
-
 	JumpKeyHoldTime = 0.0f;
 	JumpMaxHoldTime = 0.0f;
 	JumpMaxCount = 1;
@@ -122,12 +94,16 @@ UUSBMovementComponent::UUSBMovementComponent(const FObjectInitializer& ObjectIni
 	bEnableGravity = true;
 }
 
-USphereComponent* UUSBMovementComponent::GetMovementSphere() const {
-	if (!(PawnOwner && UpdatedComponent)) {
-		return NULL;
+UCapsuleComponent* UUSBMovementComponent::GetBoundingCapsule() const
+{
+	auto* PawnSk= Cast<UPhysicsSkMeshComponent>(UpdatedComponent);
+
+	if (!(PawnOwner && UpdatedComponent&&PawnSk))
+	{
+		return nullptr;
 	}
-	PRINTF("Here");
-	return Cast<USphereComponent>(UpdatedComponent);
+
+	return PawnSk->GetBoundingCapsule();
 }
 
 void UUSBMovementComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -147,11 +123,9 @@ void UUSBMovementComponent::TickComponent(float DeltaTime, enum ELevelTick TickT
 
 	PerformMovement(DeltaTime);
 
-	int MoveMode = MovementMode;
+	int MoveMode = CurrentMovementMode;
 
 	PRINTF("Move Mode Is : %d", MoveMode);
-
-
 }
 
 // 543
@@ -257,7 +231,7 @@ FVector UUSBMovementComponent::GetPawnCapsuleExtent(const EShrinkCapsuleExtent S
 	check(PawnOwner);
 
 	float Radius, HalfHeight;
-	Radius = HalfHeight = GetMovementSphere()->GetScaledSphereRadius();
+	GetBoundingCapsule()->GetScaledCapsuleSize(Radius,HalfHeight);
 	FVector CapsuleExtent(Radius, Radius, HalfHeight);
 
 	float RadiusEpsilon = 0.f;
@@ -315,7 +289,7 @@ bool UUSBMovementComponent::DoJump()
 // 831
 void UUSBMovementComponent::Launch(FVector const& LaunchVel)
 {
-	if ((MovementMode != MOVE_None) && IsActive() && HasValidData())
+	if ((CurrentMovementMode != MOVE_None) && IsActive() && HasValidData())
 	{
 		PendingLaunchVelocity = LaunchVel;
 	}
@@ -336,51 +310,17 @@ bool UUSBMovementComponent::HandlePendingLaunch()
 	return false;
 }
 
-// 853
-void UUSBMovementComponent::JumpOff(AActor* MovementBaseActor)
-{
-	if (!bPerformingJumpOff)
-	{
-		bPerformingJumpOff = true;
-		if (PawnOwner)
-		{
-			const float MaxSpeed = GetMaxSpeed() * 0.85f;
-			Velocity += MaxSpeed * GetBestDirectionOffActor(MovementBaseActor);
-			if (Velocity.Size2D() > MaxSpeed)
-			{
-				Velocity = MaxSpeed * (Velocity.GetSafeNormal());
-			}
-			Velocity.Z = JumpOffJumpZFactor * JumpZVelocity;
-			SetMovementMode(MOVE_Falling);
-		}
-		bPerformingJumpOff = false;
-	}
-}
-
-// 873
-FVector UUSBMovementComponent::GetBestDirectionOffActor(AActor* BaseActor) const
-{
-	// By default, just pick a random direction.  Derived character classes can choose to do more complex calculations,
-	// such as finding the shortest distance to move in based on the BaseActor's Bounding Volume.
-	const float RandAngle = FMath::DegreesToRadians(FMath::SRand() * 360.f);	//GetNetworkSafeRandomAngleDegrees());
-	return (FVector(FMath::Cos(RandAngle), FMath::Sin(RandAngle), 0.5f).GetSafeNormal());
-}
 
 // 912
 void UUSBMovementComponent::SetDefaultMovementMode()
 {
-	// check for water volume
-	if (CanEverSwim() && IsInWater())
-	{
-		SetMovementMode(DefaultWaterMovementMode);
-	}
-	else if (!PawnOwner || MovementMode != DefaultLandMovementMode)
+	if (!PawnOwner || CurrentMovementMode != DefaultLandMovementMode)
 	{
 		const float SavedVelocityZ = Velocity.Z;
 		SetMovementMode(DefaultLandMovementMode);
 
 		// Avoid 1-frame delay if trying to walk but walking fails at this location.
-		if (MovementMode == MOVE_Walking && GetMovementBase() == NULL)
+		if (CurrentMovementMode == MOVE_Walking)
 		{
 			Velocity.Z = SavedVelocityZ; // Prevent temporary walking state from zeroing Z velocity.
 			SetMovementMode(MOVE_Falling);
@@ -389,29 +329,16 @@ void UUSBMovementComponent::SetDefaultMovementMode()
 }
 
 // 952
-void UUSBMovementComponent::SetMovementMode(EMovementMode NewMovementMode, uint8 NewCustomMode)
+void UUSBMovementComponent::SetMovementMode(EMovementMode NewMovementMode)
 {
-	if (NewMovementMode != MOVE_Custom)
-	{
-		NewCustomMode = 0;
-	}
-
-
 	// Do nothing if nothing is changing.
-	if (MovementMode == NewMovementMode)
+	if (CurrentMovementMode == NewMovementMode)
 	{
-		// Allow changes in custom sub-mode.
-		if ((NewMovementMode != MOVE_Custom) || (NewCustomMode == CustomMovementMode))
-		{
-			return;
-		}
+		return;
 	}
 
-	const EMovementMode PrevMovementMode = MovementMode;
-	const uint8 PrevCustomMode = CustomMovementMode;
-
-	MovementMode = NewMovementMode;
-	CustomMovementMode = NewCustomMode;
+	const EMovementMode PrevMovementMode = CurrentMovementMode;
+	CurrentMovementMode = NewMovementMode;
 
 	// We allow setting movement mode before we have a component to update, in case this happens at startup.
 	if (!HasValidData())
@@ -420,45 +347,39 @@ void UUSBMovementComponent::SetMovementMode(EMovementMode NewMovementMode, uint8
 	}
 
 	// Handle change in movement mode
-	OnMovementModeChanged(PrevMovementMode, PrevCustomMode);
+	OnMovementModeChanged(PrevMovementMode);
 
 	// @todo UE4 do we need to disable ragdoll physics here? Should this function do nothing if in ragdoll?
 }
 
 // 997
-void UUSBMovementComponent::OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode)
+void UUSBMovementComponent::OnMovementModeChanged(EMovementMode PreviousMovementMode)
 {
 	if (!HasValidData())
 	{
 		return;
 	}
 	// React to changes in the movement mode.
-	if (MovementMode == MOVE_Walking)
+	if (CurrentMovementMode == MOVE_Walking)
 	{
-		// Walking uses only XY velocity, and must be on a walkable floor, with a Base.
 		Velocity.Z = 0.f;
-		//bCrouchMaintainsBaseLocation = true;
-		GroundMovementMode = MovementMode;
+		DefaultGroundMovementMode = CurrentMovementMode;
 
 		// make sure we update our new floor/base on initial entry of the walking physics
 		FindFloor(UpdatedComponent->GetComponentLocation(), CurrentFloor, false);
 		AdjustFloorHeight();
-		SetBaseFromFloor(CurrentFloor);
 	}
 	else
 	{
 		CurrentFloor.Clear();
-		//bCrouchMaintainsBaseLocation = false;
 
-		if (MovementMode == MOVE_Falling)
+		if (CurrentMovementMode == MOVE_Falling)
 		{
 			//Velocity += GetImpartedMovementBaseVelocity();
 			//CharacterOwner->Falling();	// 캐릭터 자손에서 따로 구현해주어야 하는 함수
 		}
 
-		SetBase(NULL);
-
-		if (MovementMode == MOVE_None)
+		if (CurrentMovementMode == MOVE_None)
 		{
 			// Kill velocity and clear queued up events
 			StopMovementKeepPathing();
@@ -467,7 +388,7 @@ void UUSBMovementComponent::OnMovementModeChanged(EMovementMode PreviousMovement
 		}
 	}
 
-	if (MovementMode == MOVE_Falling && PreviousMovementMode != MOVE_Falling)
+	if (CurrentMovementMode == MOVE_Falling && PreviousMovementMode != MOVE_Falling)
 	{
 		IPathFollowingAgentInterface* PFAgent = GetPathFollowingAgent();
 		if (PFAgent)
@@ -485,209 +406,6 @@ void UUSBMovementComponent::OnMovementModeChanged(EMovementMode PreviousMovement
 
 };
 
-// 1823
-void UUSBMovementComponent::SetBaseFromFloor(const FFindFloorResult& FloorResult)
-{
-	if (FloorResult.IsWalkableFloor())
-	{
-		SetBase(FloorResult.HitResult.GetComponent(), FloorResult.HitResult.BoneName);
-	}
-	else
-	{
-		SetBase(nullptr);
-	}
-}
-
-// 1835
-void UUSBMovementComponent::MaybeUpdateBasedMovement(float DeltaSeconds)
-{
-
-	bDeferUpdateBasedMovement = false;
-
-	UPrimitiveComponent* MovementBase = GetMovementBase();
-	if (MovementBaseUtility::UseRelativeLocation(MovementBase))
-	{
-		// Need to see if anything we're on is simulating physics or has a parent that is.
-		bool bBaseIsSimulatingPhysics = false;
-		USceneComponent* AttachParent = MovementBase;
-		while (!bBaseIsSimulatingPhysics && AttachParent)
-		{
-			bBaseIsSimulatingPhysics = AttachParent->IsSimulatingPhysics();
-			AttachParent = AttachParent->GetAttachParent();
-		}
-
-		if (!bBaseIsSimulatingPhysics)
-		{
-			bDeferUpdateBasedMovement = false;
-			UpdateBasedMovement(DeltaSeconds);
-		}
-		else
-		{
-			// defer movement base update until after physics
-			bDeferUpdateBasedMovement = true;
-			// If previously not simulating, remove tick dependencies and use post physics tick function.
-		}
-	}
-
-}
-
-// 1892 @todo UE4 - handle lift moving up and down through encroachment
-void UUSBMovementComponent::UpdateBasedMovement(float DeltaSeconds)
-{
-	if (!HasValidData())
-	{
-		return;
-	}
-
-	const UPrimitiveComponent* MovementBase = GetMovementBase();
-	if (!MovementBaseUtility::UseRelativeLocation(MovementBase))
-	{
-		return;
-	}
-
-	if (!IsValid(MovementBase) || !IsValid(MovementBase->GetOwner()))
-	{
-		SetBase(NULL);
-		return;
-	}
-
-	// Ignore collision with bases during these movements.
-	TGuardValue<EMoveComponentFlags> ScopedFlagRestore(MoveComponentFlags, MoveComponentFlags | MOVECOMP_IgnoreBases);
-
-	FQuat DeltaQuat = FQuat::Identity;
-	FVector DeltaPosition = FVector::ZeroVector;
-
-	FQuat NewBaseQuat;
-	FVector NewBaseLocation;
-	if (!MovementBaseUtility::GetMovementBaseTransform(MovementBase, GetBasedMovement().BoneName, NewBaseLocation, NewBaseQuat))
-	{
-		return;
-	}
-
-	// Find change in rotation
-	const bool bRotationChanged = !OldBaseQuat.Equals(NewBaseQuat, 1e-8f);
-	if (bRotationChanged)
-	{
-		DeltaQuat = NewBaseQuat * OldBaseQuat.Inverse();
-	}
-
-	// only if base moved
-	if (bRotationChanged || (OldBaseLocation != NewBaseLocation))
-	{
-		// Calculate new transform matrix of base actor (ignoring scale).
-		const FQuatRotationTranslationMatrix OldLocalToWorld(OldBaseQuat, OldBaseLocation);
-		const FQuatRotationTranslationMatrix NewLocalToWorld(NewBaseQuat, NewBaseLocation);
-
-		if (PawnOwner->IsMatineeControlled())
-		{
-			FRotationTranslationMatrix HardRelMatrix(GetBasedMovement().Rotation, GetBasedMovement().Location);
-			const FMatrix NewWorldTM = HardRelMatrix * NewLocalToWorld;
-			const FQuat NewWorldRot = bIgnoreBaseRotation ? UpdatedComponent->GetComponentQuat() : NewWorldTM.ToQuat();
-			MoveUpdatedComponent(NewWorldTM.GetOrigin() - UpdatedComponent->GetComponentLocation(), NewWorldRot, true);
-		}
-		else
-		{
-			FQuat FinalQuat = UpdatedComponent->GetComponentQuat();
-
-			if (bRotationChanged && !bIgnoreBaseRotation)
-			{
-				// Apply change in rotation and pipe through FaceRotation to maintain axis restrictions
-				const FQuat PawnOldQuat = UpdatedComponent->GetComponentQuat();
-				const FQuat TargetQuat = DeltaQuat * FinalQuat;
-				FRotator TargetRotator(TargetQuat);
-				PawnOwner->FaceRotation(TargetRotator, 0.f);
-				FinalQuat = UpdatedComponent->GetComponentQuat();
-
-				if (PawnOldQuat.Equals(FinalQuat, 1e-6f))
-				{
-					// Nothing changed. This means we probably are using another rotation mechanism (bOrientToMovement etc). We should still follow the base object.
-					// @todo: This assumes only Yaw is used, currently a valid assumption. This is the only reason FaceRotation() is used above really, aside from being a virtual hook.
-					if (bOrientRotationToMovement || (bUseControllerDesiredRotation && PawnOwner->Controller))
-					{
-						TargetRotator.Pitch = 0.f;
-						TargetRotator.Roll = 0.f;
-						MoveUpdatedComponent(FVector::ZeroVector, TargetRotator, false);
-						FinalQuat = UpdatedComponent->GetComponentQuat();
-					}
-				}
-
-				// Pipe through ControlRotation, to affect camera.
-				if (PawnOwner->Controller)
-				{
-					const FQuat PawnDeltaRotation = FinalQuat * PawnOldQuat.Inverse();
-					FRotator FinalRotation = FinalQuat.Rotator();
-					UpdateBasedRotation(FinalRotation, PawnDeltaRotation.Rotator());
-					FinalQuat = UpdatedComponent->GetComponentQuat();
-				}
-			}
-
-			// We need to offset the base of the character here, not its origin, so offset by half height
-			float HalfHeight, Radius;
-			Radius = HalfHeight = GetMovementSphere()->GetScaledSphereRadius();
-
-			FVector const BaseOffset(0.0f, 0.0f, HalfHeight);
-			FVector const LocalBasePos = OldLocalToWorld.InverseTransformPosition(UpdatedComponent->GetComponentLocation() - BaseOffset);
-			FVector const NewWorldPos = ConstrainLocationToPlane(NewLocalToWorld.TransformPosition(LocalBasePos) + BaseOffset);
-			DeltaPosition = ConstrainDirectionToPlane(NewWorldPos - UpdatedComponent->GetComponentLocation());
-
-			// move attached actor
-			if (bFastAttachedMove)
-			{
-				// we're trusting no other obstacle can prevent the move here
-				UpdatedComponent->SetWorldLocationAndRotation(NewWorldPos, FinalQuat, false);
-			}
-			else
-			{
-				// hack - transforms between local and world space introducing slight error FIXMESTEVE - discuss with engine team: just skip the transforms if no rotation?
-				FVector BaseMoveDelta = NewBaseLocation - OldBaseLocation;
-				if (!bRotationChanged && (BaseMoveDelta.X == 0.f) && (BaseMoveDelta.Y == 0.f))
-				{
-					DeltaPosition.X = 0.f;
-					DeltaPosition.Y = 0.f;
-				}
-
-				FHitResult MoveOnBaseHit(1.f);
-				const FVector OldLocation = UpdatedComponent->GetComponentLocation();
-				MoveUpdatedComponent(DeltaPosition, FinalQuat, true, &MoveOnBaseHit);
-				if ((UpdatedComponent->GetComponentLocation() - (OldLocation + DeltaPosition)).IsNearlyZero() == false)
-				{
-					//OnUnableToFollowBaseMove(DeltaPosition, OldLocation, MoveOnBaseHit);
-				}
-			}
-		}
-
-		/*
-		if (MovementBase->IsSimulatingPhysics() && CharacterOwner->GetMesh())
-		{
-			CharacterOwner->GetMesh()->ApplyDeltaToAllPhysicsTransforms(DeltaPosition, DeltaQuat);
-		}
-		*/
-	}
-}
-
-// 2031
-void UUSBMovementComponent::UpdateBasedRotation(FRotator& FinalRotation, const FRotator& ReducedRotation)
-{
-	AController* Controller = PawnOwner ? PawnOwner->Controller : NULL;
-	float ControllerRoll = 0.f;
-	if (Controller && !bIgnoreBaseRotation)
-	{
-		FRotator const ControllerRot = Controller->GetControlRotation();
-		ControllerRoll = ControllerRot.Roll;
-		Controller->SetControlRotation(ControllerRot + ReducedRotation);
-	}
-
-	// Remove roll
-	FinalRotation.Roll = 0.f;
-	if (Controller)
-	{
-		FinalRotation.Roll = UpdatedComponent->GetComponentRotation().Roll;
-		FRotator NewRotation = Controller->GetControlRotation();
-		NewRotation.Roll = ControllerRoll;
-		Controller->SetControlRotation(NewRotation);
-	}
-}
-
 // 2066
 void UUSBMovementComponent::PerformMovement(float DeltaSeconds)
 {
@@ -698,7 +416,7 @@ void UUSBMovementComponent::PerformMovement(float DeltaSeconds)
 	}
 
 	// no movement if we can't move, or if currently doing physical simulation on UpdatedComponent
-	if (MovementMode == MOVE_None || UpdatedComponent->Mobility != EComponentMobility::Movable)// || UpdatedComponent->IsSimulatingPhysics()
+	if (CurrentMovementMode == MOVE_None || UpdatedComponent->Mobility != EComponentMobility::Movable)// || UpdatedComponent->IsSimulatingPhysics()
 	{
 		// Clear pending physics forces
 		ClearAccumulatedForces();
@@ -714,8 +432,6 @@ void UUSBMovementComponent::PerformMovement(float DeltaSeconds)
 	// Scoped updates can improve performance of multiple MoveComponent calls.
 	{
 		FScopedMovementUpdate ScopedMovementUpdate(UpdatedComponent, bEnableScopedMovementUpdates ? EScopedUpdate::DeferredUpdates : EScopedUpdate::ImmediateUpdates);
-
-		MaybeUpdateBasedMovement(DeltaSeconds);	// 현재 일부 주석처리 차후 확인
 
 		OldVelocity = Velocity;
 		OldLocation = UpdatedComponent->GetComponentLocation();
@@ -747,10 +463,8 @@ void UUSBMovementComponent::PerformMovement(float DeltaSeconds)
 
 	} // End scoped movement update
 
-	// Call external post-movement events. These happen after the scoped movement completes in case the events want to use the current state of overlaps etc.
 
-	SaveBaseLocation();
-	//UpdateComponentVelocity();
+	UpdateComponentVelocity();
 
 	const FVector NewLocation = UpdatedComponent ? UpdatedComponent->GetComponentLocation() : FVector::ZeroVector;
 	const FQuat NewRotation = UpdatedComponent ? UpdatedComponent->GetComponentQuat() : FQuat::Identity;
@@ -758,39 +472,6 @@ void UUSBMovementComponent::PerformMovement(float DeltaSeconds)
 	LastUpdateLocation = NewLocation;
 	LastUpdateRotation = NewRotation;
 	LastUpdateVelocity = Velocity;
-
-}
-
-// 2451
-void UUSBMovementComponent::SaveBaseLocation()
-{
-	if (!HasValidData())
-	{
-		return;
-	}
-
-	const UPrimitiveComponent* MovementBase = GetMovementBase();
-	if (MovementBaseUtility::UseRelativeLocation(MovementBase) && !PawnOwner->IsMatineeControlled())
-	{
-		// Read transforms into OldBaseLocation, OldBaseQuat
-		MovementBaseUtility::GetMovementBaseTransform(MovementBase, GetBasedMovement().BoneName, OldBaseLocation, OldBaseQuat);
-
-		// Location
-		const FVector RelativeLocation = UpdatedComponent->GetComponentLocation() - OldBaseLocation;
-
-		// Rotation
-		if (bIgnoreBaseRotation)
-		{
-			// Absolute rotation
-			SaveRelativeBasedMovement(RelativeLocation, UpdatedComponent->GetComponentRotation(), false);
-		}
-		else
-		{
-			// Relative rotation
-			const FRotator RelativeRotation = (FQuatRotationMatrix(UpdatedComponent->GetComponentQuat()) * FQuatRotationMatrix(OldBaseQuat).GetTransposed()).Rotator();
-			SaveRelativeBasedMovement(RelativeLocation, RelativeRotation, true);
-		}
-	}
 
 }
 
@@ -805,7 +486,7 @@ void UUSBMovementComponent::StartNewPhysics(float deltaTime, int32 Iterations)
 	const bool bSavedMovementInProgress = bMovementInProgress;
 	bMovementInProgress = true;
 
-	switch (MovementMode)
+	switch (CurrentMovementMode)
 	{
 	case MOVE_None:
 		break;
@@ -836,19 +517,14 @@ float UUSBMovementComponent::GetGravityZ() const
 // 2810
 float UUSBMovementComponent::GetMaxSpeed() const
 {
-	switch (MovementMode)
+	switch (CurrentMovementMode)
 	{
 	case MOVE_Walking:
 	case MOVE_NavWalking:
-		return IsCrouching() ? MaxWalkSpeedCrouched : MaxWalkSpeed;
 	case MOVE_Falling:
 		return MaxWalkSpeed;
-	case MOVE_Swimming:
-		return MaxSwimSpeed;
 	case MOVE_Flying:
 		return MaxFlySpeed;
-	case MOVE_Custom:
-		return MaxCustomMovementSpeed;
 	case MOVE_None:
 	default:
 		return 0.f;
@@ -858,7 +534,7 @@ float UUSBMovementComponent::GetMaxSpeed() const
 // 2831
 float UUSBMovementComponent::GetMinAnalogSpeed() const
 {
-	switch (MovementMode)
+	switch (CurrentMovementMode)
 	{
 	case MOVE_Walking:
 	case MOVE_NavWalking:
@@ -1027,13 +703,13 @@ FVector UUSBMovementComponent::NewFallVelocity(const FVector& InitialVelocity, c
 // 3062
 bool UUSBMovementComponent::IsMovingOnGround() const
 {
-	return ((MovementMode == MOVE_Walking) || (MovementMode == MOVE_NavWalking)) && UpdatedComponent;
+	return ((CurrentMovementMode == MOVE_Walking) || (CurrentMovementMode == MOVE_NavWalking)) && UpdatedComponent;
 }
 
 // 3067
 bool UUSBMovementComponent::IsFalling() const
 {
-	return (MovementMode == MOVE_Falling) && UpdatedComponent;
+	return (CurrentMovementMode == MOVE_Falling) && UpdatedComponent;
 }
 
 // 3082
@@ -1220,7 +896,7 @@ float UUSBMovementComponent::GetMaxAcceleration() const
 // 3557
 float UUSBMovementComponent::GetMaxBrakingDeceleration() const
 {
-	switch (MovementMode)
+	switch (CurrentMovementMode)
 	{
 	case MOVE_Walking:
 	case MOVE_NavWalking:
@@ -1359,9 +1035,6 @@ void UUSBMovementComponent::PhysFalling(float deltaTime, int32 Iterations)
 
 		const FVector OldLocation = UpdatedComponent->GetComponentLocation();
 		const FQuat PawnRotation = UpdatedComponent->GetComponentQuat();
-		bJustTeleported = false;
-
-		// RestorePreAdditiveRootMotionVelocity();
 
 		FVector OldVelocity = Velocity;
 		FVector VelocityNoAirControl = Velocity;
@@ -1381,7 +1054,6 @@ void UUSBMovementComponent::PhysFalling(float deltaTime, int32 Iterations)
 
 		// Compute Velocity
 		{
-			// Acceleration = FallAcceleration for CalcVelocity(), but we restore it after using it.
 			TGuardValue<FVector> RestoreAcceleration(Acceleration, FallAcceleration);
 			Velocity.Z = 0.f;
 			CalcVelocity(timeTick, FallingLateralFriction, false, MaxDecel);
@@ -1480,7 +1152,7 @@ void UUSBMovementComponent::PhysFalling(float deltaTime, int32 Iterations)
 				FVector Delta = ComputeSlideVector(Adjusted, 1.f - Hit.Time, OldHitNormal, Hit);
 
 				// Compute velocity after deflection (only gravity component for RootMotion)
-				if (subTimeTickRemaining > KINDA_SMALL_NUMBER && !bJustTeleported)
+				if (subTimeTickRemaining > KINDA_SMALL_NUMBER)
 				{
 					const FVector NewVelocity = (Delta / subTimeTickRemaining);
 					Velocity = NewVelocity;
@@ -1536,7 +1208,7 @@ void UUSBMovementComponent::PhysFalling(float deltaTime, int32 Iterations)
 						}
 
 						// Compute velocity after deflection (only gravity component for RootMotion)
-						if (subTimeTickRemaining > KINDA_SMALL_NUMBER && !bJustTeleported)
+						if (subTimeTickRemaining > KINDA_SMALL_NUMBER)
 						{
 							const FVector NewVelocity = (Delta / subTimeTickRemaining);
 							Velocity = NewVelocity;
@@ -1562,7 +1234,7 @@ void UUSBMovementComponent::PhysFalling(float deltaTime, int32 Iterations)
 							ProcessLanded(Hit, remainingTime, Iterations);
 							return;
 						}
-						else if (GetPerchRadiusThreshold() > 0.f && Hit.Time == 1.f && OldHitImpactNormal.Z >= WalkableFloorZ)
+						else if (Hit.Time == 1.f && OldHitImpactNormal.Z >= WalkableFloorZ)//?
 						{
 							// We might be in a virtual 'ditch' within our perch radius. This is rare.
 							const FVector PawnLocation = UpdatedComponent->GetComponentLocation();
@@ -1617,73 +1289,6 @@ FVector UUSBMovementComponent::LimitAirControl(float DeltaTime, const FVector& F
 	return Result;
 }
 
-// 4346
-bool UUSBMovementComponent::CheckLedgeDirection(const FVector& OldLocation, const FVector& SideStep, const FVector& GravDir) const
-{
-	const FVector SideDest = OldLocation + SideStep;
-	FCollisionQueryParams CapsuleParams(SCENE_QUERY_STAT(CheckLedgeDirection), false, PawnOwner);
-	FCollisionResponseParams ResponseParam;
-	InitCollisionParams(CapsuleParams, ResponseParam);
-	const FCollisionShape CapsuleShape = GetPawnCapsuleCollisionShape(SHRINK_None);
-	const ECollisionChannel CollisionChannel = UpdatedComponent->GetCollisionObjectType();
-	FHitResult Result(1.f);
-	GetWorld()->SweepSingleByChannel(Result, OldLocation, SideDest, FQuat::Identity, CollisionChannel, CapsuleShape, CapsuleParams, ResponseParam);
-
-	if (!Result.bBlockingHit || IsWalkable(Result))
-	{
-		if (!Result.bBlockingHit)
-		{
-			UE_LOG(LogTemp, Log, TEXT("No Blocking Hit"));
-			//GetWorld()->SweepSingleByChannel(Result, SideDest, SideDest + GravDir * (MaxStepHeight + LedgeCheckThreshold), FQuat::Identity, CollisionChannel, CapsuleShape, CapsuleParams, ResponseParam);
-		}
-		if ((Result.Time < 1.f) && IsWalkable(Result))
-		{
-			UE_LOG(LogTemp, Log, TEXT("Result.Time : %f"), Result.Time);
-			return true;
-		}
-	}
-	return false;
-}
-
-// 4372
-FVector UUSBMovementComponent::GetLedgeMove(const FVector& OldLocation, const FVector& Delta, const FVector& GravDir) const
-{
-	if (!HasValidData() || Delta.IsZero())
-	{
-		return FVector::ZeroVector;
-	}
-
-	FVector SideDir(Delta.Y, -1.f * Delta.X, 0.f);
-
-	// try left
-	if (CheckLedgeDirection(OldLocation, SideDir, GravDir))
-	{
-		return SideDir;
-	}
-
-	// try right
-	SideDir *= -1.f;
-	if (CheckLedgeDirection(OldLocation, SideDir, GravDir))
-	{
-		return SideDir;
-	}
-
-	return FVector::ZeroVector;
-}
-
-// 4398 모서리 부분 넘어로 걸을 수 있는지
-bool UUSBMovementComponent::CanWalkOffLedges() const
-{
-	/*
-	if (!bCanWalkOffLedgesWhenCrouching && IsCrouching())
-	{
-		return false;
-	}
-	*/
-
-	return bCanWalkOffLedges;
-}
-
 // 4408
 bool UUSBMovementComponent::CheckFall(const FFindFloorResult& OldFloor, const FHitResult& Hit, const FVector& Delta, const FVector& OldLocation, float remainingTime, float timeTick, int32 Iterations, bool bMustJump)
 {
@@ -1692,7 +1297,7 @@ bool UUSBMovementComponent::CheckFall(const FFindFloorResult& OldFloor, const FH
 		return false;
 	}
 
-	if (bMustJump || CanWalkOffLedges())
+	if (bMustJump)
 	{
 		//HandleWalkingOffLedge(OldFloor.HitResult.ImpactNormal, OldFloor.HitResult.Normal, OldLocation, timeTick);
 		if (IsMovingOnGround())
@@ -1736,26 +1341,9 @@ void UUSBMovementComponent::StartFalling(int32 Iterations, float remainingTime, 
 }
 
 // 4456
-void UUSBMovementComponent::RevertMove(const FVector& OldLocation, UPrimitiveComponent* OldBase, const FVector& PreviousBaseLocation, const FFindFloorResult& OldFloor, bool bFailMove)
+void UUSBMovementComponent::RevertMove(const FVector& OldLocation, bool bFailMove)
 {
-	UpdatedComponent->SetWorldLocation(OldLocation, false, nullptr, GetTeleportType());
-
-	bJustTeleported = false;
-	// if our previous base couldn't have moved or changed in any physics-affecting way, restore it
-	if (IsValid(OldBase) &&
-		(!MovementBaseUtility::IsDynamicBase(OldBase) ||
-		(OldBase->Mobility == EComponentMobility::Static) ||
-			(OldBase->GetComponentLocation() == PreviousBaseLocation)
-			)
-		)
-	{
-		CurrentFloor = OldFloor;
-		SetBase(OldBase, OldFloor.HitResult.BoneName);
-	}
-	else
-	{
-		SetBase(NULL);
-	}
+	UpdatedComponent->SetWorldLocation(OldLocation, false, nullptr, ETeleportType::TeleportPhysics);
 
 	if (bFailMove)
 	{
@@ -1809,8 +1397,6 @@ void UUSBMovementComponent::MoveAlongFloor(const FVector& InVelocity, float Delt
 	if (Hit.bStartPenetrating)	// SafeMoveUpdatedComponent를 통해 이동한 결과가 다른 콜리젼이랑 겹친 상황이라면
 	{
 		// Allow this hit to be used as an impact we can deflect off, otherwise we do nothing the rest of the update and appear to hitch.
-		HandleImpact(Hit);	// 물리력을 가하는 메소드
-		PRINTF("HandleImpact called");
 		SlideAlongSurface(Delta, 1.f, Hit.Normal, Hit, true);
 
 		if (Hit.bStartPenetrating)
@@ -1834,31 +1420,11 @@ void UUSBMovementComponent::MoveAlongFloor(const FVector& InVelocity, float Delt
 			PercentTimeApplied = FMath::Clamp(PercentTimeApplied + SecondHitPercent, 0.f, 1.f);
 		}
 
+		//경사면을 오르고 또 부딫혔는지 확인
 
 		if (Hit.IsValidBlockingHit())	// Hit 여부에 따라서 어떻게 이동할지 정함
 		{
-			if (CanStepUp(Hit) || (GetMovementBase() != NULL && GetMovementBase()->GetOwner() == Hit.GetActor()))
-			{
-				// hit a barrier, try to step up
-				const FVector GravDir(0.f, 0.f, -1.f);
-				if (!StepUp(GravDir, Delta * (1.f - PercentTimeApplied), Hit, OutStepDownResult))
-				{
-					PRINTF("Hit Barrier");
-					HandleImpact(Hit, LastMoveTimeSlice, RampVector);
-					SlideAlongSurface(Delta, 1.f - PercentTimeApplied, Hit.Normal, Hit, true);
-				}
-				else
-				{
-					// Don't recalculate velocity based on this height adjustment, if considering vertical adjustments.
-					bJustTeleported |= !bMaintainHorizontalGroundVelocity;
-				}
-			}
-			else if (Hit.Component.IsValid() && !Hit.Component.Get()->CanCharacterStepUp(PawnOwner))
-			{
-				PRINTF("Cant Step up this ting");
-				HandleImpact(Hit, LastMoveTimeSlice, RampVector);
-				SlideAlongSurface(Delta, 1.f - PercentTimeApplied, Hit.Normal, Hit, true);
-			}
+			SlideAlongSurface(Delta, 1.f - PercentTimeApplied, Hit.Normal, Hit, true);
 		}
 	}
 }
@@ -1889,7 +1455,7 @@ void UUSBMovementComponent::PhysWalking(float deltaTime, int32 Iterations)
 		return;
 	}
 
-	if (!PawnOwner || (!PawnOwner->Controller && !bRunPhysicsWithNoController))
+	if (!PawnOwner || (!PawnOwner->Controller))
 	{
 		Acceleration = FVector::ZeroVector;
 		Velocity = FVector::ZeroVector;
@@ -1903,21 +1469,17 @@ void UUSBMovementComponent::PhysWalking(float deltaTime, int32 Iterations)
 		return;
 	}
 
-	bJustTeleported = false;
 	bool bCheckedFall = false;
 	bool bTriedLedgeMove = false;
 	float remainingTime = deltaTime;
 
-	while ((remainingTime >= MIN_TICK_TIME) && (Iterations < MaxSimulationIterations) && PawnOwner && (PawnOwner->Controller || bRunPhysicsWithNoController))
+	while ((remainingTime >= MIN_TICK_TIME) && (Iterations < MaxSimulationIterations) && PawnOwner && PawnOwner->Controller)
 	{
 		//하나라도 어긋나면 이루프는끝남
 		Iterations++;
-		bJustTeleported = false;
 		const float timeTick = GetSimulationTimeStep(remainingTime, Iterations);//이게 프레임계산하는듯
 		remainingTime -= timeTick;
 		// Save current values
-		UPrimitiveComponent* const OldBase = GetMovementBase();
-		const FVector PreviousBaseLocation = (OldBase != NULL) ? OldBase->GetComponentLocation() : FVector::ZeroVector;
 		const FVector OldLocation = UpdatedComponent->GetComponentLocation();
 		const FFindFloorResult OldFloor = CurrentFloor;
 
@@ -1968,94 +1530,33 @@ void UUSBMovementComponent::PhysWalking(float deltaTime, int32 Iterations)
 			FindFloor(UpdatedComponent->GetComponentLocation(), CurrentFloor, bZeroDelta, NULL);
 		}
 
-		// 모서리 부분을 걸어다닐 수 있다면
-		const bool bCheckLedges = CanWalkOffLedges();
-		if (bCheckLedges && !CurrentFloor.IsWalkableFloor())
+		// Validate the floor check
+		if (CurrentFloor.IsWalkableFloor())
 		{
-
-			// calculate possible alternate movement
-			const FVector GravDir = FVector(0.f, 0.f, -1.f);
-			const FVector NewDelta = bTriedLedgeMove ? FVector::ZeroVector : GetLedgeMove(OldLocation, Delta, GravDir);
-			if (!NewDelta.IsZero())
-			{
-				// first revert this move
-				RevertMove(OldLocation, OldBase, PreviousBaseLocation, OldFloor, false);
-
-				// avoid repeated ledge moves if the first one fails
-				bTriedLedgeMove = true;
-
-				// Try new movement direction
-				Velocity = NewDelta / timeTick;
-				remainingTime += timeTick;
-
-				UE_LOG(LogTemp, Log, TEXT("Try Ledge Move!!"));
-				continue;
-			}
-			else
-			{
-				// see if it is OK to jump
-				// @todo collision : only thing that can be problem is that oldbase has world collision on
-				bool bMustJump = bZeroDelta || (OldBase == NULL || (!OldBase->IsQueryCollisionEnabled() && MovementBaseUtility::IsDynamicBase(OldBase)));
-				if ((bMustJump || !bCheckedFall) && CheckFall(OldFloor, CurrentFloor.HitResult, Delta, OldLocation, remainingTime, timeTick, Iterations, bMustJump))
-				{
-					return;
-				}
-				bCheckedFall = true;
-
-				// revert this move
-				RevertMove(OldLocation, OldBase, PreviousBaseLocation, OldFloor, true);
-				remainingTime = 0.f;
-
-
-				UE_LOG(LogTemp, Log, TEXT("Fail Ledge Move!!"));
-				break;
-			}
-
+			AdjustFloorHeight();
 		}
-		else
+		else if (CurrentFloor.HitResult.bStartPenetrating && remainingTime <= 0.f)
 		{
-			// Validate the floor check
-			if (CurrentFloor.IsWalkableFloor())
+			// The floor check failed because it started in penetration
+			// We do not want to try to move downward because the downward sweep failed, rather we'd like to try to pop out of the floor.
+			FHitResult Hit(CurrentFloor.HitResult);
+			Hit.TraceEnd = Hit.TraceStart + FVector(0.f, 0.f, MAX_FLOOR_DIST);
+			const FVector RequestedAdjustment = GetPenetrationAdjustment(Hit);
+			ResolvePenetration(RequestedAdjustment, Hit, UpdatedComponent->GetComponentQuat());
+			bForceNextFloorCheck = true;
+		}
+
+
+		// See if we need to start falling.
+		if (!CurrentFloor.IsWalkableFloor() && !CurrentFloor.HitResult.bStartPenetrating)
+		{
+			const bool bMustJump = bZeroDelta;
+			if ((bMustJump || !bCheckedFall) && CheckFall(OldFloor, CurrentFloor.HitResult, Delta, OldLocation, remainingTime, timeTick, Iterations, bMustJump))
 			{
-
-				if (ShouldCatchAir(OldFloor, CurrentFloor))
-				{
-					//HandleWalkingOffLedge(OldFloor.HitResult.ImpactNormal, OldFloor.HitResult.Normal, OldLocation, timeTick);
-					if (IsMovingOnGround())
-					{
-						// If still walking, then fall. If not, assume the user set a different mode they want to keep.
-						StartFalling(Iterations, remainingTime, timeTick, Delta, OldLocation);
-					}
-					return;
-				}
-
-
-				AdjustFloorHeight();
-				SetBase(CurrentFloor.HitResult.Component.Get(), CurrentFloor.HitResult.BoneName);
-			}
-			else if (CurrentFloor.HitResult.bStartPenetrating && remainingTime <= 0.f)
-			{
-				// The floor check failed because it started in penetration
-				// We do not want to try to move downward because the downward sweep failed, rather we'd like to try to pop out of the floor.
-				FHitResult Hit(CurrentFloor.HitResult);
-				Hit.TraceEnd = Hit.TraceStart + FVector(0.f, 0.f, MAX_FLOOR_DIST);
-				const FVector RequestedAdjustment = GetPenetrationAdjustment(Hit);
-				ResolvePenetration(RequestedAdjustment, Hit, UpdatedComponent->GetComponentQuat());
-				bForceNextFloorCheck = true;
+				return;
 			}
 
-
-			// See if we need to start falling.
-			if (!CurrentFloor.IsWalkableFloor() && !CurrentFloor.HitResult.bStartPenetrating)
-			{
-				const bool bMustJump = bJustTeleported || bZeroDelta || (OldBase == NULL || (!OldBase->IsQueryCollisionEnabled() && MovementBaseUtility::IsDynamicBase(OldBase)));
-				if ((bMustJump || !bCheckedFall) && CheckFall(OldFloor, CurrentFloor.HitResult, Delta, OldLocation, remainingTime, timeTick, Iterations, bMustJump))
-				{
-					return;
-				}
-
-				bCheckedFall = true;
-			}
+			bCheckedFall = true;
 		}
 
 
@@ -2063,7 +1564,7 @@ void UUSBMovementComponent::PhysWalking(float deltaTime, int32 Iterations)
 		if (IsMovingOnGround())
 		{
 			// Make velocity reflect actual move
-			if (!bJustTeleported && timeTick >= MIN_TICK_TIME)
+			if (timeTick >= MIN_TICK_TIME)
 			{
 				// TODO-RootMotionSource: Allow this to happen during partial override Velocity, but only set allowed axes?
 				Velocity = (UpdatedComponent->GetComponentLocation() - OldLocation) / timeTick;
@@ -2084,11 +1585,6 @@ void UUSBMovementComponent::PhysWalking(float deltaTime, int32 Iterations)
 	}
 }
 
-// 5190
-bool UUSBMovementComponent::ShouldCatchAir(const FFindFloorResult& OldFloor, const FFindFloorResult& NewFloor)
-{
-	return false;
-}
 
 // 5203
 void UUSBMovementComponent::AdjustFloorHeight()
@@ -2145,11 +1641,6 @@ void UUSBMovementComponent::AdjustFloorHeight()
 				CurrentFloor.SetFromSweep(AdjustHit, CurrentFloor.FloorDist, true);
 			}
 		}
-
-		// Don't recalculate velocity based on this height adjustment, if considering vertical adjustments.
-		// Also avoid it if we moved out of penetration
-		bJustTeleported |= !bMaintainHorizontalGroundVelocity || (OldFloorDist < 0.f);
-
 		// If something caused us to adjust our height (especially a depentration) we should ensure another check next frame or we will keep a stale result.
 		bForceNextFloorCheck = true;
 	}
@@ -2178,15 +1669,13 @@ void UUSBMovementComponent::SetPostLandedPhysics(const FHitResult& Hit)
 			DefaultLandMovementMode == MOVE_NavWalking ||
 			DefaultLandMovementMode == MOVE_Falling)
 		{
-			SetMovementMode(GroundMovementMode);
+			SetMovementMode(DefaultGroundMovementMode);
 		}
 		else
 		{
 			SetDefaultMovementMode();
 		}
 
-		// 충돌한 물체에 힘을 가하는 함수이다.
-		ApplyImpactPhysicsForces(Hit, PreImpactAccel, PreImpactVelocity);
 	}
 }
 
@@ -2200,9 +1689,6 @@ void UUSBMovementComponent::OnTeleported()
 	}
 
 	Super::OnTeleported();
-
-	bJustTeleported = true;
-	UE_LOG(LogTemp, Log, TEXT("bJustTeleported = True"));
 
 	// Find floor at current location
 	UpdateFloorFromAdjustment();
@@ -2221,36 +1707,22 @@ void UUSBMovementComponent::OnTeleported()
 		CurrentFloor.Clear();
 	}
 
-	const bool bWasFalling = (MovementMode == MOVE_Falling);
-	const bool bWasSwimming = (MovementMode == DefaultWaterMovementMode) || (MovementMode == MOVE_Swimming);
+	const bool bWasFalling = (CurrentMovementMode == MOVE_Falling);
 
-	if (CanEverSwim() && IsInWater())
+	if (!CurrentFloor.IsWalkableFloor() || (OldBase && !NewBase))
 	{
-		if (!bWasSwimming)
-		{
-			SetMovementMode(DefaultWaterMovementMode);
-		}
-	}
-	else if (!CurrentFloor.IsWalkableFloor() || (OldBase && !NewBase))
-	{
-		if (!bWasFalling && MovementMode != MOVE_Flying && MovementMode != MOVE_Custom)
+		if (!bWasFalling && CurrentMovementMode != MOVE_Flying && CurrentMovementMode != MOVE_Custom)
 		{
 			SetMovementMode(MOVE_Falling);
 		}
 	}
 	else if (NewBase)
 	{
-		if (bWasSwimming)
-		{
-			SetMovementMode(DefaultLandMovementMode);
-		}
-		else if (bWasFalling)
+		if (bWasFalling)
 		{
 			ProcessLanded(CurrentFloor.HitResult, 0.f, 0);
 		}
 	}
-
-	SaveBaseLocation();
 }
 
 // 5475
@@ -2299,7 +1771,7 @@ void UUSBMovementComponent::PhysicsRotation(float DeltaTime)
 		return;
 	}
 
-	if (!HasValidData() || (!PawnOwner->Controller && !bRunPhysicsWithNoController))
+	if (!HasValidData() || (!PawnOwner->Controller))
 	{
 		return;
 	}
@@ -2363,7 +1835,7 @@ void UUSBMovementComponent::PhysicsRotation(float DeltaTime)
 // 5681
 void UUSBMovementComponent::AddImpulse(FVector Impulse, bool bVelocityChange)
 {
-	if (!Impulse.IsZero() && (MovementMode != MOVE_None) && IsActive() && HasValidData())
+	if (!Impulse.IsZero() && (CurrentMovementMode != MOVE_None) && IsActive() && HasValidData())
 	{
 		// handle scaling by mass
 		FVector FinalImpulse = Impulse;
@@ -2382,7 +1854,7 @@ void UUSBMovementComponent::AddImpulse(FVector Impulse, bool bVelocityChange)
 // 5703
 void UUSBMovementComponent::AddForce(FVector Force)
 {
-	if (!Force.IsZero() && (MovementMode != MOVE_None) && IsActive() && HasValidData())
+	if (!Force.IsZero() && (CurrentMovementMode != MOVE_None) && IsActive() && HasValidData())
 	{
 		if (Mass > SMALL_NUMBER)
 		{
@@ -2453,8 +1925,7 @@ void UUSBMovementComponent::ComputeFloorDist(const FVector& CapsuleLocation, flo
 	OutFloorResult.Clear();
 
 	float PawnRadius, PawnHalfHeight;	// 원래는 Capsule 기반
-	//PawnOwner->GetCapsuleComponent()->GetScaledCapsuleSize(PawnRadius, PawnHalfHeight);
-	PawnRadius = PawnHalfHeight = GetMovementSphere()->GetScaledSphereRadius();
+	GetBoundingCapsule()->GetScaledCapsuleSize(PawnRadius, PawnHalfHeight);
 
 	bool bSkipSweep = false;
 	if (DownwardSweepResult != NULL && DownwardSweepResult->IsValidBlockingHit())
@@ -2613,74 +2084,26 @@ void UUSBMovementComponent::FindFloor(const FVector& CapsuleLocation, FFindFloor
 	{
 		UUSBMovementComponent* MutableThis = const_cast<UUSBMovementComponent*>(this);
 
-		if (bAlwaysCheckFloor || !bCanUseCachedLocation || bForceNextFloorCheck || bJustTeleported)
+		if (bAlwaysCheckFloor || !bCanUseCachedLocation || bForceNextFloorCheck)
 		{
-			MutableThis->bForceNextFloorCheck = false;												//PawnOwner->GetCapsuleComponent()->GetScaledCapsuleRadius()
-			ComputeFloorDist(CapsuleLocation, FloorLineTraceDist, FloorSweepTraceDist, OutFloorResult, GetMovementSphere()->GetScaledSphereRadius(), DownwardSweepResult);
+			MutableThis->bForceNextFloorCheck = false;					
+			
+			ComputeFloorDist(CapsuleLocation, FloorLineTraceDist, FloorSweepTraceDist, OutFloorResult, GetBoundingCapsule()->GetScaledCapsuleRadius(), DownwardSweepResult);
 		}
 		else
 		{
 			// Force floor check if base has collision disabled or if it does not block us.
-			UPrimitiveComponent* MovementBase = GetMovementBase();
-			const AActor* BaseActor = MovementBase ? MovementBase->GetOwner() : NULL;
 			const ECollisionChannel CollisionChannel = UpdatedComponent->GetCollisionObjectType();
 
-			if (MovementBase != NULL)
-			{
-				MutableThis->bForceNextFloorCheck = !MovementBase->IsQueryCollisionEnabled()
-					|| MovementBase->GetCollisionResponseToChannel(CollisionChannel) != ECR_Block
-					|| MovementBaseUtility::IsDynamicBase(MovementBase);
-			}
-
-			const bool IsActorBasePendingKill = BaseActor && BaseActor->IsPendingKill();
-
-			if (!bForceNextFloorCheck && !IsActorBasePendingKill && MovementBase)
+			if (!bForceNextFloorCheck)
 			{
 				OutFloorResult = CurrentFloor;
 				bNeedToValidateFloor = false;
 			}
 			else
 			{
-				MutableThis->bForceNextFloorCheck = false;												// PawnOwner->GetCapsuleComponent()->GetScaledCapsuleRadius()
-				ComputeFloorDist(CapsuleLocation, FloorLineTraceDist, FloorSweepTraceDist, OutFloorResult, GetMovementSphere()->GetScaledSphereRadius(), DownwardSweepResult);
-			}
-		}
-	}
-
-	// OutFloorResult.HitResult is now the result of the vertical floor check.
-	// See if we should try to "perch" at this location.
-	if (bNeedToValidateFloor && OutFloorResult.bBlockingHit && !OutFloorResult.bLineTrace)
-	{
-		const bool bCheckRadius = true;
-		if (ShouldComputePerchResult(OutFloorResult.HitResult, bCheckRadius))
-		{
-			float MaxPerchFloorDist = FMath::Max(MAX_FLOOR_DIST, MaxStepHeight + HeightCheckAdjust);
-			if (IsMovingOnGround())
-			{
-				MaxPerchFloorDist += FMath::Max(0.f, PerchAdditionalHeight);
-			}
-
-			FFindFloorResult PerchFloorResult;
-			if (ComputePerchResult(GetValidPerchRadius(), OutFloorResult.HitResult, MaxPerchFloorDist, PerchFloorResult))
-			{
-				// Don't allow the floor distance adjustment to push us up too high, or we will move beyond the perch distance and fall next time.
-				const float AvgFloorDist = (MIN_FLOOR_DIST + MAX_FLOOR_DIST) * 0.5f;
-				const float MoveUpDist = (AvgFloorDist - OutFloorResult.FloorDist);
-				if (MoveUpDist + PerchFloorResult.FloorDist >= MaxPerchFloorDist)
-				{
-					OutFloorResult.FloorDist = AvgFloorDist;
-				}
-
-				// If the regular capsule is on an unwalkable surface but the perched one would allow us to stand, override the normal to be one that is walkable.
-				if (!OutFloorResult.bWalkableFloor)
-				{
-					OutFloorResult.SetFromLineTrace(PerchFloorResult.HitResult, OutFloorResult.FloorDist, FMath::Min(PerchFloorResult.FloorDist, PerchFloorResult.LineDist), true);
-				}
-			}
-			else
-			{
-				// We had no floor (or an invalid one because it was unwalkable), and couldn't perch here, so invalidate floor (which will cause us to start falling).
-				OutFloorResult.bWalkableFloor = false;
+				MutableThis->bForceNextFloorCheck = false;											
+				ComputeFloorDist(CapsuleLocation, FloorLineTraceDist, FloorSweepTraceDist, OutFloorResult, GetBoundingCapsule()->GetScaledCapsuleRadius(), DownwardSweepResult);
 			}
 		}
 	}
@@ -2704,7 +2127,7 @@ bool UUSBMovementComponent::IsValidLandingSpot(const FVector& CapsuleLocation, c
 		}
 
 		float PawnRadius, PawnHalfHeight;
-		PawnRadius = PawnHalfHeight = GetMovementSphere()->GetScaledSphereRadius();//(PawnRadius, PawnHalfHeight);
+		GetBoundingCapsule()->GetScaledCapsuleSize(PawnRadius, PawnHalfHeight);
 
 		// Reject hits that are above our lower hemisphere (can happen when sliding down a vertical surface).
 		const float LowerHemisphereZ = Hit.Location.Z - PawnHalfHeight + PawnRadius;
@@ -2786,406 +2209,13 @@ bool UUSBMovementComponent::ShouldCheckForValidLandingSpot(float DeltaTime, cons
 	if (Hit.Normal.Z > KINDA_SMALL_NUMBER && !Hit.Normal.Equals(Hit.ImpactNormal))
 	{
 		const FVector PawnLocation = UpdatedComponent->GetComponentLocation();
-		if (IsWithinEdgeTolerance(PawnLocation, Hit.ImpactPoint, GetMovementSphere()->GetScaledSphereRadius()))
+		if (IsWithinEdgeTolerance(PawnLocation, Hit.ImpactPoint, GetBoundingCapsule()->GetScaledCapsuleRadius()))
 		{
 			return true;
 		}
 	}
 
 	return false;
-}
-
-// 6232
-float UUSBMovementComponent::GetPerchRadiusThreshold() const
-{
-	// Don't allow negative values.
-	return FMath::Max(0.f, PerchRadiusThreshold);
-}
-
-// 6239
-float UUSBMovementComponent::GetValidPerchRadius() const
-{
-	if (PawnOwner)
-	{
-		const float PawnRadius = GetMovementSphere()->GetScaledSphereRadius();
-		return FMath::Clamp(PawnRadius - GetPerchRadiusThreshold(), 0.1f, PawnRadius);
-	}
-	return 0.f;
-}
-
-// 6250
-bool UUSBMovementComponent::ShouldComputePerchResult(const FHitResult& InHit, bool bCheckRadius) const
-{
-	if (!InHit.IsValidBlockingHit())
-	{
-		return false;
-	}
-
-	// Don't try to perch if the edge radius is very small.
-	if (GetPerchRadiusThreshold() <= SWEEP_EDGE_REJECT_DISTANCE)
-	{
-		return false;
-	}
-
-	if (bCheckRadius)
-	{
-		const float DistFromCenterSq = (InHit.ImpactPoint - InHit.Location).SizeSquared2D();
-		const float StandOnEdgeRadius = GetValidPerchRadius();
-		if (DistFromCenterSq <= FMath::Square(StandOnEdgeRadius))
-		{
-			// Already within perch radius.
-			return false;
-		}
-	}
-
-	return true;
-}
-
-// 6278
-bool UUSBMovementComponent::ComputePerchResult(const float TestRadius, const FHitResult& InHit, const float InMaxFloorDist, FFindFloorResult& OutPerchFloorResult) const
-{
-	if (InMaxFloorDist <= 0.f)
-	{
-		return 0.f;
-	}
-
-	// Sweep further than actual requested distance, because a reduced capsule radius means we could miss some hits that the normal radius would contact.
-	float PawnRadius, PawnHalfHeight;
-	PawnRadius = PawnHalfHeight = GetMovementSphere()->GetScaledSphereRadius();
-
-	const float InHitAboveBase = FMath::Max(0.f, InHit.ImpactPoint.Z - (InHit.Location.Z - PawnHalfHeight));
-	const float PerchLineDist = FMath::Max(0.f, InMaxFloorDist - InHitAboveBase);
-	const float PerchSweepDist = FMath::Max(0.f, InMaxFloorDist);
-
-	const float ActualSweepDist = PerchSweepDist + PawnRadius;
-	ComputeFloorDist(InHit.Location, PerchLineDist, ActualSweepDist, OutPerchFloorResult, TestRadius);
-
-	if (!OutPerchFloorResult.IsWalkableFloor())
-	{
-		return false;
-	}
-	else if (InHitAboveBase + OutPerchFloorResult.FloorDist > InMaxFloorDist)
-	{
-		// Hit something past max distance
-		OutPerchFloorResult.bWalkableFloor = false;
-		return false;
-	}
-
-	return true;
-}
-
-// 6311
-bool UUSBMovementComponent::CanStepUp(const FHitResult& Hit) const
-{
-	if (!Hit.IsValidBlockingHit() || !HasValidData() || MovementMode == MOVE_Falling)
-	{
-		return false;
-	}
-
-	// No component for "fake" hits when we are on a known good base.
-	const UPrimitiveComponent* HitComponent = Hit.Component.Get();
-	if (!HitComponent)
-	{
-		return true;
-	}
-
-	if (!HitComponent->CanCharacterStepUp(PawnOwner))
-	{
-		return false;
-	}
-
-	// No actor for "fake" hits when we are on a known good base.
-	const AActor* HitActor = Hit.GetActor();
-	if (!HitActor)
-	{
-		return true;
-	}
-
-	if (!HitActor->CanBeBaseForCharacter(PawnOwner))
-	{
-		return false;
-	}
-
-	return true;
-}
-
-// 6346
-bool UUSBMovementComponent::StepUp(const FVector& GravDir, const FVector& Delta, const FHitResult& InHit, UCharacterMovementComponent::FStepDownResult* OutStepDownResult)
-{
-	if (!CanStepUp(InHit) || MaxStepHeight <= 0.f)
-	{
-		return false;
-	}
-
-	const FVector OldLocation = UpdatedComponent->GetComponentLocation();
-	float PawnRadius, PawnHalfHeight;
-	PawnRadius = PawnHalfHeight = GetMovementSphere()->GetScaledSphereRadius();
-
-	// Don't bother stepping up if top of capsule is hitting something.
-	const float InitialImpactZ = InHit.ImpactPoint.Z;
-	if (InitialImpactZ > OldLocation.Z + (PawnHalfHeight - PawnRadius))
-	{
-		return false;
-	}
-
-	if (GravDir.IsZero())
-	{
-		return false;
-	}
-
-	// Gravity should be a normalized direction
-	ensure(GravDir.IsNormalized());
-
-	float StepTravelUpHeight = MaxStepHeight;
-	float StepTravelDownHeight = StepTravelUpHeight;
-	const float StepSideZ = -1.f * FVector::DotProduct(InHit.ImpactNormal, GravDir);
-	float PawnInitialFloorBaseZ = OldLocation.Z - PawnHalfHeight;
-	float PawnFloorPointZ = PawnInitialFloorBaseZ;
-
-	if (IsMovingOnGround() && CurrentFloor.IsWalkableFloor())
-	{
-		// Since we float a variable amount off the floor, we need to enforce max step height off the actual point of impact with the floor.
-		const float FloorDist = FMath::Max(0.f, CurrentFloor.GetDistanceToFloor());
-		PawnInitialFloorBaseZ -= FloorDist;
-		StepTravelUpHeight = FMath::Max(StepTravelUpHeight - FloorDist, 0.f);
-		StepTravelDownHeight = (MaxStepHeight + MAX_FLOOR_DIST * 2.f);
-
-		const bool bHitVerticalFace = !IsWithinEdgeTolerance(InHit.Location, InHit.ImpactPoint, PawnRadius);
-		if (!CurrentFloor.bLineTrace && !bHitVerticalFace)
-		{
-			PawnFloorPointZ = CurrentFloor.HitResult.ImpactPoint.Z;
-		}
-		else
-		{
-			// Base floor point is the base of the capsule moved down by how far we are hovering over the surface we are hitting.
-			PawnFloorPointZ -= CurrentFloor.FloorDist;
-		}
-	}
-
-	// Don't step up if the impact is below us, accounting for distance from floor.
-	if (InitialImpactZ <= PawnInitialFloorBaseZ)
-	{
-		return false;
-	}
-
-	// Scope our movement updates, and do not apply them until all intermediate moves are completed.
-	FScopedMovementUpdate ScopedStepUpMovement(UpdatedComponent, EScopedUpdate::DeferredUpdates);
-
-	// step up - treat as vertical wall
-	FHitResult SweepUpHit(1.f);
-	const FQuat PawnRotation = UpdatedComponent->GetComponentQuat();
-	MoveUpdatedComponent(-GravDir * StepTravelUpHeight, PawnRotation, true, &SweepUpHit);
-
-	if (SweepUpHit.bStartPenetrating)
-	{
-		// Undo movement
-		ScopedStepUpMovement.RevertMove();
-		return false;
-	}
-
-	// step fwd
-	FHitResult Hit(1.f);
-	MoveUpdatedComponent(Delta, PawnRotation, true, &Hit);
-
-	// Check result of forward movement
-	if (Hit.bBlockingHit)
-	{
-		if (Hit.bStartPenetrating)
-		{
-			// Undo movement
-			ScopedStepUpMovement.RevertMove();
-			return false;
-		}
-
-		// If we hit something above us and also something ahead of us, we should notify about the upward hit as well.
-		// The forward hit will be handled later (in the bSteppedOver case below).
-		// In the case of hitting something above but not forward, we are not blocked from moving so we don't need the notification.
-		if (SweepUpHit.bBlockingHit && Hit.bBlockingHit)
-		{
-			HandleImpact(SweepUpHit);
-		}
-
-		// pawn ran into a wall
-		HandleImpact(Hit);
-		if (IsFalling())
-		{
-			return true;
-		}
-
-		// adjust and try again
-		const float ForwardHitTime = Hit.Time;
-		const float ForwardSlideAmount = SlideAlongSurface(Delta, 1.f - Hit.Time, Hit.Normal, Hit, true);
-
-		if (IsFalling())
-		{
-			ScopedStepUpMovement.RevertMove();
-			return false;
-		}
-
-		// If both the forward hit and the deflection got us nowhere, there is no point in this step up.
-		if (ForwardHitTime == 0.f && ForwardSlideAmount == 0.f)
-		{
-			ScopedStepUpMovement.RevertMove();
-			return false;
-		}
-	}
-
-	// Step down
-	MoveUpdatedComponent(GravDir * StepTravelDownHeight, UpdatedComponent->GetComponentQuat(), true, &Hit);
-
-	// If step down was initially penetrating abort the step up
-	if (Hit.bStartPenetrating)
-	{
-		ScopedStepUpMovement.RevertMove();
-		return false;
-	}
-
-	UCharacterMovementComponent::FStepDownResult StepDownResult;
-	if (Hit.IsValidBlockingHit())
-	{
-		// See if this step sequence would have allowed us to travel higher than our max step height allows.
-		const float DeltaZ = Hit.ImpactPoint.Z - PawnFloorPointZ;
-		if (DeltaZ > MaxStepHeight)
-		{
-			ScopedStepUpMovement.RevertMove();
-			return false;
-		}
-
-		// Reject unwalkable surface normals here.
-		if (!IsWalkable(Hit))
-		{
-			// Reject if normal opposes movement direction
-			const bool bNormalTowardsMe = (Delta | Hit.ImpactNormal) < 0.f;
-			if (bNormalTowardsMe)
-			{
-				ScopedStepUpMovement.RevertMove();
-				return false;
-			}
-
-			// Also reject if we would end up being higher than our starting location by stepping down.
-			// It's fine to step down onto an unwalkable normal below us, we will just slide off. Rejecting those moves would prevent us from being able to walk off the edge.
-			if (Hit.Location.Z > OldLocation.Z)
-			{
-				ScopedStepUpMovement.RevertMove();
-				return false;
-			}
-		}
-
-		// Reject moves where the downward sweep hit something very close to the edge of the capsule. This maintains consistency with FindFloor as well.
-		if (!IsWithinEdgeTolerance(Hit.Location, Hit.ImpactPoint, PawnRadius))
-		{
-			ScopedStepUpMovement.RevertMove();
-			return false;
-		}
-
-		// Don't step up onto invalid surfaces if traveling higher.
-		if (DeltaZ > 0.f && !CanStepUp(Hit))
-		{
-			ScopedStepUpMovement.RevertMove();
-			return false;
-		}
-
-		// See if we can validate the floor as a result of this step down. In almost all cases this should succeed, and we can avoid computing the floor outside this method.
-		if (OutStepDownResult != NULL)
-		{
-			FindFloor(UpdatedComponent->GetComponentLocation(), StepDownResult.FloorResult, false, &Hit);
-
-			// Reject unwalkable normals if we end up higher than our initial height.
-			// It's fine to walk down onto an unwalkable surface, don't reject those moves.
-			if (Hit.Location.Z > OldLocation.Z)
-			{
-				// We should reject the floor result if we are trying to step up an actual step where we are not able to perch (this is rare).
-				// In those cases we should instead abort the step up and try to slide along the stair.
-				if (!StepDownResult.FloorResult.bBlockingHit && StepSideZ < MAX_STEP_SIDE_Z)
-				{
-					ScopedStepUpMovement.RevertMove();
-					return false;
-				}
-			}
-
-			StepDownResult.bComputedFloor = true;
-		}
-	}
-
-	// Copy step down result.
-	if (OutStepDownResult != NULL)
-	{
-		*OutStepDownResult = StepDownResult;
-	}
-
-	// Don't recalculate velocity based on this height adjustment, if considering vertical adjustments.
-	bJustTeleported |= !bMaintainHorizontalGroundVelocity;
-
-	return true;
-}
-
-// 6562
-
-void UUSBMovementComponent::ApplyImpactPhysicsForces(const FHitResult& Impact, const FVector& ImpactAcceleration, const FVector& ImpactVelocity)
-{
-	if ( Impact.bBlockingHit)
-	{
-		if (UPrimitiveComponent* ImpactComponent = Impact.GetComponent())
-		{
-			FBodyInstance* BI = ImpactComponent->GetBodyInstance(Impact.BoneName);
-			if (BI != nullptr && BI->IsInstanceSimulatingPhysics())
-			{
-				FVector ForcePoint = Impact.ImpactPoint;
-
-				const float BodyMass = FMath::Max(BI->GetBodyMass(), 1.0f);
-
-				if (bPushForceUsingZOffset)
-				{
-					FBox Bounds = BI->GetBodyBounds();
-
-					FVector Center, Extents;
-					Bounds.GetCenterAndExtents(Center, Extents);
-
-					if (!Extents.IsNearlyZero())
-					{
-						ForcePoint.Z = Center.Z + Extents.Z * PushForcePointZOffsetFactor;
-					}
-				}
-
-				FVector Force = Impact.ImpactNormal * -1.0f;
-
-				float PushForceModificator = 1.0f;
-
-				const FVector ComponentVelocity = ImpactComponent->GetPhysicsLinearVelocity();
-				const FVector VirtualVelocity = ImpactAcceleration.IsZero() ? ImpactVelocity : ImpactAcceleration.GetSafeNormal() * GetMaxSpeed();
-
-				float Dot = 0.0f;
-
-				if (bScalePushForceToVelocity && !ComponentVelocity.IsNearlyZero())
-				{
-					Dot = ComponentVelocity | VirtualVelocity;
-
-					if (Dot > 0.0f && Dot < 1.0f)
-					{
-						PushForceModificator *= Dot;
-					}
-				}
-
-				if (bPushForceScaledToMass)
-				{
-					PushForceModificator *= BodyMass;
-				}
-
-				Force *= PushForceModificator;
-
-				if (ComponentVelocity.IsNearlyZero())
-				{
-					Force *= InitialPushForceFactor;
-					ImpactComponent->AddImpulseAtLocation(Force, ForcePoint, Impact.BoneName);
-				}
-				else
-				{
-					Force *= PushForceFactor;
-					ImpactComponent->AddForceAtLocation(Force, ForcePoint, Impact.BoneName);
-				}
-			}
-		}
-	}
 }
 
 // 6821
@@ -3243,25 +2273,13 @@ float UUSBMovementComponent::GetSimulationTimeStep(float RemainingTime, int32 It
 
 // 8843
 void UUSBMovementComponent::UpdateFloorFromAdjustment()
-{
+{//텔레포트 이후 불림
 	if (!HasValidData())
 	{
 		return;
 	}
 
-	// If walking, try to update the cached floor so it is current. This is necessary for UpdateBasedMovement() and MoveAlongFloor() to work properly.
-	// If base is now NULL, presumably we are no longer walking. If we had a valid floor but don't find one now, we'll likely start falling.
-	// Walking 상태에서 현재 Floor를 갱신한다. UpdateBasedMovement()와 MoveAlongFloor() 메소드가 정확하게 동작하기 위해선 필수적으로 호출되어야 한다.
-	if (GetMovementBase())
-	{
-		// 만약 CurrentFloor가 유효하더라도 다음 바닥을 찾지 못한다면 Falling이 시작된다.
-		FindFloor(UpdatedComponent->GetComponentLocation(), CurrentFloor, false);
-	}
-	else
-	{
-		// 만약 Base가 없다면 Walking할 수 없다. 
-		CurrentFloor.Clear();
-	}
+	FindFloor(UpdatedComponent->GetComponentLocation(), CurrentFloor, false);
 }
 
 // 9357,물리상호작용,내몸에 물리 오브젝트가 닿았을때
@@ -3294,11 +2312,7 @@ void UUSBMovementComponent::ClearAccumulatedForces()
 	PendingLaunchVelocity = FVector::ZeroVector;
 }
 
-// 10900
-ETeleportType UUSBMovementComponent::GetTeleportType() const
-{
-	return bJustTeleported ? ETeleportType::TeleportPhysics : ETeleportType::None;
-}
+
 
 void UUSBMovementComponent::Jump()
 {
@@ -3365,11 +2379,6 @@ float UUSBMovementComponent::GetJumpMaxHoldTime() const
 
 bool UUSBMovementComponent::CanJump() const
 {
-	return CanJumpInternal();
-}
-
-bool UUSBMovementComponent::CanJumpInternal_Implementation() const
-{
 	// Ensure the character isn't currently crouched.
 	bool bCanJump = true;// = !bIsCrouched;
 
@@ -3407,6 +2416,7 @@ bool UUSBMovementComponent::CanJumpInternal_Implementation() const
 	return bCanJump;
 }
 
+
 void UUSBMovementComponent::ResetJumpState()
 {
 	bPressedJump = false;
@@ -3430,104 +2440,6 @@ bool UUSBMovementComponent::IsJumpProvidingForce() const
 	return false;
 }
 
-/******************************
-* Character.cpp Base 관련 요소
- ******************************/
- //바닥에 있는 물리 오브젝트가 움직이는것을 따라가는듯
-void UUSBMovementComponent::SetBase(UPrimitiveComponent* NewBaseComponent, const FName InBoneName, bool bNotifyPawn) {
-	// If NewBaseComponent is nullptr, ignore bone name.
-	const FName BoneName = (NewBaseComponent ? InBoneName : NAME_None);
-
-	// See what changed.
-	const bool bBaseChanged = (NewBaseComponent != BasedMovement.MovementBase);
-	const bool bBoneChanged = (BoneName != BasedMovement.BoneName);
-
-	if (bBaseChanged || bBoneChanged)
-	{
-		// Verify no recursion.
-		APawn* Loop = (NewBaseComponent ? Cast<APawn>(NewBaseComponent->GetOwner()) : nullptr);
-		while (Loop)
-		{
-			if (Loop == PawnOwner)
-			{
-				//UE_LOG(LogCharacter, Warning, TEXT(" SetBase failed! Recursion detected. Pawn %s already based on %s."), *GetName(), *NewBaseComponent->GetName()); //-V595
-				return;
-			}
-			if (UPrimitiveComponent* LoopBase = Loop->GetMovementBase())
-			{
-				Loop = Cast<APawn>(LoopBase->GetOwner());
-			}
-			else
-			{
-				break;
-			}
-		}
-
-		// Set base.
-		UPrimitiveComponent* OldBase = BasedMovement.MovementBase;
-		BasedMovement.MovementBase = NewBaseComponent;
-		BasedMovement.BoneName = BoneName;
-
-
-		const bool bBaseIsSimulating = NewBaseComponent && NewBaseComponent->IsSimulatingPhysics();
-		if (bBaseChanged)
-		{
-			MovementBaseUtility::RemoveTickDependency(PrimaryComponentTick, OldBase);
-			// We use a special post physics function if simulating, otherwise add normal tick prereqs.
-			if (!bBaseIsSimulating)
-			{
-				MovementBaseUtility::AddTickDependency(PrimaryComponentTick, NewBaseComponent);
-			}
-		}
-
-		if (NewBaseComponent)
-		{
-			// Update OldBaseLocation/Rotation as those were referring to a different base
-			// ... but not when handling replication for proxies (since they are going to copy this data from the replicated values anyway)
-			if (!bInBaseReplication)
-			{
-				// Force base location and relative position to be computed since we have a new base or bone so the old relative offset is meaningless.
-				SaveBaseLocation();
-			}
-
-		}
-		else
-		{
-			BasedMovement.BoneName = NAME_None; // None, regardless of whether user tried to set a bone name, since we have no base component.
-			BasedMovement.bRelativeRotation = false;
-			CurrentFloor.Clear();
-		}
-
-		if (PawnOwner->Role == ROLE_Authority || PawnOwner->Role == ROLE_AutonomousProxy)
-		{
-			BasedMovement.bServerHasBaseComponent = (BasedMovement.MovementBase != nullptr); // Also set on proxies for nicer debugging.
-		}
-		// Notify this actor of his new floor.
-		if (bNotifyPawn)
-		{
-			BaseChange();
-		}
-	}
-}
-
-void UUSBMovementComponent::BaseChange()
-{
-	if (MovementMode != MOVE_None)
-	{
-		AActor* ActualMovementBase = PawnOwner->GetMovementBaseActor(PawnOwner);
-		if ((ActualMovementBase != nullptr) && !ActualMovementBase->CanBeBaseForCharacter(PawnOwner))
-		{
-			JumpOff(ActualMovementBase);
-		}
-	}
-}
-
-void UUSBMovementComponent::SaveRelativeBasedMovement(const FVector& NewRelativeLocation, const FRotator& NewRotation, bool bRelativeRotation)
-{
-	BasedMovement.Location = NewRelativeLocation;
-	BasedMovement.Rotation = NewRotation;
-	BasedMovement.bRelativeRotation = bRelativeRotation;
-}
 
 void UUSBMovementComponent::SetPhysicalVelocity(FVector& velo)
 {

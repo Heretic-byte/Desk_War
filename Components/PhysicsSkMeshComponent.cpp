@@ -6,6 +6,12 @@
 UPhysicsSkMeshComponent::UPhysicsSkMeshComponent(const FObjectInitializer& objInit)
 	:Super(objInit)
 {
+	m_BoundingCapsule = CreateDefaultSubobject<UCapsuleComponent>("BoundingCapsule");
+	m_BoundingCapsule->SetupAttachment(this);
+	m_BoundingCapsule->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	m_BoundingCapsule->SetEnableGravity(false);
+	m_BoundingCapsule->SetHiddenInGame(true);
+
 	m_fMeshRadiusMultiple = 1.f;
 }
 
