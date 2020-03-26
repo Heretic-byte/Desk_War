@@ -32,6 +32,10 @@ protected://components
 	UPinSkMeshComponent* m_Pin5Pin;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spine_Physics", meta = (AllowPrivateAccess = "true"))
 	USplineComponent* m_SpineSpline;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "USB_Body_Mesh", meta = (AllowPrivateAccess = "true"))
+	UCapsuleComponent* m_BoundPinUSB;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "USB_Body_Mesh", meta = (AllowPrivateAccess = "true"))
+	UCapsuleComponent* m_BoundPin5Pin;
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Spine_Physics")
 	UStaticMesh* m_MeshSpine;
@@ -54,6 +58,8 @@ protected:
 	float m_fCollMass;
 	UPROPERTY(EditDefaultsOnly, Category = "Spine_Physics")
 	float m_fMaxAngularVelocity;
+	UPROPERTY(EditDefaultsOnly, Category = "Spine_Physics")
+	bool m_bEnableSpineGravity;
 private:
 	int m_nSphereSpineCount;
 
@@ -77,6 +83,7 @@ public:
 private:
 	void CreatePinUSB();
 	void CreatePin5Pin();
+	void CreateBoundCapsule();
 	void CreateSpline();
 	void UpdateSplinePoint();
 	void UpdateSplineMesh();

@@ -19,7 +19,7 @@ AUSB_PhysicsPawn::AUSB_PhysicsPawn(const FObjectInitializer& objInit):Super(objI
 	m_fMaxAngularVelocity = 150.f;
 	m_ArySpineColls.Empty();
 	m_ArySplineMeshCompos.Empty();
-
+	m_bEnableSpineGravity = true;
 	static ConstructorHelpers::FObjectFinder<UPhysicalMaterial> FoundPhyMat(TEXT("PhysicalMaterial'/Game/PhysicsMaterial/PM_LowFriction.PM_LowFriction'"));
 	if (FoundPhyMat.Succeeded())
 	{
@@ -30,6 +30,8 @@ AUSB_PhysicsPawn::AUSB_PhysicsPawn(const FObjectInitializer& objInit):Super(objI
 	CreatePinUSB();
 	CreatePin5Pin();
 	CreateSpline();
+	CreateBoundCapsule();
+	
 }
 
 void AUSB_PhysicsPawn::CreatePinUSB()
@@ -65,6 +67,16 @@ void AUSB_PhysicsPawn::CreatePin5Pin()
 	m_Pin5Pin->SetUseCCD(true);
 	m_Pin5Pin->SetSimulatePhysics(true);
 	//m_Pin5Pin->SetGenerateOverlapEvents(true);
+}
+
+void AUSB_PhysicsPawn::CreateBoundCapsule()
+{
+	m_BoundPinUSB = CreateDefaultSubobject<UCapsuleComponent>("Bound_USB");
+	m_BoundPinUSB->SetCapsuleSize(22.f, 22.f, false);
+	m_PinUSB->SetBoundingCapsule(m_BoundPinUSB);
+	m_BoundPin5Pin = CreateDefaultSubobject<UCapsuleComponent>("Bound_5Pin");
+	m_BoundPin5Pin->SetCapsuleSize(22.f, 22.f, false);
+	m_Pin5Pin->SetBoundingCapsule(m_BoundPin5Pin);
 }
 
 void AUSB_PhysicsPawn::CreateSpline()
@@ -134,6 +146,7 @@ void AUSB_PhysicsPawn::SpawnSpineColls()
 		SphereSpawned->SetRelativeLocation(SphereLocation,false,nullptr,ETeleportType::ResetPhysics);
 		SphereSpawned->SetPhysicsMaxAngularVelocityInDegrees(m_fMaxAngularVelocity);
 		SphereSpawned->SetSimulatePhysics(true);
+		SphereSpawned->SetEnableGravity(m_bEnableSpineGravity);
 		SphereSpawned->SetUseCCD(true);
 		m_ArySpineColls.Emplace(SphereSpawned);
 		Offset -= (m_fLineRadius * 2) + m_fLineExtraSpacing;

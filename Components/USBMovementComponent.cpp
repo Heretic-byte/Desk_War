@@ -109,7 +109,6 @@ UCapsuleComponent* UUSBMovementComponent::GetBoundingCapsule() const
 void UUSBMovementComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
 	CheckJumpInput(DeltaTime);
 
 	const FVector InputVector = ConsumeInputVector();
@@ -132,6 +131,7 @@ void UUSBMovementComponent::TickComponent(float DeltaTime, enum ELevelTick TickT
 #if WITH_EDITOR
 void UUSBMovementComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
+	PRINTF("PostEdit");
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 
 	const UProperty* PropertyThatChanged = PropertyChangedEvent.MemberProperty;
@@ -367,7 +367,7 @@ void UUSBMovementComponent::OnMovementModeChanged(EMovementMode PreviousMovement
 
 		// make sure we update our new floor/base on initial entry of the walking physics
 		FindFloor(UpdatedComponent->GetComponentLocation(), CurrentFloor, false);
-		AdjustFloorHeight();
+		//AdjustFloorHeight();
 	}
 	else
 	{
@@ -464,7 +464,7 @@ void UUSBMovementComponent::PerformMovement(float DeltaSeconds)
 	} // End scoped movement update
 
 
-	UpdateComponentVelocity();
+	//UpdateComponentVelocity();
 
 	const FVector NewLocation = UpdatedComponent ? UpdatedComponent->GetComponentLocation() : FVector::ZeroVector;
 	const FQuat NewRotation = UpdatedComponent ? UpdatedComponent->GetComponentQuat() : FQuat::Identity;
@@ -1161,8 +1161,8 @@ void UUSBMovementComponent::PhysFalling(float deltaTime, int32 Iterations)
 				if (subTimeTickRemaining > KINDA_SMALL_NUMBER && (Delta | Adjusted) > 0.f)
 				{
 					// Move in deflected direction.
-					SafeMoveUpdatedComponent(Delta, PawnRotation, true, Hit);
-
+					//SafeMoveUpdatedComponent(Delta, PawnRotation, true, Hit);
+					SetPhysicalVelocity(Delta);
 					if (Hit.bBlockingHit)
 					{
 						// hit second wall
@@ -1216,7 +1216,8 @@ void UUSBMovementComponent::PhysFalling(float deltaTime, int32 Iterations)
 
 						// bDitch=true means that pawn is straddling two slopes, neither of which he can stand on
 						bool bDitch = ((OldHitImpactNormal.Z > 0.f) && (Hit.ImpactNormal.Z > 0.f) && (FMath::Abs(Delta.Z) <= KINDA_SMALL_NUMBER) && ((Hit.ImpactNormal | OldHitImpactNormal) < 0.f));
-						SafeMoveUpdatedComponent(Delta, PawnRotation, true, Hit);
+						//SafeMoveUpdatedComponent(Delta, PawnRotation, true, Hit);
+						SetPhysicalVelocity(Delta);
 						if (Hit.Time == 0.f)
 						{
 							// if we are stuck then try to side step
@@ -1225,7 +1226,8 @@ void UUSBMovementComponent::PhysFalling(float deltaTime, int32 Iterations)
 							{
 								SideDelta = FVector(OldHitNormal.Y, -OldHitNormal.X, 0).GetSafeNormal();
 							}
-							SafeMoveUpdatedComponent(SideDelta, PawnRotation, true, Hit);
+							//SafeMoveUpdatedComponent(SideDelta, PawnRotation, true, Hit);
+							SetPhysicalVelocity(SideDelta);
 						}
 
 						if (bDitch || IsValidLandingSpot(UpdatedComponent->GetComponentLocation(), Hit) || Hit.Time == 0.f)
@@ -1246,7 +1248,8 @@ void UUSBMovementComponent::PhysFalling(float deltaTime, int32 Iterations)
 								Velocity.Y += 0.25f * GetMaxSpeed() * (FMath::FRand() - 0.5f);
 								Velocity.Z = FMath::Max<float>(JumpZVelocity * 0.25f, 1.f);
 								Delta = Velocity * timeTick;
-								SafeMoveUpdatedComponent(Delta, PawnRotation, true, Hit);
+								//SafeMoveUpdatedComponent(Delta, PawnRotation, true, Hit);
+								SetPhysicalVelocity(Delta);
 							}
 						}
 					}
@@ -1414,8 +1417,8 @@ void UUSBMovementComponent::MoveAlongFloor(const FVector& InVelocity, float Delt
 			const float InitialPercentRemaining = 1.f - PercentTimeApplied;
 			RampVector = ComputeGroundMovementDelta(Delta * InitialPercentRemaining, Hit, false);
 			LastMoveTimeSlice = InitialPercentRemaining * LastMoveTimeSlice;
-			SafeMoveUpdatedComponent(RampVector, UpdatedComponent->GetComponentQuat(), true, Hit);
-
+			//SafeMoveUpdatedComponent(RampVector, UpdatedComponent->GetComponentQuat(), true, Hit);
+			SetPhysicalVelocity(RampVector);
 			const float SecondHitPercent = Hit.Time * InitialPercentRemaining;
 			PercentTimeApplied = FMath::Clamp(PercentTimeApplied + SecondHitPercent, 0.f, 1.f);
 		}
@@ -1533,7 +1536,7 @@ void UUSBMovementComponent::PhysWalking(float deltaTime, int32 Iterations)
 		// Validate the floor check
 		if (CurrentFloor.IsWalkableFloor())
 		{
-			AdjustFloorHeight();
+			//AdjustFloorHeight();
 		}
 		else if (CurrentFloor.HitResult.bStartPenetrating && remainingTime <= 0.f)
 		{
@@ -1619,8 +1622,9 @@ void UUSBMovementComponent::AdjustFloorHeight()
 		const float InitialZ = UpdatedComponent->GetComponentLocation().Z;
 		const float AvgFloorDist = (MIN_FLOOR_DIST + MAX_FLOOR_DIST) * 0.5f;
 		const float MoveDist = AvgFloorDist - OldFloorDist;
-		SafeMoveUpdatedComponent(FVector(0.f, 0.f, MoveDist), UpdatedComponent->GetComponentQuat(), true, AdjustHit);
-		//UE_LOG(LogCharacterMovement, VeryVerbose, TEXT("Adjust floor height %.3f (Hit = %d)"), MoveDist, AdjustHit.bBlockingHit);
+		//SafeMoveUpdatedComponent(FVector(0.f, 0.f, MoveDist), UpdatedComponent->GetComponentQuat(), true, AdjustHit);
+		FVector FloorDelta = FVector(0.f, 0.f, MoveDist);
+		SetPhysicalVelocity(FloorDelta);
 
 		if (!AdjustHit.IsValidBlockingHit())
 		{
@@ -1828,7 +1832,7 @@ void UUSBMovementComponent::PhysicsRotation(float DeltaTime)
 			DesiredRotation.Roll = FMath::FixedTurn(CurrentRotation.Roll, DesiredRotation.Roll, DeltaRot.Roll);
 		}
 
-		MoveUpdatedComponent(FVector::ZeroVector, DesiredRotation, /*bSweep*/ false);
+		MoveUpdatedComponent(FVector::ZeroVector, DesiredRotation, /*bSweep*/ false,nullptr,ETeleportType::TeleportPhysics);
 	}
 }
 
@@ -2450,7 +2454,11 @@ void UUSBMovementComponent::SetPhysicalVelocity(FVector& velo)
 		//// Set up
 		//if (Sweep(Prim, velo))
 		{
-			Prim->SetPhysicsLinearVelocity(velo);
+			if (velo.X > 0.3f)
+			{
+				PRINTF("Here");
+			}
+			Prim->SetPhysicsLinearVelocity(velo*10);
 			PRINTF("Velo : %s", *velo.ToString());
 		}
 
@@ -2533,6 +2541,7 @@ bool UUSBMovementComponent::Sweep(UPrimitiveComponent * Prim, FVector & velo)
 							{
 								BlockingHitNormalDotDelta = NormalDotDelta;
 								BlockingHitIndex = HitIdx;
+								//각도차가 클수록 내적이 작아진다.
 							}
 						}
 						else if (BlockingHitIndex == INDEX_NONE)
