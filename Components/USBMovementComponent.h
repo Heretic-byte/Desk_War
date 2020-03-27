@@ -4,11 +4,80 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PawnMovementComponent.h"
-#include "GameFramework/CharacterMovementComponent.h"	// PawnMovementComponent.h 포함
 #include "GameFramework/Character.h"
 #include "Components/SphereComponent.h"
 #include "Engine/EngineBaseTypes.h"
+#include "Components/PhysicsSkMeshComponent.h"
+
 #include "USBMovementComponent.generated.h"
+
+
+
+
+USTRUCT(BlueprintType)
+struct DESK_WAR_API FUSBFindFloorResult
+{
+	GENERATED_USTRUCT_BODY()
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = CharacterFloor)
+	uint32 bBlockingHit : 1;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = CharacterFloor)
+	uint32 bWalkableFloor : 1;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = CharacterFloor)
+	uint32 bLineTrace : 1;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = CharacterFloor)
+	float FloorDist;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = CharacterFloor)
+	float LineDist;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = CharacterFloor)
+	FHitResult HitResult;
+
+public:
+
+	FUSBFindFloorResult()
+		: bBlockingHit(false)
+		, bWalkableFloor(false)
+		, bLineTrace(false)
+		, FloorDist(0.f)
+		, LineDist(0.f)
+		, HitResult(1.f)
+	{
+	}
+
+	/** Returns true if the floor result hit a walkable surface. */
+	bool IsWalkableFloor() const
+	{
+		return bBlockingHit && bWalkableFloor;
+	}
+
+	void Clear()
+	{
+		bBlockingHit = false;
+		bWalkableFloor = false;
+		bLineTrace = false;
+		FloorDist = 0.f;
+		LineDist = 0.f;
+		HitResult.Reset(1.f, false);
+	}
+
+	/** Gets the distance to floor, either LineDist or FloorDist. */
+	float GetDistanceToFloor() const
+	{
+		// When the floor distance is set using SetFromSweep, the LineDist value will be reset.
+		// However, when SetLineFromTrace is used, there's no guarantee that FloorDist is set.
+		return bLineTrace ? LineDist : FloorDist;
+	}
+
+	void SetFromSweep(const FHitResult& InHit, const float InSweepFloorDist, const bool bIsWalkableFloor);
+	void SetFromLineTrace(const FHitResult& InHit, const float InSweepFloorDist, const float InLineDist, const bool bIsWalkableFloor);
+};
+
+
 
 
 UCLASS()
@@ -18,118 +87,80 @@ class DESK_WAR_API UUSBMovementComponent : public UPawnMovementComponent
 public:
 	UUSBMovementComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 private:
-	UPROPERTY(Category = "Character Movement: Walking", EditAnywhere, meta = (ClampMin = "0.0", ClampMax = "90.0", UIMin = "0.0", UIMax = "90.0"))
-	float WalkableFloorAngle;
-	UPROPERTY(Category = "Character Movement: Walking", VisibleAnywhere)
-	float WalkableFloorZ;
-	UPROPERTY(Transient)
-	TEnumAsByte<enum EMovementMode> DefaultGroundMovementMode;
-private:
-	uint8 bNeedsSweepWhileWalkingUpdate : 1;
-protected://pathfollow
+	//my
 	UPROPERTY()
-	uint8 bMovementInProgress : 1;
-	UPROPERTY(Transient)
-	uint8 bHasRequestedVelocity : 1;
-	UPROPERTY(Transient)
-	uint8 bRequestedMoveWithMaxSpeed : 1;
-	/** Flag set in pre-physics update to indicate that based movement should be updated post-physics */
-	uint8 bDeferUpdateBasedMovement : 1;
-	/** Whether to raycast to underlying geometry to better conform navmesh-walking characters */
-	UPROPERTY(Category = "Character Movement: NavMesh Movement", EditAnywhere, BlueprintReadOnly)
-	uint8 bProjectNavMeshWalking : 1;
-	/** Use both WorldStatic and WorldDynamic channels for NavWalking geometry conforming */
-	UPROPERTY(Category = "Character Movement: NavMesh Movement", EditAnywhere, BlueprintReadOnly, AdvancedDisplay)
-	uint8 bProjectNavMeshOnBothWorldChannels : 1;
-public:
-	/** (Own) If enabled, Gravity is applied for the character. */
-	UPROPERTY(Category = "Character Movement (General Settings)", EditAnywhere, BlueprintReadWrite)
-	bool bEnableGravity;
-	/** 177 Custom gravity scale. Gravity is multiplied by this amount for the character. */
-	UPROPERTY(Category = "Character Movement (General Settings)", EditAnywhere, BlueprintReadWrite)
-	float GravityScale;
-	/** 181 Maximum height character can step up */
-	UPROPERTY(Category = "Character Movement: Walking", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
-	float MaxStepHeight;
-	/** 185 Initial velocity (instantaneous vertical acceleration) when jumping. */
-	UPROPERTY(Category = "Character Movement: Jumping / Falling", EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Jump Z Velocity", ClampMin = "0", UIMin = "0"))
-	float JumpZVelocity;
+	UPhysicsSkMeshComponent* m_MovingTarget;
 
-	/** 209
-	 * Actor's current movement mode (walking, falling, etc).
-	 *    - walking:  Walking on a surface, under the effects of friction, and able to "step up" barriers. Vertical velocity is zero.
-	 *    - falling:  Falling under the effects of gravity, after jumping or walking off the edge of a surface.
-	 *    - flying:   Flying, ignoring the effects of gravity.
-	 *    - swimming: Swimming through a fluid volume, under the effects of gravity and buoyancy.
-	 *    - custom:   User-defined custom movement mode, including many possible sub-modes.
-	 * This is automatically replicated through the Character owner and for client-server movement functions.
-	 * @see SetMovementMode(), CustomMovementMode
-	 */
-	UPROPERTY(Category = "Character Movement: CurrentMovementMode", BlueprintReadOnly)
-	TEnumAsByte<enum EMovementMode> CurrentMovementMode;
+	UPROPERTY()
+	TArray<AActor*>* m_ptrAryTraceIgnoreActors;
 
-	/** 234
-	 * Setting that affects movement control. Higher values allow faster changes in direction.
-	 * If bUseSeparateBrakingFriction is false, also affects the ability to stop more quickly when braking (whenever Acceleration is zero), where it is multiplied by BrakingFrictionFactor.
-	 * When braking, this property allows you to control how much friction is applied when moving across the ground, applying an opposing force that scales with current velocity.
-	 * This can be used to simulate slippery surfaces such as ice or oil by changing the value (possibly based on the material pawn is standing on).
-	 * @see BrakingDecelerationWalking, BrakingFriction, bUseSeparateBrakingFriction, BrakingFrictionFactor
-	 */
-	UPROPERTY(Category = "Character Movement: Walking", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
-	float GroundFriction;
+	FVector m_vInputNormal;
+
+	FUSBFindFloorResult CurrentFloor;
+private:
+	virtual void UpdateComponentVelocity() override;
+	void AddIgnoreActorsToQuery(FCollisionQueryParams& queryParam);
+	//
+private://Ground Property
+	UPROPERTY(Category = "Character Movement: Walking", EditAnywhere, meta = (ClampMin = "0.0", ClampMax = "90.0", UIMin = "0.0", UIMax = "90.0"))
+	float m_fWalkableFloorAngle;
+	UPROPERTY(Category = "Character Movement: Walking", VisibleAnywhere)
+	float m_fWalkableFloorZ;
 	/** 250 The maximum ground speed when walking. Also determines maximum lateral speed when falling. */
 	UPROPERTY(Category = "Character Movement: Walking", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
 	float MaxWalkSpeed;
-	/** 254 The maximum ground speed when walking and crouched. */
-	UPROPERTY(Category = "Character Movement: Walking", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
-	float MaxWalkSpeedCrouched;
-	/** 258 The maximum swimming speed. */
-	UPROPERTY(Category = "Character Movement: Swimming", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
-	float MaxSwimSpeed;
-	/** 262 The maximum flying speed. */
-	UPROPERTY(Category = "Character Movement: Flying", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
-	float MaxFlySpeed;
-	/** 266 The maximum speed when using Custom movement mode. */
-	UPROPERTY(Category = "Character Movement: Custom Movement", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
-	float MaxCustomMovementSpeed;
-	/** 270 Max Acceleration (rate of change of velocity) */
 	UPROPERTY(Category = "Character Movement (General Settings)", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
 	float MaxAcceleration;
 	/** 274 The ground speed that we should accelerate up to when walking at minimum analog stick tilt */
 	UPROPERTY(Category = "Character Movement: Walking", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
 	float MinAnalogWalkSpeed;
 
-	/** 278
-	 * Factor used to multiply actual value of friction used when braking.
-	 * This applies to any friction value that is currently used, which may depend on bUseSeparateBrakingFriction.
-	 * @note This is 2 by default for historical reasons, a value of 1 gives the true drag equation.
-	 * @see bUseSeparateBrakingFriction, GroundFriction, BrakingFriction
+private:
+	UPROPERTY(Category = "Character Movement: m_eCurrentMovementMode", BlueprintReadOnly)
+	TEnumAsByte<enum EMovementMode> m_eCurrentMovementMode;
+	UPROPERTY(Category = "Character Movement (General Settings)", EditAnywhere, BlueprintReadWrite)
+	TEnumAsByte<enum EMovementMode> m_eDefaultLandMovementMode;
+	UPROPERTY(Transient)
+	TEnumAsByte<enum EMovementMode> m_eDefaultGroundMovementMode;
+protected://pathfollow
+	UPROPERTY()
+	uint8 m_bMovementInProgress : 1;
+	UPROPERTY(Transient)
+	uint8 m_bHasRequestedVelocity : 1;
+	UPROPERTY(Transient)
+	uint8 m_bRequestedMoveWithMaxSpeed : 1;
+public://gravity
+	/** (Own) If enabled, Gravity is applied for the character. */
+	UPROPERTY(Category = "Character Movement (General Settings)", EditAnywhere, BlueprintReadWrite)
+	bool bEnableGravity;
+	/** 177 Custom gravity scale. Gravity is multiplied by this amount for the character. */
+	UPROPERTY(Category = "Character Movement (General Settings)", EditAnywhere, BlueprintReadWrite)
+	float GravityScale;
+public://jump
+	/** 185 Initial velocity (instantaneous vertical acceleration) when jumping. */
+	UPROPERTY(Category = "Character Movement: Jumping / Falling", EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Jump Z Velocity", ClampMin = "0", UIMin = "0"))
+	float JumpZVelocity;
+	/** 397
+	 *	Apply gravity while the character is actively jumping (e.g. holding the jump key).
+	 *	Helps remove frame-rate dependent jump height, but may alter base jump height.
 	 */
+	UPROPERTY(Category = "Character Movement: Jumping / Falling", EditAnywhere, BlueprintReadWrite, AdvancedDisplay)
+	uint8 bApplyGravityWhileJumping : 1;
+protected://Friction
+	UPROPERTY(Category = "Character Movement: Walking", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
+	float GroundFriction;
 	UPROPERTY(Category = "Character Movement (General Settings)", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
 	float BrakingFrictionFactor;
 
-	/** 287
-	 * Friction (drag) coefficient applied when braking (whenever Acceleration = 0, or if character is exceeding max speed); actual value used is this multiplied by BrakingFrictionFactor.
-	 * When braking, this property allows you to control how much friction is applied when moving across the ground, applying an opposing force that scales with current velocity.
-	 * Braking is composed of friction (velocity-dependent drag) and constant deceleration.
-	 * This is the current value, used in all movement modes; if this is not desired, override it or bUseSeparateBrakingFriction when movement mode changes.
-	 * @note Only used if bUseSeparateBrakingFriction setting is true, otherwise current friction such as GroundFriction is used.
-	 * @see bUseSeparateBrakingFriction, BrakingFrictionFactor, GroundFriction, BrakingDecelerationWalking
+	/** 388
+	 * If true, BrakingFriction will be used to slow the character to a stop (when there is no m_vAcceleration).
+	 * If false, braking uses the same friction passed to CalcVelocity() (ie GroundFriction when walking), multiplied by BrakingFrictionFactor.
+	 * This setting applies to all movement modes; if only desired in certain modes, consider toggling it when movement modes change.
+	 * @see BrakingFriction
 	 */
-	 // 공기저항이 없는 게임월드에 마찰과 별도의 감속을 주기위한 변수
-	UPROPERTY(Category = "Character Movement (General Settings)", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0", EditCondition = "bUseSeparateBrakingFriction"))
-	float BrakingFriction;
-
-	/** 298
-	 * Time substepping when applying braking friction. Smaller time steps increase accuracy at the slight cost of performance, especially if there are large frame times.
-	 */
-	UPROPERTY(Category = "Character Movement (General Settings)", EditAnywhere, BlueprintReadWrite, AdvancedDisplay, meta = (ClampMin = "0.0166", ClampMax = "0.05", UIMin = "0.0166", UIMax = "0.05"))
-	float BrakingSubStepTime;
-
-	/** 304
-	 * Deceleration when walking and not applying acceleration. This is a constant opposing force that directly lowers velocity by a constant value.
-	 * @see GroundFriction, MaxAcceleration
-	 */
+	UPROPERTY(Category = "Character Movement (General Settings)", EditDefaultsOnly, BlueprintReadWrite)
+	uint8 bUseSeparateBrakingFriction : 1;
+protected://braiking
 	UPROPERTY(Category = "Character Movement: Walking", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
 	float BrakingDecelerationWalking;
 
@@ -140,36 +171,23 @@ public:
 	UPROPERTY(Category = "Character Movement: Jumping / Falling", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
 	float BrakingDecelerationFalling;
 
-	/** 318
-	 * Deceleration when swimming and not applying acceleration.
-	 * @see MaxAcceleration
-	 */
-	UPROPERTY(Category = "Character Movement: Swimming", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
-	float BrakingDecelerationSwimming;
-
-	/** 325
-	 * Deceleration when flying and not applying acceleration.
-	 * @see MaxAcceleration
-	 */
-	UPROPERTY(Category = "Character Movement: Flying", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
-	float BrakingDecelerationFlying;
-
+protected://Air
 	/** 332
 	 * When falling, amount of lateral movement control available to the character.
 	 * 0 = no control, 1 = full control at max speed of MaxWalkSpeed.
 	 */
 	UPROPERTY(Category = "Character Movement: Jumping / Falling", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
-	float AirControl;
+	float m_fAirControl;
 
 	/** 339
-	 * When falling, multiplier applied to AirControl when lateral velocity is less than AirControlBoostVelocityThreshold.
+	 * When falling, multiplier applied to m_fAirControl when lateral velocity is less than AirControlBoostVelocityThreshold.
 	 * Setting this to zero will disable air control boosting. Final result is clamped at 1.
 	 */
 	UPROPERTY(Category = "Character Movement: Jumping / Falling", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
 	float AirControlBoostMultiplier;
 
 	/** 346
-	 * When falling, if lateral velocity magnitude is less than this value, AirControl is multiplied by AirControlBoostMultiplier.
+	 * When falling, if lateral velocity magnitude is less than this value, m_fAirControl is multiplied by AirControlBoostMultiplier.
 	 * Setting this to zero will disable air control boosting.
 	 */
 	UPROPERTY(Category = "Character Movement: Jumping / Falling", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
@@ -177,180 +195,31 @@ public:
 
 	/** 353
 	 * Friction to apply to lateral air movement when falling.
-	 * If bUseSeparateBrakingFriction is false, also affects the ability to stop more quickly when braking (whenever Acceleration is zero).
+	 * If bUseSeparateBrakingFriction is false, also affects the ability to stop more quickly when braking (whenever m_vAcceleration is zero).
 	 * @see BrakingFriction, bUseSeparateBrakingFriction
 	 */
 	UPROPERTY(Category = "Character Movement: Jumping / Falling", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
-	float FallingLateralFriction;
+	float m_fFallingLateralFriction;
 
-
+protected://General
+	float m_fMass;
 	/** 384 Change in rotation per second, used when UseControllerDesiredRotation or OrientRotationToMovement are true. Set a negative value for infinite rotation rate and instant turns. */
 	UPROPERTY(Category = "Character Movement (Rotation Settings)", EditAnywhere, BlueprintReadWrite)
 	FRotator RotationRate;
-
-	/** 388
-	 * If true, BrakingFriction will be used to slow the character to a stop (when there is no Acceleration).
-	 * If false, braking uses the same friction passed to CalcVelocity() (ie GroundFriction when walking), multiplied by BrakingFrictionFactor.
-	 * This setting applies to all movement modes; if only desired in certain modes, consider toggling it when movement modes change.
-	 * @see BrakingFriction
-	 */
-	UPROPERTY(Category = "Character Movement (General Settings)", EditDefaultsOnly, BlueprintReadWrite)
-	uint8 bUseSeparateBrakingFriction : 1;
-
-	/** 397
-	 *	Apply gravity while the character is actively jumping (e.g. holding the jump key).
-	 *	Helps remove frame-rate dependent jump height, but may alter base jump height.
-	 */
-	UPROPERTY(Category = "Character Movement: Jumping / Falling", EditAnywhere, BlueprintReadWrite, AdvancedDisplay)
-	uint8 bApplyGravityWhileJumping : 1;
-
-	/**403
-	 * If true, smoothly rotate the Character toward the Controller's desired rotation (typically Controller->ControlRotation), using RotationRate as the rate of rotation change. Overridden by OrientRotationToMovement.
-	 * Normally you will want to make sure that other settings are cleared, such as bUseControllerRotationYaw on the Character.
-	 */
-	UPROPERTY(Category = "Character Movement (Rotation Settings)", EditAnywhere, BlueprintReadWrite)
-	uint8 bUseControllerDesiredRotation : 1;
-
-	/** 410
-	 * If true, rotate the Character toward the direction of acceleration, using RotationRate as the rate of rotation change. Overrides UseControllerDesiredRotation.
-	 * Normally you will want to make sure that other settings are cleared, such as bUseControllerRotationYaw on the Character.
-	 */
-	UPROPERTY(Category = "Character Movement (Rotation Settings)", EditAnywhere, BlueprintReadWrite)
-	uint8 bOrientRotationToMovement : 1;
-
-	/** 417
-	 * Whether or not the character should sweep for collision geometry while walking.
-	 * @see USceneComponent::MoveComponent.
-	 */
-	UPROPERTY(Category = "Character Movement: Walking", EditAnywhere, BlueprintReadWrite)
-	uint8 bSweepWhileNavWalking : 1;
-
-	/** 441
-	 * If true, high-level movement updates will be wrapped in a movement scope that accumulates updates and defers a bulk of the work until the end.
-	 * When enabled, touch and hit events will not be triggered until the end of multiple moves within an update, which can improve performance.
-	 *
-	 * @see FScopedMovementUpdate
-	 */
-	UPROPERTY(Category = "Character Movement (General Settings)", EditAnywhere, AdvancedDisplay)
-	uint8 bEnableScopedMovementUpdates : 1;
-
-	/** 460 Ignores size of acceleration component, and forces max acceleration to drive character at full velocity. */
 	UPROPERTY()
-	uint8 bForceMaxAccel : 1;
-
-	/** 473
-	 * Force the Character in MOVE_Walking to do a check for a valid floor even if he hasn't moved. Cleared after next floor check.
-	 * Normally if bAlwaysCheckFloor is false we try to avoid the floor check unless some conditions are met, but this can be used to force the next check to always run.
-	 */
-	UPROPERTY(Category = "Character Movement: Walking", VisibleInstanceOnly, BlueprintReadWrite, AdvancedDisplay)
-	uint8 bForceNextFloorCheck : 1;
-
-	/** 521 true to update CharacterOwner and UpdatedComponent after movement ends */
+	FVector m_vAcceleration;
 	UPROPERTY()
-	uint8 bDeferUpdateMoveComponent : 1;
-
-	/** 548 What to update CharacterOwner and UpdatedComponent after movement ends */
+	FQuat m_qLastUpdateRotation;
 	UPROPERTY()
-	USceneComponent* DeferredUpdatedMoveComponent;
-
-	/** 558 Mass of pawn (for when momentum is imparted to it). */
-	UPROPERTY(Category = "Character Movement (General Settings)", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
-	float Mass;
-
+	FVector m_vLastUpdateLocation;
 	UPROPERTY()
-	FVector Acceleration;
+	FVector m_vLastUpdateVelocity;
 	UPROPERTY()
-	FQuat LastUpdateRotation;
+	FVector m_vPendingImpulseToApply;
 	UPROPERTY()
-	FVector LastUpdateLocation;
+	FVector m_vPendingForceToApply;
 	UPROPERTY()
-	FVector LastUpdateVelocity;
-	UPROPERTY()
-	FVector PendingImpulseToApply;
-	UPROPERTY()
-	FVector PendingForceToApply;
-	/** 656
-	 * Modifier to applied to values such as acceleration and max speed due to analog input.
-	 */
-	UPROPERTY()
-	float AnalogInputModifier;
-
-	/** 702
-	 * Max time delta for each discrete simulation step.
-	 * Used primarily in the the more advanced movement modes that break up larger time steps (usually those applying gravity such as falling and walking).
-	 * Lowering this value can address issues with fast-moving objects or complex collision scenarios, at the cost of performance.
-	 *
-	 * WARNING: if (MaxSimulationTimeStep * MaxSimulationIterations) is too low for the min framerate, the last simulation step may exceed MaxSimulationTimeStep to complete the simulation.
-	 * @see MaxSimulationIterations
-	 */
-	UPROPERTY(Category = "Character Movement (General Settings)", EditAnywhere, BlueprintReadWrite, AdvancedDisplay, meta = (ClampMin = "0.0166", ClampMax = "0.50", UIMin = "0.0166", UIMax = "0.50"))
-	float MaxSimulationTimeStep;
-
-	/** 713
-	 * Max number of iterations used for each discrete simulation step.
-	 * Used primarily in the the more advanced movement modes that break up larger time steps (usually those applying gravity such as falling and walking).
-	 * Increasing this value can address issues with fast-moving objects or complex collision scenarios, at the cost of performance.
-	 *
-	 * WARNING: if (MaxSimulationTimeStep * MaxSimulationIterations) is too low for the min framerate, the last simulation step may exceed MaxSimulationTimeStep to complete the simulation.
-	 * @see MaxSimulationTimeStep
-	 */
-	UPROPERTY(Category = "Character Movement (General Settings)", EditAnywhere, BlueprintReadWrite, AdvancedDisplay, meta = (ClampMin = "1", ClampMax = "25", UIMin = "1", UIMax = "25"))
-	int32 MaxSimulationIterations;
-
-	/** 841 Information about the floor the Character is standing on (updated only during walking movement). */
-	UPROPERTY(Category = "Character Movement: Walking", VisibleInstanceOnly, BlueprintReadOnly)
-	FFindFloorResult CurrentFloor;
-
-	/** 845
-	 * Default movement mode when not in water. Used at player startup or when teleported.
-	 * @see DefaultWaterMovementMode
-	 * @see bRunPhysicsWithNoController
-	 */
-	UPROPERTY(Category = "Character Movement (General Settings)", EditAnywhere, BlueprintReadWrite)
-	TEnumAsByte<enum EMovementMode> DefaultLandMovementMode;
-
-
-	/** 871
-	 * If true, walking movement always maintains horizontal velocity when moving up ramps, which causes movement up ramps to be faster parallel to the ramp surface.
-	 * If false, then walking movement maintains velocity magnitude parallel to the ramp surface.
-	 * 경사면을 올라갈 때 감속이 되는지 안되는지 여부이다.
-	 * True면 평평한 지면을 이동하는 것과 같은 속도로 이동하고
-	 * False면 경사면 각도에 따라서 감속을 적용한다.
-	 */
-	UPROPERTY(Category = "Character Movement: Walking", EditAnywhere, BlueprintReadWrite)
-	uint8 bMaintainHorizontalGroundVelocity : 1;
-
-	/** 942
-	 * Whether the character ignores changes in rotation of the base it is standing on.
-	 * If true, the character maintains current world rotation.
-	 * If false, the character rotates with the moving base.
-	 확인후 지울것
-	 */
-	UPROPERTY(Category = "Character Movement: Walking", EditAnywhere, BlueprintReadWrite)
-	uint8 bIgnoreBaseRotation : 1;
-
-	/** 957
-	 * Whether we always force floor checks for stationary Characters while walking.
-	 * Normally floor checks are avoided if possible when not moving, but this can be used to force them if there are use-cases where they are being skipped erroneously
-	 * (such as objects moving up into the character from below).
-	 *///확인후 true
-	UPROPERTY(Category = "Character Movement: Walking", EditAnywhere, BlueprintReadWrite, AdvancedDisplay)
-	uint8 bAlwaysCheckFloor : 1;
-
-	/** 965
-	 * Performs floor checks as if the character is using a shape with a flat base.
-	 * This avoids the situation where characters slowly lower off the side of a ledge (as their capsule 'balances' on the edge).
-	 */
-	UPROPERTY(Category = "Character Movement: Walking", EditAnywhere, BlueprintReadWrite, AdvancedDisplay)
-	uint8 bUseFlatBaseForFloorChecks : 1;
-
-	/** 972 Used to prevent reentry of JumpOff() */
-	UPROPERTY()
-	uint8 bPerformingJumpOff : 1;
-
-	/** 976 Used to safely leave NavWalking movement mode */
-	UPROPERTY()
-	uint8 bWantsToLeaveNavWalking : 1;
+	float m_fAnalogInputModifier;
 
 	/** 984
 	 * Should use acceleration for path following?
@@ -358,19 +227,16 @@ public:
 	 * If false, path following velocity is set directly, disregarding acceleration.
 	 */
 	UPROPERTY(Category = "Character Movement (General Settings)", EditAnywhere, BlueprintReadWrite, AdvancedDisplay)
-	uint8 bRequestedMoveUseAcceleration : 1;
+	uint8 m_bRequestedMoveUseAcceleration : 1;
 
-	/** 1043
-	 * Velocity requested by path following.
-	 * @see RequestDirectMove()
-	 */
 	UPROPERTY(Transient)
-	FVector RequestedVelocity;
+	FVector m_vRequestedVelocity;
 
 	/** 1090 Temporarily holds launch velocity when pawn is to be launched so it happens at end of movement. */
 	UPROPERTY()
-	FVector PendingLaunchVelocity;
-private:
+	FVector m_vPendingLaunchVelocity;
+
+private://magic number
 	static const float MIN_TICK_TIME;
 	static const float MIN_FLOOR_DIST;
 	static const float MAX_FLOOR_DIST;
@@ -378,11 +244,11 @@ private:
 	static const float BRAKE_TO_STOP_VELOCITY;
 
 protected:
-	/** 116 Called after CurrentMovementMode has changed. Base implementation does special handling for starting certain modes, then notifies the CharacterOwner. */
 	virtual void OnMovementModeChanged(EMovementMode PreviousMovementMode);
 
-	/** 1737 @note Movement update functions should only be called through StartNewPhysics()*/
-	virtual void PhysWalking(float deltaTime, int32 Iterations);
+	void PhysWalking(float deltaTime);
+
+	void PhysFalling(float deltaTime);
 
 	/** 1780
 	 * Adjusts velocity when walking so that Z velocity is zero.
@@ -396,8 +262,7 @@ protected:
 	/** 1984 Enforce constraints on input given current state. For instance, don't move upwards if walking and looking up. */
 	virtual FVector ConstrainInputAcceleration(const FVector& InputAcceleration) const;
 
-	/** 1987 Scale input acceleration, based on movement acceleration rate. */
-	virtual FVector ScaleInputAcceleration(const FVector& InputAcceleration) const;
+	void ScaleInputAcceleration(const FVector& InputAcceleration);
 
 	/** 2025 Perform movement on an autonomous client */
 	virtual void PerformMovement(float DeltaTime);
@@ -408,17 +273,6 @@ public:
 	/** 662 Computes the analog input modifier based on current input vector and/or acceleration. */
 	virtual float ComputeAnalogInputModifier() const;
 
-	/** 691
-	 * Compute remaining time step given remaining time and current iterations.
-	 * The last iteration (limited by MaxSimulationIterations) always returns the remaining time, which may violate MaxSimulationTimeStep.
-	 *
-	 * @param RemainingTime		Remaining time in the tick.
-	 * @param Iterations		Current iteration of the tick (starting at 1).
-	 * @return The remaining time step to use for the next sub-step of iteration.
-	 * @see MaxSimulationTimeStep, MaxSimulationIterations
-	 */
-	float GetSimulationTimeStep(float RemainingTime, int32 Iterations) const;
-
 	UFUNCTION(BlueprintCallable, Category = "Pawn|Components|CharacterMovement")
 	virtual void SetMovementMode(EMovementMode NewMovementMode);
 
@@ -427,7 +281,7 @@ public:
 	virtual bool IsFalling() const override;
 	virtual bool IsMovingOnGround() const override;
 	virtual float GetGravityZ() const override;
-	bool IsMovementInProgress() const { return bMovementInProgress; }
+	bool IsMovementInProgress() const { return m_bMovementInProgress; }
 
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
@@ -436,12 +290,12 @@ public:
 	virtual bool HasValidData() const;
 
 	/** 1240 Transition from walking to falling */
-	virtual void StartFalling(int32 Iterations, float remainingTime, float timeTick, const FVector& Delta, const FVector& subLoc);
+	virtual void StartFalling(float timeTick, const FVector& Delta, const FVector& subLoc);
 
 	/** 1255 Adjust distance from floor, trying to maintain a slight offset from the floor when walking (based on CurrentFloor). */
 	virtual void AdjustFloorHeight();
 
-	virtual void StartNewPhysics(float deltaTime, int32 Iterations);
+	virtual void StartNewPhysics(float deltaTime);
 
 	virtual bool DoJump();
 
@@ -455,7 +309,7 @@ public:
 
 	/** 1320
 	  * Compute a target rotation based on current movement. Used by PhysicsRotation() when bOrientRotationToMovement is true.
-	  * Default implementation targets a rotation based on Acceleration.
+	  * Default implementation targets a rotation based on m_vAcceleration.
 	  *
 	  * @param CurrentRotation	- Current rotation of the Character
 	  * @param DeltaTime		- Time slice for this movement
@@ -467,7 +321,7 @@ public:
 
 	/** 1332
 	 * Use velocity requested by path following to compute a requested acceleration and speed.
-	 * This does not affect the Acceleration member variable, as that is used to indicate input acceleration.
+	 * This does not affect the m_vAcceleration member variable, as that is used to indicate input acceleration.
 	 * This may directly affect current Velocity.
 	 *
 	 * @param DeltaTime				Time slice for this operation
@@ -475,7 +329,7 @@ public:
 	 * @param MaxSpeed				Max speed allowed when computing OutRequestedSpeed.
 	 * @param Friction				Current friction.
 	 * @param BrakingDeceleration	Current braking deceleration.
-	 * @param OutAcceleration		Acceleration computed based on requested velocity.
+	 * @param OutAcceleration		m_vAcceleration computed based on requested velocity.
 	 * @param OutRequestedSpeed		Speed of resulting velocity request, which can affect the max speed allowed by movement.
 	 * @return Whether there is a requested velocity and acceleration, resulting in valid OutAcceleration and OutRequestedSpeed values.
 	 */
@@ -487,7 +341,7 @@ public:
 	virtual FVector NewFallVelocity(const FVector& InitialVelocity, const FVector& Gravity, float DeltaTime) const;
 
 	/** 1361
-	 * Updates Velocity and Acceleration based on the current state, applying the effects of friction and acceleration or deceleration. Does not apply gravity.
+	 * Updates Velocity and m_vAcceleration based on the current state, applying the effects of friction and acceleration or deceleration. Does not apply gravity.
 	 * This is used internally during movement updates. Normally you don't need to call this from outside code, but you might want to use it for custom movement modes.
 	 *
 	 * @param	DeltaTime						time elapsed since last frame.
@@ -525,7 +379,7 @@ public:
 		virtual float GetMaxBrakingDeceleration() const;
 
 	/** 1406 Returns current acceleration, computed from input vector each update. */
-	UFUNCTION(BlueprintCallable, Category = "Pawn|Components|CharacterMovement", meta = (Keywords = "Acceleration GetAcceleration"))
+	UFUNCTION(BlueprintCallable, Category = "Pawn|Components|CharacterMovement", meta = (Keywords = "m_vAcceleration GetAcceleration"))
 		FVector GetCurrentAcceleration() const;
 
 	/** 1410 Returns modifier [0..1] based on the magnitude of the last input vector, which is used to modify the acceleration and max speed during movement. */
@@ -551,12 +405,12 @@ public:
 
 	/** 1491
 	 * Get the lateral acceleration to use during falling movement. The Z component of the result is ignored.
-	 * Default implementation returns current Acceleration value modified by GetAirControl(), with Z component removed,
+	 * Default implementation returns current m_vAcceleration value modified by GetAirControl(), with Z component removed,
 	 * with magnitude clamped to GetMaxAcceleration().
 	 * This function is used internally by PhysFalling().
 	 *
 	 * @param DeltaTime Time step for the current update.
-	 * @return Acceleration to use during falling movement.
+	 * @return m_vAcceleration to use during falling movement.
 	 */
 	virtual FVector GetFallingLateralAcceleration(float DeltaTime);
 
@@ -567,9 +421,9 @@ public:
 	 *
 	 * @param DeltaTime			Time step for the current update.
 	 * @param TickAirControl	Current air control value.
-	 * @param FallAcceleration	Acceleration used during movement.
+	 * @param FallAcceleration	m_vAcceleration used during movement.
 	 * @return Air control to use during falling movement.
-	 * @see AirControl, BoostAirControl(), LimitAirControl(), GetFallingLateralAcceleration()
+	 * @see m_fAirControl, BoostAirControl(), LimitAirControl(), GetFallingLateralAcceleration()
 	 */
 	virtual FVector GetAirControl(float DeltaTime, float TickAirControl, const FVector& FallAcceleration);
 
@@ -581,7 +435,7 @@ protected:
 	 *
 	 * @param DeltaTime			Time step for the current update.
 	 * @param TickAirControl	Current air control value.
-	 * @param FallAcceleration	Acceleration used during movement.
+	 * @param FallAcceleration	m_vAcceleration used during movement.
 	 * @return Modified air control to use during falling movement
 	 * @see GetAirControl()
 	 */
@@ -592,7 +446,7 @@ protected:
 	 * This function is used internally by PhysFalling().
 	 *
 	 * @param DeltaTime			Time step for the current update.
-	 * @param FallAcceleration	Acceleration used during movement.
+	 * @param FallAcceleration	m_vAcceleration used during movement.
 	 * @param HitResult			Result of impact.
 	 * @param bCheckForValidLandingSpot If true, will use IsValidLandingSpot() to determine if HitResult is a walkable surface. If false, this check is skipped.
 	 * @return Modified air control acceleration to use during falling movement.
@@ -602,7 +456,7 @@ protected:
 
 
 	/** 1543 Handle landing against Hit surface over remaingTime and iterations, calling SetPostLandedPhysics() and starting the new movement mode. */
-	virtual void ProcessLanded(const FHitResult& Hit, float remainingTime, int32 Iterations);
+	virtual void ProcessLanded(const FHitResult& Hit, float remainingTime);
 
 	/** 1546 Use new physics after landing. Defaults to swimming if in water, walking otherwise. */
 	virtual void SetPostLandedPhysics(const FHitResult& Hit);
@@ -614,7 +468,7 @@ public:
 
 
 	/** 1603 Check if pawn is falling */
-	virtual bool CheckFall(const FFindFloorResult& OldFloor, const FHitResult& Hit, const FVector& Delta, const FVector& OldLocation, float remainingTime, float timeTick, int32 Iterations, bool bMustJump);
+	virtual bool CheckFall(const FUSBFindFloorResult& OldFloor, const FHitResult& Hit, const FVector& Delta, const FVector& OldLocation,float timeTick, bool bMustJump);
 
 	void RevertMove(const FVector& OldLocation, bool bFailMove);
 
@@ -661,16 +515,16 @@ public:
 		virtual bool IsWalkable(const FHitResult& Hit) const;
 
 	/** 1707 Get the max angle in degrees of a walkable surface for the character. */
-	FORCEINLINE float GetWalkableFloorAngle() const { return WalkableFloorAngle; }
+	FORCEINLINE float GetWalkableFloorAngle() const { return m_fWalkableFloorAngle; }
 
-	/** 1714 Set the max angle in degrees of a walkable surface for the character. Also computes WalkableFloorZ. */
+	/** 1714 Set the max angle in degrees of a walkable surface for the character. Also computes m_fWalkableFloorZ. */
 	UFUNCTION(BlueprintCallable, Category = "Pawn|Components|CharacterMovement")
 		void SetWalkableFloorAngle(float InWalkableFloorAngle);
 
 	/** 1718 Get the Z component of the normal of the steepest walkable surface for the character. Any lower than this and it is not walkable. */
-	FORCEINLINE float GetWalkableFloorZ() const { return WalkableFloorZ; }
+	FORCEINLINE float GetWalkableFloorZ() const { return m_fWalkableFloorZ; }
 
-	/** 1725 Set the Z component of the normal of the steepest walkable surface for the character. Also computes WalkableFloorAngle. */
+	/** 1725 Set the Z component of the normal of the steepest walkable surface for the character. Also computes m_fWalkableFloorAngle. */
 	UFUNCTION(BlueprintCallable, Category = "Pawn|Components|CharacterMovement")
 		void SetWalkableFloorZ(float InWalkableFloorZ);
 
@@ -695,14 +549,12 @@ public:
 	 * @param DeltaSeconds:			Time over which movement occurs
 	 * @param OutStepDownResult:	[Out] If non-null, and a floor check is performed, this will be updated to reflect that result.
 	 */
-	virtual void MoveAlongFloor(const FVector& InVelocity, float DeltaSeconds, UCharacterMovementComponent::FStepDownResult* OutStepDownResult = NULL);
+	virtual void MoveAlongFloor(const FVector& InVelocity, float DeltaSeconds);
 
 
 	/** 1803 Custom version of SlideAlongSurface that handles different movement modes separately; namely during walking physics we might not want to slide up slopes. */
 	virtual float SlideAlongSurface(const FVector& Delta, float Time, const FVector& Normal, FHitResult& Hit, bool bHandleImpact) override;
 
-	/** 1806 Custom version that allows upwards slides when walking if the surface is walkable. */
-	virtual void TwoWallAdjust(FVector& Delta, const FHitResult& Hit, const FVector& OldHitNormal) const override;
 
 	/** 1809
 	 * Calculate slide vector along a surface.
@@ -742,7 +594,7 @@ public:
 	 * @param bCanUseCachedLocation If true, may use a cached value (can be used to avoid unnecessary floor tests, if for example the capsule was not moving since the last test).
 	 * @param DownwardSweepResult	If non-null and it contains valid blocking hit info, this will be used as the result of a downward sweep test instead of doing it as part of the update.
 	 */
-	virtual void FindFloor(const FVector& CapsuleLocation, FFindFloorResult& OutFloorResult, bool bCanUseCachedLocation, const FHitResult* DownwardSweepResult = NULL) const;
+	virtual void FindFloor(const FVector& CapsuleLocation, FUSBFindFloorResult& OutFloorResult, bool bCanUseCachedLocation, const FHitResult* DownwardSweepResult = NULL) const;
 
 
 	/** 1865
@@ -758,7 +610,7 @@ public:
 	 * @param SweepRadius:		The radius to use for sweep tests. Should be <= capsule radius.
 	 * @param DownwardSweepResult:	If non-null and it contains valid blocking hit info, this will be used as the result of a downward sweep test instead of doing it as part of the update.
 	 */
-	virtual void ComputeFloorDist(const FVector& CapsuleLocation, float LineDistance, float SweepDistance, FFindFloorResult& OutFloorResult, float SweepRadius, const FHitResult* DownwardSweepResult = NULL) const;
+	virtual void ComputeFloorDist(const FVector& CapsuleLocation, float LineDistance, float SweepDistance, FUSBFindFloorResult& OutFloorResult, float SweepRadius, const FHitResult* DownwardSweepResult = NULL) const;
 
 
 	/** 1894
@@ -779,7 +631,7 @@ public:
 		const FVector& Start,
 		const FVector& End,
 		ECollisionChannel TraceChannel,
-		const struct FCollisionShape& CollisionShape,
+		float radius,float halfHeight,
 		const struct FCollisionQueryParams& Params,
 		const struct FCollisionResponseParams& ResponseParam
 	) const;
@@ -922,7 +774,7 @@ public:
 	virtual float GetJumpMaxHoldTime() const;
 
 private:
-	void SetPhysicalVelocity(FVector& velo);
+	void SetPhysicalVelocity(FVector& velo,FHitResult* outSweep);
 	bool Sweep(UPrimitiveComponent * Prim, FVector & velo);
 	void PullBackHit(FHitResult& Hit, const FVector& Start, const FVector& End, const float Dist);
 };

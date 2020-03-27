@@ -27,7 +27,7 @@ public:
 private:
 	FVector m_AutoMoveDir;
 	FRotator m_AutoRotateRot;
-	FVector m_InputNormal;
+	FVector m_vInputNormal;
 	FVector m_Acceleration;
 	bool m_bOnGround;
 	bool m_bPressedJump;

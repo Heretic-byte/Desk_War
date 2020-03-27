@@ -352,14 +352,14 @@ bool UPhysicsMovement::IsFalling() const
 
 void UPhysicsMovement::TickCheckCanMoveForward()
 {
-	if (m_InputNormal.SizeSquared() < KINDA_SMALL_NUMBER)
+	if (m_vInputNormal.SizeSquared() < KINDA_SMALL_NUMBER)
 	{
 		PRINTF("NoInput");
 		//m_bIsWallBlocking = false;
 		return ;
 	}
 	FVector TraceStart = m_MovingTarget->GetComponentLocation();
-	FVector TraceEnd = TraceStart + (m_fForwardWallCheckCast*m_fAdditionalTraceMultipleLength*m_InputNormal);//groundoffset is minus
+	FVector TraceEnd = TraceStart + (m_fForwardWallCheckCast*m_fAdditionalTraceMultipleLength*m_vInputNormal);//groundoffset is minus
 
 #if WITH_EDITOR
 	if (m_bDebugShowForwardCast)
@@ -463,9 +463,9 @@ bool UPhysicsMovement::IsGround() const
 
 void UPhysicsMovement::SetAccelerationByDir(const FVector inputPure)
 {
-	m_InputNormal = inputPure.GetClampedToMaxSize(1.f);
+	m_vInputNormal = inputPure.GetClampedToMaxSize(1.f);
 
-	m_Acceleration= GetMaxForce() *m_InputNormal;
+	m_Acceleration= GetMaxForce() *m_vInputNormal;
 }
 
 void UPhysicsMovement::Jump()
