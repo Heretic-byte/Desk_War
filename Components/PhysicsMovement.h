@@ -134,4 +134,25 @@ public:
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	void PhysSceneStep(FPhysScene* PhysScene, float DeltaTime);
 	FDelegateHandle OnPhysSceneStepHandle;
+	//
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
+	float m_fMaxBrakingDeceleration;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
+	float m_fMaxSpeed;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
+	float m_fMinAnalogSpeed;
+	UPROPERTY(Category = "PhysicsMovement", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
+	float m_fGroundFriction;
+	UPROPERTY(Category = "PhysicsMovement", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "30", UIMin = "30"))
+	float m_fMaxTimeStep;
+
+	float m_fAnalogInputModifier;
+	void CalcVelocity(float DeltaTime, float Friction);
+
+	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
+	float GetMinAnalogSpeed() const;
+	
+	float ComputeAnalogInputModifier() const;
+	virtual float GetMaxSpeed() const override;
+	void ApplyVelocityBraking(float DeltaTime, float Friction, float BrakingDeceleration);
 };

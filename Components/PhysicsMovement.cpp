@@ -11,6 +11,11 @@
 
 UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 {
+	m_fMaxTimeStep = 33.f;
+	m_fGroundFriction = 8.f;
+	m_fMaxSpeed = 10000.f;
+	m_fMaxBrakingDeceleration = 4500.f;
+	m_fMinAnalogSpeed = 100.f;
 	m_bIsWallBlocking = false;
 	m_bAutoRot = false;
 	m_bAutoMove = false;
@@ -57,7 +62,9 @@ void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 	TickCastGround();
 	TickCastFlipCheck();
 	SetAccel(DeltaTime);
-	TickCheckCanMoveForward();
+	m_fAnalogInputModifier = ComputeAnalogInputModifier();
+	//CalcVelocity(DeltaTime, m_fGroundFriction);
+	//TickCheckCanMoveForward();
 	TickRotate(SelectTargetRotation(DeltaTime), DeltaTime);
 	CheckJumpInput(DeltaTime);
 	ClearJumpInput(DeltaTime);
@@ -71,8 +78,60 @@ void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
 	}
 
 	
-	if(!m_bIsWallBlocking)
+	if (!m_bIsWallBlocking)
+	{
+		CalcVelocity(DeltaTime, m_fGroundFriction);
 		TickMovement(DeltaTime);
+	}
+}
+
+void UPhysicsMovement::CalcVelocity(float DeltaTime, float Friction)
+{
+	PRINTF("---------------------------------------------------------------------------");
+	PRINTF("Begin V : %s, Size : %f", *Velocity.ToString(), Velocity.Size());
+
+	float MaxSpeed = GetMaxSpeed();
+	const float MaxInputSpeed = FMath::Max(MaxSpeed * m_fAnalogInputModifier, GetMinAnalogSpeed());
+	MaxSpeed = MaxInputSpeed;
+
+	const bool bZeroAcceleration = m_Acceleration.IsZero();
+	const bool bVelocityOverMax = IsExceedingMaxSpeed(MaxSpeed);
+
+	if (bZeroAcceleration || bVelocityOverMax)
+	{
+		PRINTF("Braking Did");
+		const FVector OldVelocity = Velocity;
+		const float ActualBrakingFriction = Friction;
+		ApplyVelocityBraking(DeltaTime, ActualBrakingFriction, m_fMaxBrakingDeceleration);
+
+		if (bVelocityOverMax && Velocity.SizeSquared() < FMath::Square(MaxSpeed) && FVector::DotProduct(m_Acceleration, OldVelocity) > 0.0f)
+		{
+			PRINTF("Here");
+			Velocity = OldVelocity.GetSafeNormal() * MaxSpeed;
+		}
+	}
+	else if (!bZeroAcceleration)
+	{
+		PRINTF("Just Move");
+		const FVector AccelDir = (m_Acceleration.Size() == 0) ? FVector::ZeroVector : m_Acceleration.GetSafeNormal();
+		const float VelSize = Velocity.Size();
+		Velocity = Velocity - (Velocity - AccelDir * VelSize) * FMath::Min(DeltaTime * Friction, 1.f);
+		const float NewMaxInputSpeed = IsExceedingMaxSpeed(MaxInputSpeed) ? Velocity.Size() : MaxInputSpeed;
+		Velocity += m_Acceleration * DeltaTime;
+		Velocity = Velocity.GetClampedToMaxSize(NewMaxInputSpeed);
+	}
+
+	PRINTF("End V : %s, Size : %f", *Velocity.ToString(), Velocity.Size());
+}
+
+float UPhysicsMovement::GetMinAnalogSpeed() const
+{
+	return m_fMinAnalogSpeed;
+}
+
+float UPhysicsMovement::GetMaxSpeed() const
+{
+	return m_fMaxSpeed;
 }
 
 
@@ -246,9 +305,23 @@ bool UPhysicsMovement::SetAccel(float DeltaTime)
 		InputDir = ConsumeInputVector();
 	}
 	SetAccelerationByDir(InputDir);
-
+	
 	return true;
 }
+
+
+
+float UPhysicsMovement::ComputeAnalogInputModifier() const
+{
+	const float MaxAccel = GetMaxForce();
+	if (m_Acceleration.SizeSquared() > 0.f && MaxAccel > SMALL_NUMBER)
+	{
+		return FMath::Clamp(m_Acceleration.Size() / MaxAccel, 0.f, 1.f);
+	}
+
+	return 0.f;
+}
+
 
 
 
@@ -284,12 +357,12 @@ void UPhysicsMovement::TickMovement(float delta)
 	{
 		return;
 	}
-	Velocity = m_Acceleration * delta;
+	/*Velocity = m_Acceleration * delta;
 
 	if(!IsGround())
 	{
 		Velocity*= m_fAirControl;
-	}
+	}*/
 
 	UpdateComponentVelocity();
 }
@@ -354,7 +427,6 @@ void UPhysicsMovement::TickCheckCanMoveForward()
 {
 	if (m_vInputNormal.SizeSquared() < KINDA_SMALL_NUMBER)
 	{
-		PRINTF("NoInput");
 		//m_bIsWallBlocking = false;
 		return ;
 	}
@@ -374,14 +446,12 @@ void UPhysicsMovement::TickCheckCanMoveForward()
 
 	if (GetWorld()->SweepSingleByObjectType(HitResult, TraceStart, TraceEnd, FQuat::Identity, ECollisionChannel::ECC_WorldStatic, FCollisionShape::MakeSphere(1.f), QueryParam))
 	{
-		PRINTF("Blocked");
 		//m_bIsWallBlocking = true;
 		m_Acceleration = FVector::ZeroVector;
 		return ;
 	}
 	else
 	{
-		PRINTF("NotBlocked");
 		//m_bIsWallBlocking = false;
 		return ;
 	}
@@ -588,4 +658,58 @@ void UPhysicsMovement::ResetJumpState()
 	m_fJumpKeyHoldTime = 0.0f;
 	m_fJumpForceTimeRemaining = 0.0f;
 	m_nJumpCurrentCount = 0;
+}
+
+
+void UPhysicsMovement::ApplyVelocityBraking(float DeltaTime, float Friction, float BrakingDeceleration)
+{
+	const float MIN_TICK_TIME = 1e-6f;
+	if (Velocity.IsZero() || DeltaTime < MIN_TICK_TIME)
+	{
+		return;
+	}
+
+	const float FrictionFactor = FMath::Max(0.f, 2.f);
+	Friction = FMath::Max(0.f, Friction * FrictionFactor);
+	BrakingDeceleration = FMath::Max(0.f, BrakingDeceleration);
+	const bool bZeroFriction = (Friction == 0.f);
+	const bool bZeroBraking = (BrakingDeceleration == 0.f);
+
+	if (bZeroFriction && bZeroBraking)
+	{
+		return;
+	}
+
+	const FVector OldVel = Velocity;
+
+	// subdivide braking to get reasonably consistent results at lower frame rates
+	// (important for packet loss situations w/ networking)
+	float RemainingTime = DeltaTime;
+	const float MaxTimeStep = FMath::Clamp(1.0f / m_fMaxTimeStep, 1.0f / 75.0f, 1.0f / 20.0f);
+
+	// Decelerate to brake to a stop
+	const FVector RevAccel = (bZeroBraking ? FVector::ZeroVector : (-BrakingDeceleration * Velocity.GetSafeNormal()));
+	while (RemainingTime >= MIN_TICK_TIME)
+	{
+		// Zero friction uses constant deceleration, so no need for iteration.
+		const float dt = ((RemainingTime > MaxTimeStep && !bZeroFriction) ? FMath::Min(MaxTimeStep, RemainingTime * 0.5f) : RemainingTime);
+		RemainingTime -= dt;
+
+		// apply friction and braking
+		Velocity = Velocity + ((-Friction) * Velocity + RevAccel) * dt;
+
+		// Don't reverse direction
+		if ((Velocity | OldVel) <= 0.f)
+		{
+			Velocity = FVector::ZeroVector;
+			return;
+		}
+	}
+
+	// Clamp to zero if nearly zero, or if below min threshold and braking.
+	const float VSizeSq = Velocity.SizeSquared();
+	if (VSizeSq <= KINDA_SMALL_NUMBER || (!bZeroBraking && VSizeSq <= FMath::Square(10.f)))
+	{
+		Velocity = FVector::ZeroVector;
+	}
 }

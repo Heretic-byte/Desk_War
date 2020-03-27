@@ -162,7 +162,7 @@ void AUSB_PlayerPawn::CreateSkFaceMesh()
 
 void AUSB_PlayerPawn::SetHeadTail(UPhysicsSkMeshComponent * headWant, UPhysicsSkMeshComponent * tailWant)
 {
-	m_CurrentHead->OnComponentBeginOverlap.RemoveAll(this);//remove from older
+	//m_CurrentHead->OnComponentBeginOverlap.RemoveAll(this);//remove from older
 
 	m_CurrentHead = headWant;
 	m_CurrentTail = tailWant;
@@ -171,7 +171,7 @@ void AUSB_PlayerPawn::SetHeadTail(UPhysicsSkMeshComponent * headWant, UPhysicsSk
 	
 	m_CamRoot->AttachToComponent(m_CurrentHead,FAttachmentTransformRules::KeepRelativeTransform);
 
-	m_CurrentHead->OnComponentBeginOverlap.AddDynamic(this,&AUSB_PlayerPawn::TryConnect);
+	//m_CurrentHead->OnComponentBeginOverlap.AddDynamic(this,&AUSB_PlayerPawn::TryConnect);
 
 	m_CurrentHeadPin = Cast<UPinSkMeshComponent>(m_CurrentHead);
 }

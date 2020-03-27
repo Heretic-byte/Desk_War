@@ -371,9 +371,6 @@ void UUSBMovementComponent::SetMovementMode(EMovementMode NewMovementMode)
 	// @todo UE4 do we need to disable ragdoll physics here? Should this function do nothing if in ragdoll?
 }
 
-void UUSBMovementComponent::UpdateComponentVelocity()
-{
-}
 
 void UUSBMovementComponent::AddIgnoreActorsToQuery(FCollisionQueryParams & queryParam)
 {
@@ -456,7 +453,7 @@ void UUSBMovementComponent::PhysWalking(float deltaTime)
 	m_vAcceleration.Z = 0.f;
 
 	// Apply acceleration
-	CalcVelocity(deltaTime, GroundFriction, false, GetMaxBrakingDeceleration());
+	CalcVelocity(deltaTime, GroundFriction,  GetMaxBrakingDeceleration());
 
 	// Compute move parameters
 	const FVector MoveVelocity = Velocity;
@@ -465,7 +462,6 @@ void UUSBMovementComponent::PhysWalking(float deltaTime)
 
 	if (!bZeroDelta)
 	{
-		// try to move forward
 		MoveAlongFloor(MoveVelocity, deltaTime);
 
 		if (IsFalling())//움직임이 끝나니 떨어지는상태
@@ -475,36 +471,36 @@ void UUSBMovementComponent::PhysWalking(float deltaTime)
 		}
 	}
 
-	FindFloor(UpdatedComponent->GetComponentLocation(), CurrentFloor, bZeroDelta, NULL);
+	//FindFloor(UpdatedComponent->GetComponentLocation(), CurrentFloor, bZeroDelta, NULL);
 
-	// Validate the floor check
-	if (CurrentFloor.IsWalkableFloor())
-	{
-		//AdjustFloorHeight();may be need height adjust
-	}
-	else if (CurrentFloor.HitResult.bStartPenetrating)
-	{
-		PRINTF("PhysWalk,Penetrated");
-		// The floor check failed because it started in penetration
-		// We do not want to try to move downward because the downward sweep failed, rather we'd like to try to pop out of the floor.
-		FHitResult Hit(CurrentFloor.HitResult);
-		Hit.TraceEnd = Hit.TraceStart + FVector(0.f, 0.f, MAX_FLOOR_DIST);
-		const FVector RequestedAdjustment = GetPenetrationAdjustment(Hit);
-		ResolvePenetration(RequestedAdjustment, Hit, UpdatedComponent->GetComponentQuat());
-	}
+	//// Validate the floor check
+	//if (CurrentFloor.IsWalkableFloor())
+	//{
+	//	//AdjustFloorHeight();may be need height adjust
+	//}
+	//else if (CurrentFloor.HitResult.bStartPenetrating)
+	//{
+	//	PRINTF("PhysWalk,Penetrated");
+	//	// The floor check failed because it started in penetration
+	//	// We do not want to try to move downward because the downward sweep failed, rather we'd like to try to pop out of the floor.
+	//	FHitResult Hit(CurrentFloor.HitResult);
+	//	Hit.TraceEnd = Hit.TraceStart + FVector(0.f, 0.f, MAX_FLOOR_DIST);
+	//	const FVector RequestedAdjustment = GetPenetrationAdjustment(Hit);
+	//	ResolvePenetration(RequestedAdjustment, Hit, UpdatedComponent->GetComponentQuat());
+	//}
 
 
-	// See if we need to start falling.
-	if (!CurrentFloor.IsWalkableFloor() && !CurrentFloor.HitResult.bStartPenetrating)
-	{
-		const bool bMustJump = bZeroDelta;
-		if ((bMustJump || !bCheckedFall) && CheckFall(OldFloor, CurrentFloor.HitResult, Delta, OldLocation, deltaTime, bMustJump))
-		{
-			return;
-		}
+	//// See if we need to start falling.
+	//if (!CurrentFloor.IsWalkableFloor() && !CurrentFloor.HitResult.bStartPenetrating)
+	//{
+	//	/*const bool bMustJump = bZeroDelta;
+	//	if ((bMustJump || !bCheckedFall) && CheckFall(OldFloor, CurrentFloor.HitResult, Delta, OldLocation, deltaTime, bMustJump))
+	//	{
+	//		return;
+	//	}*/
 
-		bCheckedFall = true;
-	}
+	//	bCheckedFall = true;
+	//}
 
 
 	// Allow overlap events and such to change physics state and velocity
@@ -990,7 +986,7 @@ bool UUSBMovementComponent::IsFalling() const
 }
 
 // 3082
-void UUSBMovementComponent::CalcVelocity(float DeltaTime, float Friction, bool bFluid, float BrakingDeceleration)
+void UUSBMovementComponent::CalcVelocity(float DeltaTime, float Friction, float BrakingDeceleration)
 {
 	if (!HasValidData() || DeltaTime < MIN_TICK_TIME)
 	{
@@ -1006,11 +1002,6 @@ void UUSBMovementComponent::CalcVelocity(float DeltaTime, float Friction, bool b
 	FVector RequestedAcceleration = FVector::ZeroVector;
 	float RequestedSpeed = 0.0f;
 
-	//지금 네비로 이동중이었으면 그에 걸맞게 가속계산
-	if (ApplyRequestedMove(DeltaTime, MaxAccel, MaxSpeed, Friction, BrakingDeceleration, RequestedAcceleration, RequestedSpeed))
-	{
-		bZeroRequestedAcceleration = false;
-	}
 
 	// Path following above didn't care about the analog modifier, but we do for everything else below, so get the fully modified value.
 	// Use max of requested speed and max speed if we modified the speed in ApplyRequestedMove above.
@@ -1043,11 +1034,6 @@ void UUSBMovementComponent::CalcVelocity(float DeltaTime, float Friction, bool b
 		Velocity = Velocity - (Velocity - AccelDir * VelSize) * FMath::Min(DeltaTime * Friction, 1.f);
 	}
 
-	// Apply fluid friction
-	if (bFluid)
-	{
-		Velocity = Velocity * (1.f - FMath::Min(Friction * DeltaTime, 1.f));
-	}
 
 	// Apply input acceleration
 	if (!bZeroAcceleration)
@@ -1057,13 +1043,6 @@ void UUSBMovementComponent::CalcVelocity(float DeltaTime, float Friction, bool b
 		Velocity = Velocity.GetClampedToMaxSize(NewMaxInputSpeed);
 	}
 
-	// Apply additional requested acceleration
-	if (!bZeroRequestedAcceleration)
-	{
-		const float NewMaxRequestedSpeed = IsExceedingMaxSpeed(RequestedSpeed) ? Velocity.Size() : RequestedSpeed;
-		Velocity += RequestedAcceleration * DeltaTime;
-		Velocity = Velocity.GetClampedToMaxSize(NewMaxRequestedSpeed);
-	}
 }
 
 // 3179
@@ -1342,10 +1321,6 @@ FVector UUSBMovementComponent::ComputeGroundMovementDelta(const FVector& Delta, 
 //실제 움직이는것
 void UUSBMovementComponent::MoveAlongFloor(const FVector& InVelocity, float DeltaSeconds)
 {
-	if (!CurrentFloor.IsWalkableFloor())
-	{
-		return;
-	}
 	// Move along the current floor
 	const FVector Delta = FVector(InVelocity.X, InVelocity.Y, 0.f) * DeltaSeconds;
 	FHitResult Hit(1.f);
@@ -2096,11 +2071,7 @@ void UUSBMovementComponent::SetPhysicalVelocity(FVector& velo,FHitResult* outSwe
 		//// Set up
 		//if (Sweep(Prim, velo))
 		{
-			if (velo.X > 0.3f)
-			{
-				PRINTF("Here");
-			}
-			Prim->SetPhysicsLinearVelocity(velo*10);
+			Prim->SetPhysicsLinearVelocity(velo);
 			PRINTF("Velo : %s", *velo.ToString());
 		}
 

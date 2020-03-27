@@ -86,22 +86,19 @@ class DESK_WAR_API UUSBMovementComponent : public UPawnMovementComponent
 	GENERATED_BODY()
 public:
 	UUSBMovementComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
-private:
+public:
 	//my
 	UPROPERTY()
 	UPhysicsSkMeshComponent* m_MovingTarget;
 
 	UPROPERTY()
-	TArray<AActor*>* m_ptrAryTraceIgnoreActors;
+	TArray<AActor*> m_ptrAryTraceIgnoreActors;
 
 	FVector m_vInputNormal;
 
 	FUSBFindFloorResult CurrentFloor;
-private:
-	virtual void UpdateComponentVelocity() override;
 	void AddIgnoreActorsToQuery(FCollisionQueryParams& queryParam);
 	//
-private://Ground Property
 	UPROPERTY(Category = "Character Movement: Walking", EditAnywhere, meta = (ClampMin = "0.0", ClampMax = "90.0", UIMin = "0.0", UIMax = "90.0"))
 	float m_fWalkableFloorAngle;
 	UPROPERTY(Category = "Character Movement: Walking", VisibleAnywhere)
@@ -115,28 +112,24 @@ private://Ground Property
 	UPROPERTY(Category = "Character Movement: Walking", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
 	float MinAnalogWalkSpeed;
 
-private:
 	UPROPERTY(Category = "Character Movement: m_eCurrentMovementMode", BlueprintReadOnly)
 	TEnumAsByte<enum EMovementMode> m_eCurrentMovementMode;
 	UPROPERTY(Category = "Character Movement (General Settings)", EditAnywhere, BlueprintReadWrite)
 	TEnumAsByte<enum EMovementMode> m_eDefaultLandMovementMode;
 	UPROPERTY(Transient)
 	TEnumAsByte<enum EMovementMode> m_eDefaultGroundMovementMode;
-protected://pathfollow
 	UPROPERTY()
 	uint8 m_bMovementInProgress : 1;
 	UPROPERTY(Transient)
 	uint8 m_bHasRequestedVelocity : 1;
 	UPROPERTY(Transient)
 	uint8 m_bRequestedMoveWithMaxSpeed : 1;
-public://gravity
 	/** (Own) If enabled, Gravity is applied for the character. */
 	UPROPERTY(Category = "Character Movement (General Settings)", EditAnywhere, BlueprintReadWrite)
 	bool bEnableGravity;
 	/** 177 Custom gravity scale. Gravity is multiplied by this amount for the character. */
 	UPROPERTY(Category = "Character Movement (General Settings)", EditAnywhere, BlueprintReadWrite)
 	float GravityScale;
-public://jump
 	/** 185 Initial velocity (instantaneous vertical acceleration) when jumping. */
 	UPROPERTY(Category = "Character Movement: Jumping / Falling", EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Jump Z Velocity", ClampMin = "0", UIMin = "0"))
 	float JumpZVelocity;
@@ -146,7 +139,6 @@ public://jump
 	 */
 	UPROPERTY(Category = "Character Movement: Jumping / Falling", EditAnywhere, BlueprintReadWrite, AdvancedDisplay)
 	uint8 bApplyGravityWhileJumping : 1;
-protected://Friction
 	UPROPERTY(Category = "Character Movement: Walking", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
 	float GroundFriction;
 	UPROPERTY(Category = "Character Movement (General Settings)", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
@@ -160,7 +152,6 @@ protected://Friction
 	 */
 	UPROPERTY(Category = "Character Movement (General Settings)", EditDefaultsOnly, BlueprintReadWrite)
 	uint8 bUseSeparateBrakingFriction : 1;
-protected://braiking
 	UPROPERTY(Category = "Character Movement: Walking", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
 	float BrakingDecelerationWalking;
 
@@ -171,7 +162,6 @@ protected://braiking
 	UPROPERTY(Category = "Character Movement: Jumping / Falling", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
 	float BrakingDecelerationFalling;
 
-protected://Air
 	/** 332
 	 * When falling, amount of lateral movement control available to the character.
 	 * 0 = no control, 1 = full control at max speed of MaxWalkSpeed.
@@ -201,7 +191,6 @@ protected://Air
 	UPROPERTY(Category = "Character Movement: Jumping / Falling", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
 	float m_fFallingLateralFriction;
 
-protected://General
 	float m_fMass;
 	/** 384 Change in rotation per second, used when UseControllerDesiredRotation or OrientRotationToMovement are true. Set a negative value for infinite rotation rate and instant turns. */
 	UPROPERTY(Category = "Character Movement (Rotation Settings)", EditAnywhere, BlueprintReadWrite)
@@ -248,7 +237,6 @@ protected:
 
 	void PhysWalking(float deltaTime);
 
-	void PhysFalling(float deltaTime);
 
 	/** 1780
 	 * Adjusts velocity when walking so that Z velocity is zero.
@@ -293,7 +281,7 @@ public:
 	virtual void StartFalling(float timeTick, const FVector& Delta, const FVector& subLoc);
 
 	/** 1255 Adjust distance from floor, trying to maintain a slight offset from the floor when walking (based on CurrentFloor). */
-	virtual void AdjustFloorHeight();
+	//virtual void AdjustFloorHeight();
 
 	virtual void StartNewPhysics(float deltaTime);
 
@@ -350,7 +338,7 @@ public:
 	 * @param	BrakingDeceleration				deceleration applied when not accelerating, or when exceeding max velocity.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Pawn|Components|CharacterMovement")
-		virtual void CalcVelocity(float DeltaTime, float Friction, bool bFluid, float BrakingDeceleration);
+		virtual void CalcVelocity(float DeltaTime, float Friction, float BrakingDeceleration);
 
 	/** 1373
 	 *	Compute the max jump height based on the JumpZVelocity velocity and gravity.
@@ -399,7 +387,7 @@ public:
 		virtual void ClearAccumulatedForces();
 
 	/** 1486 Handle falling movement. */
-	virtual void PhysFalling(float deltaTime, int32 Iterations);
+	virtual void PhysFalling(float deltaTime);
 
 	// Helpers for PhysFalling
 
