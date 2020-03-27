@@ -114,7 +114,7 @@ private:
 	void TickCastGround();
 	void TickCastFlipCheck();
 	void TickRotate(const FRotator rotateWant,float delta);
-	void TickMovement(float delta);
+	void TickMovement(float delta,int32 iter);
 	virtual void SetUpdatedComponent(USceneComponent* NewUpdatedComponent) override;
 	FRotator SelectTargetRotation(float delta);
 	bool SetAccel(float DeltaTime);
@@ -144,8 +144,11 @@ public:
 	UPROPERTY(Category = "PhysicsMovement", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
 	float m_fGroundFriction;
 	UPROPERTY(Category = "PhysicsMovement", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "30", UIMin = "30"))
-	float m_fMaxTimeStep;
-
+	float m_fBrakingSubstepFrame;
+	UPROPERTY(Category = "PhysicsMovement", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
+	float m_fMaxSimulationTimeStep;
+	UPROPERTY(Category = "PhysicsMovement", EditAnywhere, BlueprintReadWrite, AdvancedDisplay, meta = (ClampMin = "1", ClampMax = "25", UIMin = "1", UIMax = "25"))
+	int32 m_nMaxSimulationIterations;
 	float m_fAnalogInputModifier;
 	void CalcVelocity(float DeltaTime, float Friction);
 
@@ -155,4 +158,16 @@ public:
 	float ComputeAnalogInputModifier() const;
 	virtual float GetMaxSpeed() const override;
 	void ApplyVelocityBraking(float DeltaTime, float Friction, float BrakingDeceleration);
+	//
+	static const float MIN_TICK_TIME;
+
+	static const float MIN_FLOOR_DIST;
+
+	static const float MAX_FLOOR_DIST;
+
+	static const float SWEEP_EDGE_REJECT_DISTANCE;
+
+	static const float BRAKE_TO_STOP_VELOCITY;
+
+	float GetSimulationTimeStep(float RemainingTime, int32 Iterations) const;
 };

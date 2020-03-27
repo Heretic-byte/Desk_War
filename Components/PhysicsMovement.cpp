@@ -9,10 +9,17 @@
 #include "PhysicsPublic.h"
 #include "Engine/World.h"
 
+const float UPhysicsMovement::MIN_TICK_TIME = 1e-6f;
+const float UPhysicsMovement::MIN_FLOOR_DIST = 1.9f;
+const float UPhysicsMovement::MAX_FLOOR_DIST = 2.4f;
+const float UPhysicsMovement::BRAKE_TO_STOP_VELOCITY = 10.f;
+const float UPhysicsMovement::SWEEP_EDGE_REJECT_DISTANCE = 0.15f;
+
 UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 {
-	m_fMaxTimeStep = 33.f;
-	m_fGroundFriction = 8.f;
+	m_nMaxSimulationIterations = 8.f;
+	m_fBrakingSubstepFrame = 33.f;
+	m_fGroundFriction = 2.f;
 	m_fMaxSpeed = 10000.f;
 	m_fMaxBrakingDeceleration = 4500.f;
 	m_fMinAnalogSpeed = 100.f;
@@ -38,6 +45,7 @@ UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 	m_fAutoRotTimer = 0.f;
 	m_fAdditionalTraceMultipleLength = 1.f;
 	m_fForwardWallCheckCast = 50.f;
+	m_fMaxSimulationTimeStep = 0.05f;
 }
 
 void UPhysicsMovement::BeginPlay()
@@ -65,6 +73,7 @@ void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 	m_fAnalogInputModifier = ComputeAnalogInputModifier();
 	//CalcVelocity(DeltaTime, m_fGroundFriction);
 	//TickCheckCanMoveForward();
+	//TickMovement(DeltaTime, 0);
 	TickRotate(SelectTargetRotation(DeltaTime), DeltaTime);
 	CheckJumpInput(DeltaTime);
 	ClearJumpInput(DeltaTime);
@@ -80,14 +89,14 @@ void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
 	
 	if (!m_bIsWallBlocking)
 	{
-		CalcVelocity(DeltaTime, m_fGroundFriction);
-		TickMovement(DeltaTime);
+		TickMovement(DeltaTime, 0);
 	}
 }
 
 void UPhysicsMovement::CalcVelocity(float DeltaTime, float Friction)
 {
 	PRINTF("---------------------------------------------------------------------------");
+	PRINTF("Accel : %s, Size : %f", *m_Acceleration.ToString(), m_Acceleration.Size());
 	PRINTF("Begin V : %s, Size : %f", *Velocity.ToString(), Velocity.Size());
 
 	float MaxSpeed = GetMaxSpeed();
@@ -97,6 +106,14 @@ void UPhysicsMovement::CalcVelocity(float DeltaTime, float Friction)
 	const bool bZeroAcceleration = m_Acceleration.IsZero();
 	const bool bVelocityOverMax = IsExceedingMaxSpeed(MaxSpeed);
 
+	if (bZeroAcceleration)
+	{
+		PRINTF("ZeroAccel");
+	}
+	if (bVelocityOverMax)
+	{
+		PRINTF("VeloOver");
+	}
 	if (bZeroAcceleration || bVelocityOverMax)
 	{
 		PRINTF("Braking Did");
@@ -345,7 +362,7 @@ void UPhysicsMovement::SetInitHeadMass(float massHead)
 	m_fInitHeadMass = massHead;
 }
 
-void UPhysicsMovement::TickMovement(float delta)
+void UPhysicsMovement::TickMovement(float delta, int32 iter)
 {	
 	if (m_bBlockMove && !m_bAutoMove)
 	{
@@ -363,8 +380,46 @@ void UPhysicsMovement::TickMovement(float delta)
 	{
 		Velocity*= m_fAirControl;
 	}*/
+	float remainingTime = delta;
+	PRINTF("RemainDelta : %f", delta);
+	PRINTF("MinTick :%f", MIN_TICK_TIME);
+	while ((remainingTime >= MIN_TICK_TIME) && (iter < m_nMaxSimulationIterations))
+	{
+		iter++;
+		PRINTF("PhysWalk - Iter : %d", iter);
+		const float timeTick = GetSimulationTimeStep(remainingTime, iter);
+		remainingTime -= timeTick;
 
-	UpdateComponentVelocity();
+		// Save current values
+		const FVector OldLocation = UpdatedComponent->GetComponentLocation();
+
+		const FVector OldVelocity = Velocity;
+
+		// Apply acceleration
+		CalcVelocity(delta,m_fGroundFriction);
+
+		const FVector MoveVelocity = Velocity;
+		const FVector Delta = timeTick * MoveVelocity;
+		const bool bZeroDelta = Delta.IsNearlyZero();
+
+		if (bZeroDelta)
+		{
+			remainingTime = 0.f;
+		}
+		else
+		{
+			UpdateComponentVelocity();
+		}
+
+		if (UpdatedComponent->GetComponentLocation() == OldLocation)
+		{
+			remainingTime = 0.f;
+			break;
+		}
+	}
+
+
+	
 }
 void UPhysicsMovement::TickRotate(const FRotator rotateWant,float delta)
 {
@@ -663,7 +718,6 @@ void UPhysicsMovement::ResetJumpState()
 
 void UPhysicsMovement::ApplyVelocityBraking(float DeltaTime, float Friction, float BrakingDeceleration)
 {
-	const float MIN_TICK_TIME = 1e-6f;
 	if (Velocity.IsZero() || DeltaTime < MIN_TICK_TIME)
 	{
 		return;
@@ -685,7 +739,7 @@ void UPhysicsMovement::ApplyVelocityBraking(float DeltaTime, float Friction, flo
 	// subdivide braking to get reasonably consistent results at lower frame rates
 	// (important for packet loss situations w/ networking)
 	float RemainingTime = DeltaTime;
-	const float MaxTimeStep = FMath::Clamp(1.0f / m_fMaxTimeStep, 1.0f / 75.0f, 1.0f / 20.0f);
+	const float MaxTimeStep = FMath::Clamp(1.0f / m_fBrakingSubstepFrame, 1.0f / 75.0f, 1.0f / 20.0f);
 
 	// Decelerate to brake to a stop
 	const FVector RevAccel = (bZeroBraking ? FVector::ZeroVector : (-BrakingDeceleration * Velocity.GetSafeNormal()));
@@ -708,8 +762,23 @@ void UPhysicsMovement::ApplyVelocityBraking(float DeltaTime, float Friction, flo
 
 	// Clamp to zero if nearly zero, or if below min threshold and braking.
 	const float VSizeSq = Velocity.SizeSquared();
-	if (VSizeSq <= KINDA_SMALL_NUMBER || (!bZeroBraking && VSizeSq <= FMath::Square(10.f)))
+	if (VSizeSq <= KINDA_SMALL_NUMBER || (!bZeroBraking && VSizeSq <= FMath::Square(BRAKE_TO_STOP_VELOCITY)))
 	{
 		Velocity = FVector::ZeroVector;
 	}
+}
+
+float UPhysicsMovement::GetSimulationTimeStep(float RemainingTime, int32 Iterations) const
+{
+	static uint32 s_WarningCount = 0;
+	if (RemainingTime > m_fMaxSimulationTimeStep)
+	{
+		if (Iterations < m_nMaxSimulationIterations)
+		{
+			// Subdivide moves to be no longer than MaxSimulationTimeStep seconds
+			RemainingTime = FMath::Min(m_fMaxSimulationTimeStep, RemainingTime * 0.5f);
+		}
+	}
+	// no less than MIN_TICK_TIME (to avoid potential divide-by-zero during simulation).
+	return FMath::Max(MIN_TICK_TIME, RemainingTime);
 }
