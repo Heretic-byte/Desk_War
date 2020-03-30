@@ -94,7 +94,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
 	void AddImpulse(FVector impulseWant);
 private:
-	virtual void UpdateComponentVelocity() override;
 	void SetAccelerationByDir(const FVector inputPure);
 	float GetAxisDeltaRotation(float InAxisRotationRate, float DeltaTime) const;
 	FRotator GetDeltaRotation(float DeltaTime) const;
@@ -155,4 +154,12 @@ public:
 	float ComputeAnalogInputModifier() const;
 	virtual float GetMaxSpeed() const override;
 	void ApplyVelocityBraking(float DeltaTime, float Friction, float BrakingDeceleration);
+
+	FVector ComputeGroundMovementDelta(const FVector& Delta, const FHitResult& RampHit)const;
+
+	bool IsWalkable(const FHitResult& Hit) const;
+
+	void SetVelocity(FVector& velocity,FHitResult& sweep);
+
+	float SlideAlongSurface(const FVector& Delta, float Time, const FVector& InNormal, FHitResult& Hit, bool bHandleImpact);
 };
