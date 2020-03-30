@@ -32,6 +32,7 @@ private:
 	bool m_bOnGround;
 	bool m_bPressedJump;
 	FHitResult m_GroundHitResult;
+	float m_fGroundDist;
 	//jump
 	bool m_bWasJumping;
 	float m_fJumpKeyHoldTime;
@@ -65,9 +66,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement_Rotate")
 	FRotator m_RotationRate;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
-	float m_WalkableSlopeAngle;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
-	float m_WalkableSlopeHeight;
+	float m_fWalkableSlopeAngle;
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
+	float m_fWalkableSlopeHeight;
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement_Jump", meta = (ClampMin = "0", UIMin = "0"))
 	float m_fJumpZVelocity;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement_Jump", meta = (ClampMin = "0", UIMin = "0"))
@@ -80,13 +81,16 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "PhysicsMovement_Jump")
 	FVoidVoidBP m_OnJumpBP;
 	FVoidVoid m_OnJump;
+
 public:
 	UFUNCTION(BlueprintCallable,Category="PhysicsMovement_Jump")
 	void Jump();
 	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement_Jump")
 	void StopJumping();
-	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
-	bool IsGround() const;
+
+	//virtual bool IsMovingOnGround() override const;
+	virtual bool IsMovingOnGround()  const override;
+
 	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
 	float GetMaxForce() const;
 	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
@@ -94,6 +98,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
 	void AddImpulse(FVector impulseWant);
 private:
+	void SetWalkableFloorAngle(float InWalkableFloorAngle);
 	void SetAccelerationByDir(const FVector inputPure);
 	float GetAxisDeltaRotation(float InAxisRotationRate, float DeltaTime) const;
 	FRotator GetDeltaRotation(float DeltaTime) const;
@@ -159,7 +164,12 @@ public:
 
 	bool IsWalkable(const FHitResult& Hit) const;
 
-	void SetVelocity(FVector& velocity,FHitResult& sweep);
+	void SetVelocity(FVector& velocity,FHitResult& sweep,float delta);
 
 	float SlideAlongSurface(const FVector& Delta, float Time, const FVector& InNormal, FHitResult& Hit, bool bHandleImpact);
+
+	bool Sweep(UPrimitiveComponent * Prim, FVector  delta,FHitResult& OutHit);
+	void PullBackHit(FHitResult& Hit, const FVector& Start, const FVector& End, const float Dist);
+
+	virtual void UpdateComponentVelocity() override;
 };

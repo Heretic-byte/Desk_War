@@ -109,7 +109,7 @@ void AUSB_PlayerPawn::CreatePhysicMovement()
 	m_UsbMovement->m_fMovingForce=38000.f;
 	m_UsbMovement->m_fGroundCastBoxSize = 10.f;
 	m_UsbMovement->m_fGroundCastOffset = -20.f;
-	m_UsbMovement->m_WalkableSlopeAngle = 55.f;
+	m_UsbMovement->m_fWalkableSlopeAngle = 55.f;
 	m_UsbMovement->m_fJumpZVelocity = 2000.f;
 	m_UsbMovement->m_nJumpMaxCount = 2;
 	m_UsbMovement->m_fAirControl = 0.6f;
@@ -283,7 +283,7 @@ void AUSB_PlayerPawn::ConnectShot()
 
 
 
-	if (!m_UsbMovement->IsGround())//sky connect
+	if (!m_UsbMovement->IsMovingOnGround())//sky connect
 	{ 
 		//공중삽입의 문제점
 
@@ -319,7 +319,7 @@ void AUSB_PlayerPawn::TryConnect(UPrimitiveComponent * OverlappedComponent, AAct
 		return;
 	}
 
-	if (!PortCompo->CheckConnectTransform(GetHead(), m_UsbMovement->IsGround()))
+	if (!PortCompo->CheckConnectTransform(GetHead(), m_UsbMovement->IsMovingOnGround()))
 	{
 		PRINTF("FailConnect - Rotation");
 		FailConnection(PortCompo, SweepResult);
