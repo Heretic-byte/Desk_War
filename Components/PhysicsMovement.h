@@ -60,8 +60,6 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMax = "0", UIMax = "0"))
 	float m_fGroundCastOffset;
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMin = "1", UIMin = "1"))
-	float m_fForwardWallCheckCast;
-	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMin = "1", UIMin = "1"))
 	float m_fMovingForce;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement_Rotate")
 	FRotator m_RotationRate;
@@ -114,7 +112,6 @@ private:
 	bool CanJump() const;
 	bool DoJump();
 private:
-	void TickCheckCanMoveForward();
 	void TickCastGround();
 	void TickCastFlipCheck();
 	void TickRotate(const FRotator rotateWant,float delta);
@@ -166,9 +163,10 @@ public:
 
 	void SetVelocity(FVector& velocity,FHitResult& sweep,float delta);
 
-	FVector  SlideAlongSurface(const FVector& velocity, float deltaTime,float Time, const FVector& InNormal, FHitResult& Hit, bool bHandleImpact);
+	FVector SlideAlongOnSurface(const FVector& velocity, float deltaTime,float Time, const FVector& InNormal, FHitResult& Hit, bool bHandleImpact);
 
 	bool SweepCanMove(FVector  delta, float deltaTime, FHitResult& OutHit, float offset = 0.05f);
+
 	void PullBackHit(FHitResult& Hit, const FVector& Start, const FVector& End, const float Dist);
 
 	virtual void UpdateComponentVelocity() override;
@@ -180,5 +178,5 @@ public:
 
 	void DrawVectorFromHead(FVector wantVector, float length, FColor color) const;
 
-
+	FRotator TargetRot;
 };

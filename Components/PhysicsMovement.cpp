@@ -37,7 +37,6 @@ UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 	m_fAutoRotTime = 0.f;
 	m_fAutoRotTimer = 0.f;
 	m_fAdditionalTraceMultipleLength = 1.f;
-	m_fForwardWallCheckCast = 50.f;
 }
 
 void UPhysicsMovement::BeginPlay()
@@ -62,7 +61,7 @@ void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	TickCastGround();
-	TickCastFlipCheck();
+	//TickCastFlipCheck();
 	SetAccel(DeltaTime);
 	m_fAnalogInputModifier = ComputeAnalogInputModifier();
 	TickRotate(SelectTargetRotation(DeltaTime), DeltaTime);
@@ -269,14 +268,21 @@ FRotator UPhysicsMovement::SelectTargetRotation(float delta)
 				DisableAutoRotate();
 			}
 		}
+		//TargetRot = m_AutoRotateRot;
 		return m_AutoRotateRot;
 	}
 
 	if (m_Acceleration.SizeSquared() < KINDA_SMALL_NUMBER)
 	{
+		//TargetRot = m_MovingTarget->GetComponentRotation();
 		return m_MovingTarget->GetComponentRotation();
 	}
-	return m_Acceleration.GetSafeNormal().Rotation();
+
+	FRotator ROt = m_Acceleration.GetSafeNormal().Rotation();
+	TargetRot.Yaw = ROt.Yaw;
+	//TargetRot.Roll = ROt.Roll;
+
+	return TargetRot;
 }
 
 bool UPhysicsMovement::SetAccel(float DeltaTime)
@@ -319,8 +325,6 @@ bool UPhysicsMovement::SetAccel(float DeltaTime)
 	return true;
 }
 
-
-
 float UPhysicsMovement::ComputeAnalogInputModifier() const
 {
 	const float MaxAccel = GetMaxForce();
@@ -331,9 +335,6 @@ float UPhysicsMovement::ComputeAnalogInputModifier() const
 
 	return 0.f;
 }
-
-
-
 
 void UPhysicsMovement::SetDamping(float fLinDamp, float fAngDamp)
 {
@@ -364,23 +365,22 @@ void UPhysicsMovement::TickMovement(float delta)
 	if (SweepCanMove(RampVector, delta, Hit))
 	{
 		SetVelocity(RampVector, Hit, delta);
-		PRINTF("1");
+		TargetRot = RampVector.GetSafeNormal().Rotation();
 		return;
 	}
-
-	float LastMoveTimeSlice = delta;
 
 	if (Hit.bStartPenetrating)
 	{
 		ResultVector=SlideAlongSurface(Delta, delta,1.f, Hit.Normal, Hit, true);
 	}
-	else if (Hit.IsValidBlockingHit())	// 일반적인 BlockingHit일 때
+	else if (Hit.IsValidBlockingHit())	//일반적인 BlockingHit일 때
 	{
+		float LastMoveTimeSlice = delta;
 		float PercentTimeApplied = Hit.Time;//시작에서 끝까지 어디서 부딫혔는지의 퍼센트
-		if ((Hit.Time > 0.f) && (Hit.Normal.Z > KINDA_SMALL_NUMBER) && IsWalkable(Hit))	// Hit된 지면이 경사면으로 추정된다면 경사면을 따라 걸음
+		if ((Hit.Time > 0.f) && (Hit.Normal.Z > KINDA_SMALL_NUMBER) && IsWalkable(Hit))	//Hit된 지면이 경사면으로 추정된다면 경사면을 따라 걸음
 		{
 			PRINTF("ClimbRamp");
-			// Another walkable ramp.
+			//Another walkable ramp.
 			const float InitialPercentRemaining = 1.f - PercentTimeApplied;
 			RampVector = ComputeGroundMovementDelta(Delta * InitialPercentRemaining, Hit);
 			LastMoveTimeSlice = InitialPercentRemaining * LastMoveTimeSlice;
@@ -396,6 +396,7 @@ void UPhysicsMovement::TickMovement(float delta)
 			ResultVector=SlideAlongSurface(Delta,delta, 1.f - PercentTimeApplied, Hit.Normal, Hit, true);
 		}
 	}
+	TargetRot = ResultVector.GetSafeNormal().Rotation();
 	SetVelocity(ResultVector, Hit, delta);
 
 }
@@ -456,39 +457,6 @@ bool UPhysicsMovement::IsFalling() const
 	return !IsMovingOnGround();
 }
 
-void UPhysicsMovement::TickCheckCanMoveForward()
-{
-	if (m_vInputNormal.SizeSquared() < KINDA_SMALL_NUMBER)
-	{
-		//m_bIsWallBlocking = false;
-		return ;
-	}
-	FVector TraceStart = m_MovingTarget->GetComponentLocation();
-	FVector TraceEnd = TraceStart + (m_fForwardWallCheckCast*m_fAdditionalTraceMultipleLength*m_vInputNormal);//groundoffset is minus
-
-#if WITH_EDITOR
-	if (m_bDebugShowForwardCast)
-	{
-		DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor(255, 255, 120), false, -1.f, 0.1f);
-	}
-#endif
-
-	FCollisionQueryParams QueryParam;
-	AddIgnoreActorsToQuery(QueryParam);
-	FHitResult HitResult;
-
-	if (GetWorld()->SweepSingleByObjectType(HitResult, TraceStart, TraceEnd, FQuat::Identity, ECollisionChannel::ECC_WorldStatic, FCollisionShape::MakeSphere(1.f), QueryParam))
-	{
-		//m_bIsWallBlocking = true;
-		m_Acceleration = FVector::ZeroVector;
-		return ;
-	}
-	else
-	{
-		//m_bIsWallBlocking = false;
-		return ;
-	}
-}
 
 void UPhysicsMovement::TickCastGround()
 {
