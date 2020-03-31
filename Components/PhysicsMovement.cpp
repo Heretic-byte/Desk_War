@@ -634,7 +634,7 @@ void UPhysicsMovement::ClearJumpInput(float delta)
 		m_bWasJumping = false;
 	}
 
-	if(IsMovingOnGround())
+	if(IsMovingOnGround()&& IsWalkable(m_GroundHitResult))
 		ResetJumpState();
 }
 
