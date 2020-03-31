@@ -166,9 +166,9 @@ public:
 
 	void SetVelocity(FVector& velocity,FHitResult& sweep,float delta);
 
-	float SlideAlongSurface(const FVector& Delta, float Time, const FVector& InNormal, FHitResult& Hit, bool bHandleImpact);
+	FVector  SlideAlongSurface(const FVector& velocity, float deltaTime,float Time, const FVector& InNormal, FHitResult& Hit, bool bHandleImpact);
 
-	bool SweepCanMove(UPrimitiveComponent * Prim, FVector  delta,FHitResult& OutHit);
+	bool SweepCanMove(FVector  delta, float deltaTime, FHitResult& OutHit, float offset = 0.05f);
 	void PullBackHit(FHitResult& Hit, const FVector& Start, const FVector& End, const float Dist);
 
 	virtual void UpdateComponentVelocity() override;
@@ -179,4 +179,6 @@ public:
 
 
 	void DrawVectorFromHead(FVector wantVector, float length, FColor color) const;
+
+
 };
