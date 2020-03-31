@@ -168,8 +168,15 @@ public:
 
 	float SlideAlongSurface(const FVector& Delta, float Time, const FVector& InNormal, FHitResult& Hit, bool bHandleImpact);
 
-	bool Sweep(UPrimitiveComponent * Prim, FVector  delta,FHitResult& OutHit);
+	bool SweepCanMove(UPrimitiveComponent * Prim, FVector  delta,FHitResult& OutHit);
 	void PullBackHit(FHitResult& Hit, const FVector& Start, const FVector& End, const float Dist);
 
 	virtual void UpdateComponentVelocity() override;
+
+	virtual FVector ComputeSlideVector(const FVector& Delta, const float Time, const FVector& Normal, const FHitResult& Hit) const override;
+
+	virtual FVector HandleSlopeBoosting(const FVector& SlideResult, const FVector& Delta, const float Time, const FVector& Normal, const FHitResult& Hit) const;
+
+
+	void DrawVectorFromHead(FVector wantVector, float length, FColor color) const;
 };

@@ -357,9 +357,9 @@ void UPhysicsMovement::SetInitHeadMass(float massHead)
 
 void UPhysicsMovement::TickMovement(float delta)
 {	
-	const FVector Delta = FVector(Velocity.X, Velocity.Y, 0.f);// *delta;
+	const FVector Delta = FVector(Velocity.X, Velocity.Y, 0.f);// delta;
 	FHitResult Hit(1.f);
-	FVector RampVector = ComputeGroundMovementDelta(Delta, m_GroundHitResult);//못올라가는 경사이거나 경사가 없으면 걍 지금움직임이 나가버린다
+	FVector RampVector = ComputeGroundMovementDelta(Delta, m_GroundHitResult);
 	SetVelocity(RampVector,Hit,delta);
 
 	float LastMoveTimeSlice = delta;
@@ -368,29 +368,23 @@ void UPhysicsMovement::TickMovement(float delta)
 	//이 스윕을 이용해서 경사를 움직여야한다.
 	if (Hit.bStartPenetrating)
 	{
-		PRINTF("Penet");
 		SlideAlongSurface(Delta, 1.f, Hit.Normal, Hit, true);
 	}
 	else if (Hit.IsValidBlockingHit())	// 일반적인 BlockingHit일 때
 	{
-		PRINTF("Blocked");
 		float PercentTimeApplied = Hit.Time;//시작에서 끝까지 어디서 부딫혔는지의 퍼센트
 		if ((Hit.Time > 0.f) && (Hit.Normal.Z > KINDA_SMALL_NUMBER) && IsWalkable(Hit))	// Hit된 지면이 경사면으로 추정된다면 경사면을 따라 걸음
 		{
-
-			PRINTF("Blocked2");
+			PRINTF("ClimbRamp");
 			// Another walkable ramp.
 			const float InitialPercentRemaining = 1.f - PercentTimeApplied;
 			RampVector = ComputeGroundMovementDelta(Delta * InitialPercentRemaining, Hit);
 			LastMoveTimeSlice = InitialPercentRemaining * LastMoveTimeSlice;
-			SetVelocity(RampVector, Hit,delta);
+			SetVelocity(RampVector, Hit, delta);
 			const float SecondHitPercent = Hit.Time * InitialPercentRemaining;
 			PercentTimeApplied = FMath::Clamp(PercentTimeApplied + SecondHitPercent, 0.f, 1.f);
 		}
-
-		//경사면을 오르고 또 부딫혔는지 확인
-
-		if (Hit.IsValidBlockingHit())	// Hit 여부에 따라서 어떻게 이동할지 정함
+		if (Hit.IsValidBlockingHit())
 		{
 			PRINTF("Blocked3");
 			SlideAlongSurface(Delta, 1.f - PercentTimeApplied, Hit.Normal, Hit, true);
@@ -718,9 +712,7 @@ void UPhysicsMovement::ApplyVelocityBraking(float DeltaTime, float Friction, flo
 	{
 		const float dt = ((RemainingTime > MaxTimeStep && !bZeroFriction) ? FMath::Min(MaxTimeStep, RemainingTime * 0.5f) : RemainingTime);
 		RemainingTime -= dt;
-
 		Velocity = Velocity + ((-Friction) * Velocity + RevAccel) * dt;
-
 		if ((Velocity | OldVel) <= 0.f)
 		{
 			Velocity = FVector::ZeroVector;
@@ -775,7 +767,13 @@ bool UPhysicsMovement::IsWalkable(const FHitResult & Hit) const
 		const FWalkableSlopeOverride& SlopeOverride = HitComponent->GetWalkableSlopeOverride();
 		TestWalkableZ = SlopeOverride.ModifyWalkableFloorZ(TestWalkableZ);
 	}
-
+	// Can't walk on this surface if it is too steep.
+	if (Hit.ImpactNormal.Z < TestWalkableZ)
+	{
+		PRINTF("CantWalkable");
+		return false;
+	}
+	PRINTF("Walkable");
 	return true;
 }
 
@@ -788,10 +786,11 @@ void UPhysicsMovement::SetVelocity(FVector& velocity,FHitResult & sweep, float d
 	FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
 
 	velocity.Z = CurrentV.Z;
-	if (!Sweep(m_MovingTarget, velocity*(delta+0.05f), sweep))
+	(SweepCanMove(m_MovingTarget, velocity*(delta + 0.05f), sweep));
 	{
 		m_MovingTarget->SetPhysicsLinearVelocity(velocity);
 	}
+	DrawVectorFromHead(m_MovingTarget->GetPhysicsLinearVelocity(), 40, FColor::Emerald);
 }
 
 float UPhysicsMovement::SlideAlongSurface(const FVector & Delta, float Time, const FVector & InNormal, FHitResult & Hit, bool bHandleImpact)
@@ -800,7 +799,8 @@ float UPhysicsMovement::SlideAlongSurface(const FVector & Delta, float Time, con
 	{
 		return 0.f;
 	}
-	PRINTF("SlideAlongSurface");
+	static int TT=1;
+	//PRINTF("SlideAlongSurface : %d", TT++);//이새끼 오하려 뒤로보낸다
 
 	FVector Normal(InNormal);
 	if (IsMovingOnGround())
@@ -842,29 +842,24 @@ float UPhysicsMovement::SlideAlongSurface(const FVector & Delta, float Time, con
 		const FQuat Rotation = UpdatedComponent->GetComponentQuat();
 		FVector Location= UpdatedComponent->GetComponentLocation();
 		SetVelocity(SlideDelta, Hit, Time);
-		//UpdatedComponent->SetWorldLocationAndRotation(Location + SlideDelta,Rotation, false,&Hit,ETeleportType::TeleportPhysics);
 		const float FirstHitPercent = Hit.Time;
 		PercentTimeApplied = FirstHitPercent;
 		if (Hit.IsValidBlockingHit())
 		{
-			// Compute new slide normal when hitting multiple surfaces.
 			TwoWallAdjust(SlideDelta, Hit, OldHitNormal);
-			// Only proceed if the new direction is of significant length and not in reverse of original attempted move.
 			if (!SlideDelta.IsNearlyZero(1e-3f) && (SlideDelta | Delta) > 0.f)
 			{
 				SetVelocity(SlideDelta, Hit, Time);
-				//UpdatedComponent->SetWorldLocationAndRotation(Location + SlideDelta, Rotation, false, &Hit, ETeleportType::TeleportPhysics);
 				const float SecondHitPercent = Hit.Time * (1.f - FirstHitPercent);
 				PercentTimeApplied += SecondHitPercent;
 			}
 		}
-		DrawDebugLine(GetWorld(), Location, Location + (SlideDelta.GetSafeNormal()*100.f), FColor::Red,false,-1.f,1,3.5f);
 		return FMath::Clamp(PercentTimeApplied, 0.f, 1.f);
 	}
 	return 0.f;
 }
 
-bool UPhysicsMovement::Sweep(UPrimitiveComponent * Prim, FVector  delta, FHitResult& OutHit)
+bool UPhysicsMovement::SweepCanMove(UPrimitiveComponent * Prim, FVector  delta, FHitResult& OutHit)
 {
 	 FVector TraceStart = Prim->GetComponentLocation();
 	TraceStart.Z += 10.f;
@@ -872,12 +867,10 @@ bool UPhysicsMovement::Sweep(UPrimitiveComponent * Prim, FVector  delta, FHitRes
 	float DeltaSizeSq = (TraceEnd - TraceStart).SizeSquared();				// Recalc here to account for precision loss of float addition
 	const FQuat InitialRotationQuat = Prim->GetComponentTransform().GetRotation();
 
-	// ComponentSweepMulti does nothing if moving < KINDA_SMALL_NUMBER in distance, so it's important to not try to sweep distances smaller than that. 
 	const float MinMovementDistSq = FMath::Square(4.f*KINDA_SMALL_NUMBER);
 
 	if (DeltaSizeSq <= MinMovementDistSq)//너무작으면 스윕 안한다
 	{
-		// Skip if no vector or rotation.
 		if (UpdatedComponent->GetComponentQuat().Equals(InitialRotationQuat, SCENECOMPONENT_QUAT_TOLERANCE))
 		{
 			return true;
@@ -885,7 +878,6 @@ bool UPhysicsMovement::Sweep(UPrimitiveComponent * Prim, FVector  delta, FHitRes
 		DeltaSizeSq = 0.f;
 	}
 
-	// WARNING: HitResult is only partially initialized in some paths. All data is valid only if bFilledHitResult is true.
 	FHitResult BlockingHit(NoInit);
 	BlockingHit.bBlockingHit = false;
 	BlockingHit.Time = 1.f;
@@ -907,7 +899,7 @@ bool UPhysicsMovement::Sweep(UPrimitiveComponent * Prim, FVector  delta, FHitRes
 			FCollisionResponseParams ResponseParam;
 			Prim->InitSweepCollisionParams(Params, ResponseParam);
 			bool const bHadBlockingHit = MyWorld->ComponentSweepMulti(Hits, Prim, TraceStart, TraceEnd, InitialRotationQuat, Params);
-			DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Blue, false, -1.f, 0.1f, 3.f);
+			//DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Red, false, -1.f, 0.1f, 3.f);
 			if (Hits.Num() > 0)
 			{
 				const float DeltaSize = FMath::Sqrt(DeltaSizeSq);
@@ -918,7 +910,7 @@ bool UPhysicsMovement::Sweep(UPrimitiveComponent * Prim, FVector  delta, FHitRes
 			}
 			else
 			{
-				return false;
+				return true;
 			}
 
 			int32 FirstNonInitialOverlapIdx = INDEX_NONE;
@@ -934,7 +926,6 @@ bool UPhysicsMovement::Sweep(UPrimitiveComponent * Prim, FVector  delta, FHitRes
 					{
 						if (TestHit.Time == 0.f)
 						{
-							// We may have multiple initial hits, and want to choose the one with the normal most opposed to our movement.
 							const float NormalDotDelta = (TestHit.ImpactNormal | delta);
 							if (NormalDotDelta < BlockingHitNormalDotDelta)
 							{
@@ -945,15 +936,12 @@ bool UPhysicsMovement::Sweep(UPrimitiveComponent * Prim, FVector  delta, FHitRes
 						}
 						else if (BlockingHitIndex == INDEX_NONE)
 						{
-							// First non-overlapping blocking hit should be used, if an overlapping hit was not.
-							// This should be the only non-overlapping blocking hit, and last in the results.
 							BlockingHitIndex = HitIdx;
 							break;
 						}
 					}
 				}
 
-				// Update blocking hit, if there was a valid one.
 				if (BlockingHitIndex >= 0)
 				{
 					BlockingHit = Hits[BlockingHitIndex];
@@ -962,7 +950,6 @@ bool UPhysicsMovement::Sweep(UPrimitiveComponent * Prim, FVector  delta, FHitRes
 				}
 			}
 
-			// Update NewLocation based on the hit result
 			if (!BlockingHit.bBlockingHit)
 			{
 				NewLocation = TraceEnd;
@@ -972,15 +959,12 @@ bool UPhysicsMovement::Sweep(UPrimitiveComponent * Prim, FVector  delta, FHitRes
 				check(bFilledHitResult);
 				NewLocation = TraceStart + (BlockingHit.Time * (TraceEnd - TraceStart));
 
-				// Sanity check
 				const FVector ToNewLocation = (NewLocation - TraceStart);
 				if (ToNewLocation.SizeSquared() <= MinMovementDistSq)
 				{
-					// We don't want really small movements to put us on or inside a surface.
 					NewLocation = TraceStart;
 					BlockingHit.Time = 0.f;
 
-					// Remove any pending overlaps after this point, we are not going as far as we swept.
 					if (FirstNonInitialOverlapIdx != INDEX_NONE)
 					{
 						const bool bAllowShrinking = false;
@@ -991,26 +975,19 @@ bool UPhysicsMovement::Sweep(UPrimitiveComponent * Prim, FVector  delta, FHitRes
 		}
 		else if (DeltaSizeSq > 0.f)
 		{
-			// apply move delta even if components has collisions disabled
 			NewLocation += delta;
 			bIncludesOverlapsAtEnd = false;
 		}
 
-		// Update the location.  This will teleport any child components as well (not sweep).
-		DrawDebugLine(GetWorld(), m_MovingTarget->GetComponentLocation(), NewLocation, FColor::Black, false, -1.f, 0.1f, 3.f);
-		Prim->SetWorldLocationAndRotationNoPhysics(NewLocation, UpdatedComponent->GetComponentRotation());
 	}
 
-
-	// Handle blocking hit notifications. Avoid if pending kill (which could happen after overlaps).
 	if (BlockingHit.bBlockingHit && !IsPendingKill())
 	{
 		check(bFilledHitResult);
 		Prim->DispatchBlockingHit(*Actor, BlockingHit);
 	}
 	OutHit = BlockingHit;
-	PRINTF("Chosen Hit :%s", *OutHit.Actor.Get()->GetName());
-	return !IsWalkable(BlockingHit);
+	return IsWalkable(BlockingHit);
 }
 
 void UPhysicsMovement::PullBackHit(FHitResult & Hit, const FVector & Start, const FVector & End, const float Dist)
@@ -1021,5 +998,59 @@ void UPhysicsMovement::PullBackHit(FHitResult & Hit, const FVector & Start, cons
 
 void UPhysicsMovement::UpdateComponentVelocity()
 {
+}
+
+FVector UPhysicsMovement::ComputeSlideVector(const FVector & Delta, const float Time, const FVector & Normal, const FHitResult & Hit) const
+{
+	//DrawVectorFromHead(Delta, 100.f, FColor::Cyan);
+	FVector Result = Super::ComputeSlideVector(Delta, Time, Normal, Hit);
+	DrawVectorFromHead(Result, 100.f, FColor::Red);
+	// prevent boosting up slopes
+	if (IsFalling())
+	{
+		Result = HandleSlopeBoosting(Result, Delta, Time, Normal, Hit);
+	}
+
+	return Result;
+}
+
+FVector UPhysicsMovement::HandleSlopeBoosting(const FVector & SlideResult, const FVector & Delta, const float Time, const FVector & Normal, const FHitResult & Hit) const
+{
+	FVector Result = SlideResult;
+
+	if (Result.Z > 0.f)
+	{
+		// Don't move any higher than we originally intended.
+		const float ZLimit = Delta.Z * Time;
+		if (Result.Z - ZLimit > KINDA_SMALL_NUMBER)
+		{
+			if (ZLimit > 0.f)
+			{
+				// Rescale the entire vector (not just the Z component) otherwise we change the direction and likely head right back into the impact.
+				const float UpPercent = ZLimit / Result.Z;
+				Result *= UpPercent;
+			}
+			else
+			{
+				// We were heading down but were going to deflect upwards. Just make the deflection horizontal.
+				Result = FVector::ZeroVector;
+			}
+
+			// Make remaining portion of original result horizontal and parallel to impact normal.
+			const FVector RemainderXY = (SlideResult - Result) * FVector(1.f, 1.f, 0.f);
+			const FVector NormalXY = Normal.GetSafeNormal2D();
+			const FVector Adjust = Super::ComputeSlideVector(RemainderXY, 1.f, NormalXY, Hit);
+			Result += Adjust;
+		}
+	}
+
+	return Result;;
+}
+
+void UPhysicsMovement::DrawVectorFromHead(FVector wantVector, float length, FColor color) const
+{
+	static int b = 1;
+	FVector Start = UpdatedComponent->GetComponentLocation();
+	DrawDebugLine(GetWorld(), Start, Start + wantVector.GetSafeNormal()*length, color, false, -1.f, 1, 1.3f);
 }
 
