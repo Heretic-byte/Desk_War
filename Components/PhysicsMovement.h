@@ -165,7 +165,7 @@ public:
 
 	FVector SlideAlongOnSurface(const FVector& velocity, float deltaTime,float Time, const FVector& InNormal, FHitResult& Hit, bool bHandleImpact);
 
-	bool SweepCanMove(FVector  delta, float deltaTime, FHitResult& OutHit, float offset = 0.05f);
+	bool SweepCanMove(FVector  delta, float deltaTime, FHitResult& OutHit, float offset = 0.03f);
 
 	void PullBackHit(FHitResult& Hit, const FVector& Start, const FVector& End, const float Dist);
 

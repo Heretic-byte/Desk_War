@@ -371,7 +371,7 @@ void UPhysicsMovement::TickMovement(float delta)
 
 	if (Hit.bStartPenetrating)
 	{
-		ResultVector=SlideAlongSurface(Delta, delta,1.f, Hit.Normal, Hit, true);
+		ResultVector= SlideAlongOnSurface(Delta, delta,1.f, Hit.Normal, Hit, true);
 	}
 	else if (Hit.IsValidBlockingHit())	//일반적인 BlockingHit일 때
 	{
@@ -393,7 +393,7 @@ void UPhysicsMovement::TickMovement(float delta)
 		if (Hit.IsValidBlockingHit())
 		{
 			PRINTF("Blocked3");
-			ResultVector=SlideAlongSurface(Delta,delta, 1.f - PercentTimeApplied, Hit.Normal, Hit, true);
+			ResultVector= SlideAlongOnSurface(Delta,delta, 1.f - PercentTimeApplied, Hit.Normal, Hit, true);
 		}
 	}
 	TargetRot = ResultVector.GetSafeNormal().Rotation();
@@ -766,7 +766,7 @@ void UPhysicsMovement::SetVelocity(FVector& velocity,FHitResult & sweep, float d
 	DrawVectorFromHead(m_MovingTarget->GetPhysicsLinearVelocity(), 40, FColor::Emerald);
 }
 
-FVector  UPhysicsMovement::SlideAlongSurface(const FVector& velocity, float deltaTime, float Time, const FVector & InNormal, FHitResult & Hit, bool bHandleImpact)
+FVector UPhysicsMovement::SlideAlongOnSurface(const FVector& velocity, float deltaTime, float Time, const FVector & InNormal, FHitResult & Hit, bool bHandleImpact)
 {
 	if (!Hit.bBlockingHit)
 	{
@@ -952,7 +952,7 @@ bool UPhysicsMovement::SweepCanMove ( FVector  delta,float deltaTime,FHitResult&
 			NewLocation += delta;
 			bIncludesOverlapsAtEnd = false;
 		}
-
+		m_MovingTarget->SetWorldLocationAndRotationNoPhysics(NewLocation,SelectTargetRotation(deltaTime));
 	}
 
 	if (BlockingHit.bBlockingHit && !IsPendingKill())
