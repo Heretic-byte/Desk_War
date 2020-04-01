@@ -179,4 +179,6 @@ public:
 	void DrawVectorFromHead(FVector wantVector, float length, FColor color) const;
 
 	FRotator TargetRot;
+
+	UPrimitiveComponent* GetMovingTargetComponent() const;
 };

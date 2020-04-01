@@ -145,7 +145,7 @@ public:
 	float BrakingFrictionFactor;
 
 	/** 388
-	 * If true, BrakingFriction will be used to slow the character to a stop (when there is no m_vAcceleration).
+	 * If true, BrakingFriction will be used to slow the character to a stop (when there is no m_Acceleration).
 	 * If false, braking uses the same friction passed to CalcVelocity() (ie GroundFriction when walking), multiplied by BrakingFrictionFactor.
 	 * This setting applies to all movement modes; if only desired in certain modes, consider toggling it when movement modes change.
 	 * @see BrakingFriction
@@ -185,7 +185,7 @@ public:
 
 	/** 353
 	 * Friction to apply to lateral air movement when falling.
-	 * If bUseSeparateBrakingFriction is false, also affects the ability to stop more quickly when braking (whenever m_vAcceleration is zero).
+	 * If bUseSeparateBrakingFriction is false, also affects the ability to stop more quickly when braking (whenever m_Acceleration is zero).
 	 * @see BrakingFriction, bUseSeparateBrakingFriction
 	 */
 	UPROPERTY(Category = "Character Movement: Jumping / Falling", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
@@ -196,7 +196,7 @@ public:
 	UPROPERTY(Category = "Character Movement (Rotation Settings)", EditAnywhere, BlueprintReadWrite)
 	FRotator RotationRate;
 	UPROPERTY()
-	FVector m_vAcceleration;
+	FVector m_Acceleration;
 	UPROPERTY()
 	FQuat m_qLastUpdateRotation;
 	UPROPERTY()
@@ -297,7 +297,7 @@ public:
 
 	/** 1320
 	  * Compute a target rotation based on current movement. Used by PhysicsRotation() when bOrientRotationToMovement is true.
-	  * Default implementation targets a rotation based on m_vAcceleration.
+	  * Default implementation targets a rotation based on m_Acceleration.
 	  *
 	  * @param CurrentRotation	- Current rotation of the Character
 	  * @param DeltaTime		- Time slice for this movement
@@ -309,7 +309,7 @@ public:
 
 	/** 1332
 	 * Use velocity requested by path following to compute a requested acceleration and speed.
-	 * This does not affect the m_vAcceleration member variable, as that is used to indicate input acceleration.
+	 * This does not affect the m_Acceleration member variable, as that is used to indicate input acceleration.
 	 * This may directly affect current Velocity.
 	 *
 	 * @param DeltaTime				Time slice for this operation
@@ -317,7 +317,7 @@ public:
 	 * @param MaxSpeed				Max speed allowed when computing OutRequestedSpeed.
 	 * @param Friction				Current friction.
 	 * @param BrakingDeceleration	Current braking deceleration.
-	 * @param OutAcceleration		m_vAcceleration computed based on requested velocity.
+	 * @param OutAcceleration		m_Acceleration computed based on requested velocity.
 	 * @param OutRequestedSpeed		Speed of resulting velocity request, which can affect the max speed allowed by movement.
 	 * @return Whether there is a requested velocity and acceleration, resulting in valid OutAcceleration and OutRequestedSpeed values.
 	 */
@@ -329,7 +329,7 @@ public:
 	virtual FVector NewFallVelocity(const FVector& InitialVelocity, const FVector& Gravity, float DeltaTime) const;
 
 	/** 1361
-	 * Updates Velocity and m_vAcceleration based on the current state, applying the effects of friction and acceleration or deceleration. Does not apply gravity.
+	 * Updates Velocity and m_Acceleration based on the current state, applying the effects of friction and acceleration or deceleration. Does not apply gravity.
 	 * This is used internally during movement updates. Normally you don't need to call this from outside code, but you might want to use it for custom movement modes.
 	 *
 	 * @param	DeltaTime						time elapsed since last frame.
@@ -367,7 +367,7 @@ public:
 		virtual float GetMaxBrakingDeceleration() const;
 
 	/** 1406 Returns current acceleration, computed from input vector each update. */
-	UFUNCTION(BlueprintCallable, Category = "Pawn|Components|CharacterMovement", meta = (Keywords = "m_vAcceleration GetAcceleration"))
+	UFUNCTION(BlueprintCallable, Category = "Pawn|Components|CharacterMovement", meta = (Keywords = "m_Acceleration GetAcceleration"))
 		FVector GetCurrentAcceleration() const;
 
 	/** 1410 Returns modifier [0..1] based on the magnitude of the last input vector, which is used to modify the acceleration and max speed during movement. */
@@ -393,12 +393,12 @@ public:
 
 	/** 1491
 	 * Get the lateral acceleration to use during falling movement. The Z component of the result is ignored.
-	 * Default implementation returns current m_vAcceleration value modified by GetAirControl(), with Z component removed,
+	 * Default implementation returns current m_Acceleration value modified by GetAirControl(), with Z component removed,
 	 * with magnitude clamped to GetMaxAcceleration().
 	 * This function is used internally by PhysFalling().
 	 *
 	 * @param DeltaTime Time step for the current update.
-	 * @return m_vAcceleration to use during falling movement.
+	 * @return m_Acceleration to use during falling movement.
 	 */
 	virtual FVector GetFallingLateralAcceleration(float DeltaTime);
 
@@ -409,7 +409,7 @@ public:
 	 *
 	 * @param DeltaTime			Time step for the current update.
 	 * @param TickAirControl	Current air control value.
-	 * @param FallAcceleration	m_vAcceleration used during movement.
+	 * @param FallAcceleration	m_Acceleration used during movement.
 	 * @return Air control to use during falling movement.
 	 * @see m_fAirControl, BoostAirControl(), LimitAirControl(), GetFallingLateralAcceleration()
 	 */
@@ -423,7 +423,7 @@ protected:
 	 *
 	 * @param DeltaTime			Time step for the current update.
 	 * @param TickAirControl	Current air control value.
-	 * @param FallAcceleration	m_vAcceleration used during movement.
+	 * @param FallAcceleration	m_Acceleration used during movement.
 	 * @return Modified air control to use during falling movement
 	 * @see GetAirControl()
 	 */
@@ -434,7 +434,7 @@ protected:
 	 * This function is used internally by PhysFalling().
 	 *
 	 * @param DeltaTime			Time step for the current update.
-	 * @param FallAcceleration	m_vAcceleration used during movement.
+	 * @param FallAcceleration	m_Acceleration used during movement.
 	 * @param HitResult			Result of impact.
 	 * @param bCheckForValidLandingSpot If true, will use IsValidLandingSpot() to determine if HitResult is a walkable surface. If false, this check is skipped.
 	 * @return Modified air control acceleration to use during falling movement.
@@ -540,7 +540,7 @@ public:
 	virtual void MoveAlongFloor(const FVector& InVelocity, float DeltaSeconds);
 
 
-	/** 1803 Custom version of SlideAlongSurface that handles different movement modes separately; namely during walking physics we might not want to slide up slopes. */
+	/** 1803 Custom version of SlideAlongOnSurface that handles different movement modes separately; namely during walking physics we might not want to slide up slopes. */
 	virtual float SlideAlongSurface(const FVector& Delta, float Time, const FVector& Normal, FHitResult& Hit, bool bHandleImpact) override;
 
 

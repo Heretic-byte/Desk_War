@@ -124,6 +124,7 @@ void UUSBMovementComponent::TickComponent(float DeltaTime, enum ELevelTick TickT
 	}
 
 	PerformMovement(DeltaTime);
+
 }
 
 UCapsuleComponent* UUSBMovementComponent::GetBoundingCapsule() const
@@ -438,7 +439,7 @@ void UUSBMovementComponent::PhysWalking(float deltaTime)
 
 	if (!PawnOwner || (!PawnOwner->Controller))
 	{
-		m_vAcceleration = FVector::ZeroVector;
+		m_Acceleration = FVector::ZeroVector;
 		Velocity = FVector::ZeroVector;
 		return;
 	}
@@ -450,7 +451,7 @@ void UUSBMovementComponent::PhysWalking(float deltaTime)
 
 	MaintainHorizontalGroundVelocity();//위아래 속력 쏠림없앰
 	const FVector OldVelocity = Velocity;
-	m_vAcceleration.Z = 0.f;
+	m_Acceleration.Z = 0.f;
 
 	// Apply acceleration
 	CalcVelocity(deltaTime, GroundFriction,  GetMaxBrakingDeceleration());
@@ -542,14 +543,14 @@ void UUSBMovementComponent::PhysFalling(float deltaTime)
 	//if (bHasAirControl)
 	//{
 	//	// Find velocity *without* acceleration.
-	//	TGuardValue<FVector> RestoreAcceleration(m_vAcceleration, FVector::ZeroVector);
+	//	TGuardValue<FVector> RestoreAcceleration(m_Acceleration, FVector::ZeroVector);
 	//	TGuardValue<FVector> RestoreVelocity(Velocity, Velocity);
 	//	Velocity.Z = 0.f;
 	//	CalcVelocity(deltaTime, m_fFallingLateralFriction, false, MaxDecel);
 	//	VelocityNoAirControl = FVector(Velocity.X, Velocity.Y, OldVelocity.Z);
 	//}
 
-	//TGuardValue<FVector> RestoreAcceleration(m_vAcceleration, FallAcceleration);
+	//TGuardValue<FVector> RestoreAcceleration(m_Acceleration, FallAcceleration);
 	//Velocity.Z = 0.f;
 	//CalcVelocity(deltaTime, m_fFallingLateralFriction, false, MaxDecel);
 	//Velocity.Z = OldVelocity.Z;
@@ -1010,7 +1011,7 @@ void UUSBMovementComponent::CalcVelocity(float DeltaTime, float Friction, float 
 
 
 	// Apply braking or deceleration
-	const bool bZeroAcceleration = m_vAcceleration.IsZero();
+	const bool bZeroAcceleration = m_Acceleration.IsZero();
 	const bool bVelocityOverMax = IsExceedingMaxSpeed(MaxSpeed);
 
 
@@ -1021,7 +1022,7 @@ void UUSBMovementComponent::CalcVelocity(float DeltaTime, float Friction, float 
 		ApplyVelocityBraking(DeltaTime, Friction, BrakingDeceleration);
 
 		// Don't allow braking to lower us below max speed if we started above it.
-		if (bVelocityOverMax && Velocity.SizeSquared() < FMath::Square(MaxSpeed) && FVector::DotProduct(m_vAcceleration, OldVelocity) > 0.0f)
+		if (bVelocityOverMax && Velocity.SizeSquared() < FMath::Square(MaxSpeed) && FVector::DotProduct(m_Acceleration, OldVelocity) > 0.0f)
 		{
 			Velocity = (OldVelocity.GetSafeNormal()) * MaxSpeed;
 		}
@@ -1029,7 +1030,7 @@ void UUSBMovementComponent::CalcVelocity(float DeltaTime, float Friction, float 
 	else if (!bZeroAcceleration)
 	{
 		// Friction affects our ability to change direction. This is only done for input acceleration, not path following.
-		const FVector AccelDir = (m_vAcceleration.Size() == 0) ? FVector::ZeroVector : (m_vAcceleration.GetSafeNormal());
+		const FVector AccelDir = (m_Acceleration.Size() == 0) ? FVector::ZeroVector : (m_Acceleration.GetSafeNormal());
 		const float VelSize = Velocity.Size();
 		Velocity = Velocity - (Velocity - AccelDir * VelSize) * FMath::Min(DeltaTime * Friction, 1.f);
 	}
@@ -1039,7 +1040,7 @@ void UUSBMovementComponent::CalcVelocity(float DeltaTime, float Friction, float 
 	if (!bZeroAcceleration)
 	{
 		const float NewMaxInputSpeed = IsExceedingMaxSpeed(MaxInputSpeed) ? Velocity.Size() : MaxInputSpeed;
-		Velocity += m_vAcceleration * DeltaTime;
+		Velocity += m_Acceleration * DeltaTime;
 		Velocity = Velocity.GetClampedToMaxSize(NewMaxInputSpeed);
 	}
 
@@ -1150,7 +1151,7 @@ float UUSBMovementComponent::GetMaxBrakingDeceleration() const
 // 3578
 FVector UUSBMovementComponent::GetCurrentAcceleration() const
 {
-	return m_vAcceleration;
+	return m_Acceleration;
 }
 
 // 3583
@@ -1199,7 +1200,7 @@ void UUSBMovementComponent::ApplyVelocityBraking(float DeltaTime, float Friction
 FVector UUSBMovementComponent::GetFallingLateralAcceleration(float DeltaTime)
 {//공중에서 이동 정도
 	// No acceleration in Z
-	FVector FallAcceleration = FVector(m_vAcceleration.X, m_vAcceleration.Y, 0.f);
+	FVector FallAcceleration = FVector(m_Acceleration.X, m_Acceleration.Y, 0.f);
 
 	// bound acceleration, falling object has minimal ability to impact acceleration
 	if (FallAcceleration.SizeSquared2D() > 0.f)
@@ -1295,7 +1296,7 @@ void UUSBMovementComponent::RevertMove(const FVector& OldLocation, bool bFailMov
 	{
 		// end movement now
 		Velocity = FVector::ZeroVector;
-		m_vAcceleration = FVector::ZeroVector;
+		m_Acceleration = FVector::ZeroVector;
 	}
 }
 
@@ -1386,7 +1387,7 @@ void UUSBMovementComponent::SetPostLandedPhysics(const FHitResult& Hit)
 {
 	if (PawnOwner)
 	{
-		const FVector PreImpactAccel = m_vAcceleration + (IsFalling() ? FVector(0.f, 0.f, GetGravityZ()) : FVector::ZeroVector);
+		const FVector PreImpactAccel = m_Acceleration + (IsFalling() ? FVector(0.f, 0.f, GetGravityZ()) : FVector::ZeroVector);
 		const FVector PreImpactVelocity = Velocity;
 
 		if (m_eDefaultLandMovementMode == MOVE_Walking ||
@@ -1462,7 +1463,7 @@ FRotator UUSBMovementComponent::GetDeltaRotation(float DeltaTime) const
 // 5485
 FRotator UUSBMovementComponent::ComputeOrientToMovementRotation(const FRotator& CurrentRotation, float DeltaTime, FRotator& DeltaRotation) const
 {
-	if (m_vAcceleration.SizeSquared() < KINDA_SMALL_NUMBER)
+	if (m_Acceleration.SizeSquared() < KINDA_SMALL_NUMBER)
 	{
 		// AI path following request can orient us in that direction (it's effectively an acceleration)
 		if (m_bHasRequestedVelocity && m_vRequestedVelocity.SizeSquared() > KINDA_SMALL_NUMBER)
@@ -1475,7 +1476,7 @@ FRotator UUSBMovementComponent::ComputeOrientToMovementRotation(const FRotator& 
 	}
 
 	// Rotate toward direction of acceleration.
-	return m_vAcceleration.GetSafeNormal().Rotation();
+	return m_Acceleration.GetSafeNormal().Rotation();
 }
 
 // 5503
@@ -1870,16 +1871,16 @@ FVector UUSBMovementComponent::ConstrainInputAcceleration(const FVector& InputAc
 void UUSBMovementComponent::ScaleInputAcceleration(const FVector& InputAcceleration)
 {
 	m_vInputNormal = InputAcceleration.GetClampedToMaxSize(1.f);
-	m_vAcceleration= GetMaxAcceleration() * m_vInputNormal;
+	m_Acceleration= GetMaxAcceleration() * m_vInputNormal;
 }
 
 // 6849
 float UUSBMovementComponent::ComputeAnalogInputModifier() const
 {
 	const float MaxAccel = GetMaxAcceleration();
-	if (m_vAcceleration.SizeSquared() > 0.f && MaxAccel > SMALL_NUMBER)
+	if (m_Acceleration.SizeSquared() > 0.f && MaxAccel > SMALL_NUMBER)
 	{
-		return FMath::Clamp(m_vAcceleration.Size() / MaxAccel, 0.f, 1.f);
+		return FMath::Clamp(m_Acceleration.Size() / MaxAccel, 0.f, 1.f);
 	}
 
 	return 0.f;

@@ -67,6 +67,8 @@ void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 	TickRotate(SelectTargetRotation(DeltaTime), DeltaTime);
 	CheckJumpInput(DeltaTime);
 	ClearJumpInput(DeltaTime);
+
+	//PRINTF("V: %s :size: %f, A: %s :size: %f", *Velocity.ToString(), Velocity.Size(), *m_Acceleration.ToString(), m_Acceleration.Size());
 }
 
 void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
@@ -398,7 +400,7 @@ void UPhysicsMovement::TickMovement(float delta)
 	}
 	TargetRot = ResultVector.GetSafeNormal().Rotation();
 	SetVelocity(ResultVector, Hit, delta);
-
+	
 }
 void UPhysicsMovement::TickRotate(const FRotator rotateWant,float delta)
 {
@@ -746,7 +748,7 @@ bool UPhysicsMovement::IsWalkable(const FHitResult & Hit) const
 	// Can't walk on this surface if it is too steep.
 	if (Hit.ImpactNormal.Z < TestWalkableZ)
 	{
-		PRINTF("CantWalkable");
+		PRINTF("CantWalk");
 		return false;
 	}
 	PRINTF("Walkable");
@@ -858,6 +860,7 @@ bool UPhysicsMovement::SweepCanMove ( FVector  delta,float deltaTime,FHitResult&
 	bool bFilledHitResult = false;
 	bool bIncludesOverlapsAtEnd = false;
 	bool bRotationOnly = false;
+	bool IsSimul = false;
 	TArray<FOverlapInfo> PendingOverlaps;
 	AActor* const Actor = GetOwner();
 
@@ -898,6 +901,7 @@ bool UPhysicsMovement::SweepCanMove ( FVector  delta,float deltaTime,FHitResult&
 
 					if (TestHit.bBlockingHit)
 					{
+						
 						if (TestHit.Time == 0.f)
 						{
 							const float NormalDotDelta = (TestHit.ImpactNormal | delta);
@@ -919,7 +923,9 @@ bool UPhysicsMovement::SweepCanMove ( FVector  delta,float deltaTime,FHitResult&
 				if (BlockingHitIndex >= 0)
 				{
 					BlockingHit = Hits[BlockingHitIndex];
-					
+					PRINTF("!!");
+					PRINTF("The Chosen : %s", *BlockingHit.Actor.Get()->GetName());
+					IsSimul = BlockingHit.GetComponent()->IsSimulatingPhysics();
 					bFilledHitResult = true;
 				}
 			}
@@ -952,15 +958,24 @@ bool UPhysicsMovement::SweepCanMove ( FVector  delta,float deltaTime,FHitResult&
 			NewLocation += delta;
 			bIncludesOverlapsAtEnd = false;
 		}
-		m_MovingTarget->SetWorldLocationAndRotationNoPhysics(NewLocation,SelectTargetRotation(deltaTime));
+		OutHit = BlockingHit;
+		if (IsSimul)
+		{
+			return true;
+		}
+		//else
+			m_MovingTarget->SetWorldLocationAndRotationNoPhysics(NewLocation, SelectTargetRotation(deltaTime));
+		{
+		//	return true;
+		}
 	}
 
 	if (BlockingHit.bBlockingHit && !IsPendingKill())
 	{
-		check(bFilledHitResult);
-		m_MovingTarget->DispatchBlockingHit(*Actor, BlockingHit);
+		//check(bFilledHitResult);
+		//m_MovingTarget->DispatchBlockingHit(*Actor, BlockingHit);
 	}
-	OutHit = BlockingHit;
+
 	return IsWalkable(BlockingHit);
 }
 
@@ -1026,5 +1041,10 @@ void UPhysicsMovement::DrawVectorFromHead(FVector wantVector, float length, FCol
 	static int b = 1;
 	FVector Start = UpdatedComponent->GetComponentLocation();
 	DrawDebugLine(GetWorld(), Start, Start + wantVector.GetSafeNormal()*length, color, false, -1.f, 1, 1.3f);
+}
+
+UPrimitiveComponent * UPhysicsMovement::GetMovingTargetComponent() const
+{
+	return m_MovingTarget;
 }
 
