@@ -451,6 +451,7 @@ float UPhysicsMovement::GetAxisDeltaRotation(float InAxisRotationRate, float Del
 
 void UPhysicsMovement::AddIgnoreActorsToQuery(FCollisionQueryParams & queryParam)
 {
+	if(m_ptrAryTraceIgnoreActors)
 	queryParam.AddIgnoredActors(*m_ptrAryTraceIgnoreActors);
 }
 
@@ -599,16 +600,24 @@ bool UPhysicsMovement::DoJump()
 		FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
 		CurrentV.Z = FMath::Max(m_fJumpZVelocity, CurrentV.Z);
 		
-		float CurrentTargetMass = m_MovingTarget->GetBodyInstance()->GetBodyMass();
-		float TargetTailMassRate = CurrentTargetMass / m_fInitHeadMass;
 
-		float CurrentTailMass = m_MovingTargetTail->GetBodyInstance()->GetBodyMass();
-		float TargetMassRate = CurrentTailMass / m_fInitHeadMass;
+		if (m_MovingTargetTail)
+		{
+
+			float CurrentTargetMass = m_MovingTarget->GetBodyInstance()->GetBodyMass();
+			float TargetTailMassRate = CurrentTargetMass / m_fInitHeadMass;
+
+			float CurrentTailMass = m_MovingTargetTail->GetBodyInstance()->GetBodyMass();
+			float TargetMassRate = CurrentTailMass / m_fInitHeadMass;
 
 
-		m_MovingTarget->SetPhysicsLinearVelocity(CurrentV * TargetMassRate);
-		m_MovingTargetTail->SetPhysicsLinearVelocity(CurrentV * TargetTailMassRate);
-
+			m_MovingTarget->SetPhysicsLinearVelocity(CurrentV * TargetMassRate);
+			m_MovingTargetTail->SetPhysicsLinearVelocity(CurrentV * TargetTailMassRate);
+		}
+		else
+		{
+			m_MovingTarget->SetPhysicsLinearVelocity(CurrentV);
+		}
 		//Velocity.Z = FMath::Max(Velocity.Z, m_fJumpZVelocity);
 
 		m_nJumpCurrentCount++;
@@ -748,7 +757,6 @@ bool UPhysicsMovement::IsWalkable(const FHitResult & Hit) const
 	// Can't walk on this surface if it is too steep.
 	if (Hit.ImpactNormal.Z < TestWalkableZ)
 	{
-		PRINTF("CantWalk");
 		return false;
 	}
 	PRINTF("Walkable");
@@ -838,7 +846,7 @@ FVector UPhysicsMovement::SlideAlongOnSurface(const FVector& velocity, float del
 bool UPhysicsMovement::SweepCanMove ( FVector  delta,float deltaTime,FHitResult& OutHit,float offset)
 {
 	 FVector TraceStart = m_MovingTarget->GetComponentLocation();
-	TraceStart.Z += 10.f;
+	TraceStart.Z += 50.f;//피봇이 땅에 안박혀있으면 이게문제임
 	const FVector TraceEnd = TraceStart + delta*(deltaTime+offset);
 	float DeltaSizeSq = (TraceEnd - TraceStart).SizeSquared();				// Recalc here to account for precision loss of float addition
 	const FQuat InitialRotationQuat = m_MovingTarget->GetComponentTransform().GetRotation();
@@ -965,6 +973,7 @@ bool UPhysicsMovement::SweepCanMove ( FVector  delta,float deltaTime,FHitResult&
 		}
 		//else
 			m_MovingTarget->SetWorldLocationAndRotationNoPhysics(NewLocation, SelectTargetRotation(deltaTime));
+			PRINTF("SweepTeleported");
 		{
 		//	return true;
 		}

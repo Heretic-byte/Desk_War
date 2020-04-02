@@ -14,6 +14,9 @@
 #include "Components/PrimitiveComponent.h"
 #include "Components/PhysicsMovement.h"
 
+#include "Components/PhysicsPathFollowingComponent.h"
+
+
 DEFINE_LOG_CATEGORY_STATIC(USB_PlayerController, Log, All);
 
 AUSB_PlayerController::AUSB_PlayerController()
@@ -100,5 +103,7 @@ void AUSB_PlayerController::OnSetDestinationReleased()
 
 FVector AUSB_PlayerController::GetNavAgentLocation() const
 {
-	return Cast<UPhysicsMovement>( GetPawn()->GetMovementComponent())->GetMovingTargetComponent()->GetComponentLocation();
+	return  Cast<UPhysicsMovement>( GetPawn()->GetMovementComponent())->GetMovingTargetComponent()->GetComponentLocation();
+
+	//return GetPawn()->GetActorLocation();
 }
