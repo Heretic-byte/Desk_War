@@ -110,8 +110,6 @@ private:
 	void CheckJumpInput(float delta);
 	void ClearJumpInput(float delta);
 	bool CanJump() const;
-public:
-	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement_Jump")
 	bool DoJump();
 private:
 	void TickCastGround();

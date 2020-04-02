@@ -4,16 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "Navigation/PathFollowingComponent.h"
-#include "AI/NavigationSystemBase.h"
-#include "NavigationSystem.h"
-#include "NavArea.h"
-#include "NavigationData.h"
-#include "NavMesh/RecastNavMesh.h"
+
 
 #include "PhysicsPathFollowingComponent.generated.h"
 
-//class ARecastNavMesh;
-//class UNavigationSystemV1;
 UCLASS()
 class DESK_WAR_API UPhysicsPathFollowingComponent : public UPathFollowingComponent
 {
@@ -23,5 +17,10 @@ protected:
 	virtual void SetMoveSegment(int32 SegmentStartIndex)override ;
 	virtual void FollowPathSegment(float DeltaTime) override;
 	virtual void UpdatePathSegment()  override;
+
+	bool NavPoly_GetVerts(const NavNodeRef& PolyID, TArray<FVector>& OutVerts);
+
+	//Bounds
+	FBox NavPoly_GetBounds(const NavNodeRef& PolyID);
 
 };

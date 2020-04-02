@@ -4,14 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
-
+#include "Components/PhysicsPathFollowingComponent.h"
 #include "USB_PlayerController.generated.h"
 
 /**
  * 
  */
-
-class UPhysicsPathFollowingComponent;
 UCLASS()
 class DESK_WAR_API AUSB_PlayerController : public APlayerController
 {

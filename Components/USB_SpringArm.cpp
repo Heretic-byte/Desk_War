@@ -204,16 +204,23 @@ void UUSB_SpringArm::UpdateDesiredArmLocation(bool bDoTrace, bool bDoLocationLag
 		UnfixedCameraPosition = ResultLoc;
 	}
 
+
+	// Form a transform for new world transform for camera
 	FTransform WorldCamTM(DesiredRot, ResultLoc);
+	// Convert to relative to component
 	FTransform RelCamTM = WorldCamTM.GetRelativeTransform(GetComponentTransform());
 	
 	m_LastTarget = ResultLoc;
 
+	// Update socket location/rotation
 	RelativeSocketLocation = RelCamTM.GetLocation();
 	RelativeSocketRotation = RelCamTM.GetRotation();
 
 	UpdateChildTransforms();
+
 }
+
+
 
 FVector UUSB_SpringArm::BlendLocations(const FVector& DesiredArmLocation, const FVector& TraceHitLocation, bool bHitSomething, float DeltaTime, const FHitResult& hit)
 {
@@ -221,7 +228,6 @@ FVector UUSB_SpringArm::BlendLocations(const FVector& DesiredArmLocation, const 
 	{
 		return DesiredArmLocation;
 	}
-
 
 	auto LerpedLocation= UKismetMathLibrary::VInterpTo(m_LastTarget, TraceHitLocation, DeltaTime,m_fCamZoomInSpeed);
 	return LerpedLocation;
