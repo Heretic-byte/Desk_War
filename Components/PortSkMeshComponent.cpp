@@ -87,9 +87,10 @@ UPhysicsSkMeshComponent * UPortSkMeshComponent::GetParentSkMesh()
 
 void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)//should call last
 {
+	//m_MeshParentActor->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	DisablePhysicsCollision();
 	m_ConnectedPin = connector;
-	
+	m_MeshParentActor->SetPhysicsLinearVelocity(FVector::ZeroVector);
 	ConstraintPinPort();
 	m_OnConnected.Broadcast(m_ConnectedPin);
 	EnablePhysicsCollision();

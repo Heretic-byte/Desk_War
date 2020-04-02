@@ -27,7 +27,7 @@ UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 	m_bOnGround = false;
 	m_bPressedJump = false;
 	m_fGroundCastOffset = -45.f;
-	m_RotationRate = FRotator(180.f,180.f,500.f);
+	m_RotationRate = FRotator(180.f, 180.f, 500.f);
 	m_bDebugShowForwardCast = false;
 	m_fAirControl = 0.05f;
 	m_fGroundCastBoxSize = 15.f;
@@ -60,14 +60,14 @@ void UPhysicsMovement::BeginPlay()
 void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	CheckJumpInput(DeltaTime);
 	TickCastGround();
 	//TickCastFlipCheck();
 	SetAccel(DeltaTime);
 	m_fAnalogInputModifier = ComputeAnalogInputModifier();
 	TickRotate(SelectTargetRotation(DeltaTime), DeltaTime);
-	CheckJumpInput(DeltaTime);
-	ClearJumpInput(DeltaTime);
 
+	ClearJumpInput(DeltaTime);
 	//PRINTF("V: %s :size: %f, A: %s :size: %f", *Velocity.ToString(), Velocity.Size(), *m_Acceleration.ToString(), m_Acceleration.Size());
 }
 
@@ -78,7 +78,7 @@ void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
 		return;
 	}
 
-	
+
 	if (!m_bIsWallBlocking)
 	{
 		CalcVelocity(DeltaTime, m_fGroundFriction);
@@ -110,20 +110,20 @@ void UPhysicsMovement::CalcVelocity(float DeltaTime, float Friction)
 
 	if (bZeroAcceleration || bVelocityOverMax)
 	{
-	
+
 		const FVector OldVelocity = Velocity;
 		const float ActualBrakingFriction = Friction;
 		ApplyVelocityBraking(DeltaTime, ActualBrakingFriction, m_fMaxBrakingDeceleration);
 
 		if (bVelocityOverMax && Velocity.SizeSquared() < FMath::Square(MaxSpeed) && FVector::DotProduct(m_Acceleration, OldVelocity) > 0.0f)
 		{
-			
+
 			Velocity = OldVelocity.GetSafeNormal() * MaxSpeed;
 		}
 	}
 	else if (!bZeroAcceleration)
 	{
-		
+
 		const FVector AccelDir = (m_Acceleration.Size() == 0) ? FVector::ZeroVector : m_Acceleration.GetSafeNormal();
 		const float VelSize = Velocity.Size();
 		Velocity = Velocity - (Velocity - AccelDir * VelSize) * FMath::Min(DeltaTime * Friction, 1.f);
@@ -132,7 +132,7 @@ void UPhysicsMovement::CalcVelocity(float DeltaTime, float Friction)
 		Velocity = Velocity.GetClampedToMaxSize(NewMaxInputSpeed);
 	}
 
-	
+
 }
 
 float UPhysicsMovement::GetMinAnalogSpeed() const
@@ -245,7 +245,7 @@ void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent
 
 	PawnOwner = NewUpdatedComponent ? CastChecked<APawn>(NewUpdatedComponent->GetOwner()) : NULL;
 
-	if (UpdatedComponent == NULL)
+	//if (UpdatedComponent == NULL)
 	{
 		StopActiveMovement();
 	}
@@ -254,6 +254,12 @@ void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent
 	{
 		m_MovingTarget->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 		m_MovingTarget->SetSimulatePhysics(true);
+	}
+
+	if (!m_ptrAryTraceIgnoreActors)
+	{
+		m_IgnoreActor.Add(m_MovingTarget->GetOwner());
+		m_ptrAryTraceIgnoreActors = &m_IgnoreActor;
 	}
 }
 
@@ -276,11 +282,21 @@ FRotator UPhysicsMovement::SelectTargetRotation(float delta)
 
 	if (m_Acceleration.SizeSquared() < KINDA_SMALL_NUMBER)
 	{
+		//NPC는 가만히 있을때 원위치로 돌아와야한다
+		FRotator ROt2= m_MovingTarget->GetComponentRotation();
+		ROt2.Pitch = 0.f;
+		ROt2.Roll = 0.f;
 		//TargetRot = m_MovingTarget->GetComponentRotation();
-		return m_MovingTarget->GetComponentRotation();
+		return ROt2;
 	}
 
 	FRotator ROt = m_Acceleration.GetSafeNormal().Rotation();
+	if (!IsMovingOnGround())
+	{
+		ROt.Pitch = 0.f;
+		ROt.Roll = 0.f;
+		return ROt;
+	}
 	TargetRot.Yaw = ROt.Yaw;
 	//TargetRot.Roll = ROt.Roll;
 
@@ -323,7 +339,7 @@ bool UPhysicsMovement::SetAccel(float DeltaTime)
 		InputDir = ConsumeInputVector();
 	}
 	SetAccelerationByDir(InputDir);
-	
+
 	return true;
 }
 
@@ -359,7 +375,7 @@ void UPhysicsMovement::SetInitHeadMass(float massHead)
 }
 
 void UPhysicsMovement::TickMovement(float delta)
-{	
+{
 	const FVector Delta = FVector(Velocity.X, Velocity.Y, 0.f);// delta;
 	FHitResult Hit(1.f);
 	FVector RampVector = ComputeGroundMovementDelta(Delta, m_GroundHitResult);
@@ -373,7 +389,7 @@ void UPhysicsMovement::TickMovement(float delta)
 
 	if (Hit.bStartPenetrating)
 	{
-		ResultVector= SlideAlongOnSurface(Delta, delta,1.f, Hit.Normal, Hit, true);
+		ResultVector = SlideAlongOnSurface(Delta, delta, 1.f, Hit.Normal, Hit, true);
 	}
 	else if (Hit.IsValidBlockingHit())	//일반적인 BlockingHit일 때
 	{
@@ -386,7 +402,7 @@ void UPhysicsMovement::TickMovement(float delta)
 			const float InitialPercentRemaining = 1.f - PercentTimeApplied;
 			RampVector = ComputeGroundMovementDelta(Delta * InitialPercentRemaining, Hit);
 			LastMoveTimeSlice = InitialPercentRemaining * LastMoveTimeSlice;
-			
+
 			ResultVector = RampVector;
 
 			const float SecondHitPercent = Hit.Time * InitialPercentRemaining;
@@ -395,14 +411,14 @@ void UPhysicsMovement::TickMovement(float delta)
 		if (Hit.IsValidBlockingHit())
 		{
 			PRINTF("Blocked3");
-			ResultVector= SlideAlongOnSurface(Delta,delta, 1.f - PercentTimeApplied, Hit.Normal, Hit, true);
+			ResultVector = SlideAlongOnSurface(Delta, delta, 1.f - PercentTimeApplied, Hit.Normal, Hit, true);
 		}
 	}
 	TargetRot = ResultVector.GetSafeNormal().Rotation();
 	SetVelocity(ResultVector, Hit, delta);
-	
+
 }
-void UPhysicsMovement::TickRotate(const FRotator rotateWant,float delta)
+void UPhysicsMovement::TickRotate(const FRotator rotateWant, float delta)
 {
 	FRotator CurrentRotation = UpdatedComponent->GetComponentRotation(); // Normalized
 	CurrentRotation.DiagnosticCheckNaN(TEXT("UPhysicsMovement::Rotate(): CurrentRotation"));
@@ -410,7 +426,7 @@ void UPhysicsMovement::TickRotate(const FRotator rotateWant,float delta)
 	FRotator DeltaRot = GetDeltaRotation(delta);//돌릴 값
 	DeltaRot.DiagnosticCheckNaN(TEXT("UPhysicsMovement::Rotate(): GetDeltaRotation"));
 
-	FRotator DesiredRotation= rotateWant;
+	FRotator DesiredRotation = rotateWant;
 
 	DesiredRotation.Normalize();
 
@@ -451,8 +467,8 @@ float UPhysicsMovement::GetAxisDeltaRotation(float InAxisRotationRate, float Del
 
 void UPhysicsMovement::AddIgnoreActorsToQuery(FCollisionQueryParams & queryParam)
 {
-	if(m_ptrAryTraceIgnoreActors)
-	queryParam.AddIgnoredActors(*m_ptrAryTraceIgnoreActors);
+	if (m_ptrAryTraceIgnoreActors)
+		queryParam.AddIgnoredActors(*m_ptrAryTraceIgnoreActors);
 }
 
 bool UPhysicsMovement::IsFalling() const
@@ -482,22 +498,32 @@ void UPhysicsMovement::TickCastGround()
 	}
 #endif
 
-	m_bOnGround=GetWorld()->SweepSingleByChannel(m_GroundHitResult,TraceStart,TraceEnd,FQuat(FVector(0.f, 0.f, -1.f), PI * 0.25f),ECollisionChannel::ECC_Visibility,BoxShape,QueryParam);
+	m_bOnGround = GetWorld()->SweepSingleByChannel(m_GroundHitResult, TraceStart, TraceEnd, FQuat(FVector(0.f, 0.f, -1.f), PI * 0.25f), ECollisionChannel::ECC_Visibility, BoxShape, QueryParam);
 	m_fGroundDist = (TraceStart.Z - m_GroundHitResult.Location.Z);
 	if (!m_bOnGround)//간혹 실패할경우 각도차이인지 확인
 	{
 		m_GroundHitResult.Reset(1.f, false);
 
-		m_bOnGround = GetWorld()->SweepSingleByChannel(m_GroundHitResult,TraceStart,TraceEnd,FQuat::Identity,ECollisionChannel::ECC_Visibility,BoxShape,QueryParam);
+		m_bOnGround = GetWorld()->SweepSingleByChannel(m_GroundHitResult, TraceStart, TraceEnd, FQuat::Identity, ECollisionChannel::ECC_Visibility, BoxShape, QueryParam);
 
 		m_fGroundDist = (TraceStart.Z - m_GroundHitResult.Location.Z);
+	}
+
+
+	m_bCanReset = false;
+	if (m_bGroundd!=m_bOnGround)
+	{
+		m_bGroundd = m_bOnGround;
+		if(m_bOnGround)
+		m_bCanReset = true;
+		PRINTF("GrounddUpdated");
 	}
 }
 
 void UPhysicsMovement::TickCastFlipCheck()
 {
 	FVector TraceStart = m_MovingTarget->GetComponentLocation();
-	FVector TraceEnd = TraceStart +( m_fGroundCastOffset*m_MovingTarget->GetUpVector());//groundoffset is minus
+	FVector TraceEnd = TraceStart + (m_fGroundCastOffset*m_MovingTarget->GetUpVector());//groundoffset is minus
 
 #if WITH_EDITOR
 	if (m_bDebugShowForwardCast)
@@ -530,7 +556,7 @@ void UPhysicsMovement::SetAccelerationByDir(const FVector inputPure)
 {
 	m_vInputNormal = inputPure.GetSafeNormal2D();
 
-	m_Acceleration= GetMaxForce() *m_vInputNormal;
+	m_Acceleration = GetMaxForce() *m_vInputNormal;
 }
 
 
@@ -599,17 +625,15 @@ bool UPhysicsMovement::DoJump()
 	{
 		FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
 		CurrentV.Z = FMath::Max(m_fJumpZVelocity, CurrentV.Z);
-		
+		//Velocity.Z = FMath::Max(Velocity.Z, m_fJumpZVelocity);
 
 		if (m_MovingTargetTail)
 		{
-
 			float CurrentTargetMass = m_MovingTarget->GetBodyInstance()->GetBodyMass();
 			float TargetTailMassRate = CurrentTargetMass / m_fInitHeadMass;
 
 			float CurrentTailMass = m_MovingTargetTail->GetBodyInstance()->GetBodyMass();
 			float TargetMassRate = CurrentTailMass / m_fInitHeadMass;
-
 
 			m_MovingTarget->SetPhysicsLinearVelocity(CurrentV * TargetMassRate);
 			m_MovingTargetTail->SetPhysicsLinearVelocity(CurrentV * TargetTailMassRate);
@@ -618,7 +642,6 @@ bool UPhysicsMovement::DoJump()
 		{
 			m_MovingTarget->SetPhysicsLinearVelocity(CurrentV);
 		}
-		//Velocity.Z = FMath::Max(Velocity.Z, m_fJumpZVelocity);
 
 		m_nJumpCurrentCount++;
 
@@ -645,21 +668,23 @@ void UPhysicsMovement::ClearJumpInput(float delta)
 		m_bWasJumping = false;
 	}
 
-	if(IsMovingOnGround()&& IsWalkable(m_GroundHitResult))
+	if (m_bGroundd && IsWalkable(m_GroundHitResult) && m_bCanReset)
 		ResetJumpState();
 }
 
-bool UPhysicsMovement::CanJump() const
+bool UPhysicsMovement::CanJump()
 {
-	bool bCanJump = true;
-
-	if (m_nJumpCurrentCount == 0)
+	if (m_nJumpCurrentCount >= m_nJumpMaxCount)
 	{
-		bCanJump = IsMovingOnGround();
+		return false;
 	}
-	bCanJump =  m_nJumpCurrentCount < m_nJumpMaxCount -1;
 
-	return bCanJump;
+  	if (m_nJumpCurrentCount == 0)
+	{
+		return IsMovingOnGround();
+	}
+
+	return true;
 }
 
 void UPhysicsMovement::ResetJumpState()
@@ -669,11 +694,14 @@ void UPhysicsMovement::ResetJumpState()
 	m_fJumpKeyHoldTime = 0.0f;
 	m_fJumpForceTimeRemaining = 0.0f;
 	m_nJumpCurrentCount = 0;
+	//
+	PRINTF("Reset");
 }
 
 void UPhysicsMovement::ApplyVelocityBraking(float DeltaTime, float Friction, float BrakingDeceleration)
 {
 	const float MIN_TICK_TIME = 1e-6f;
+
 	if (Velocity.IsZero() || DeltaTime < MIN_TICK_TIME)
 	{
 		return;
@@ -734,7 +762,7 @@ FVector UPhysicsMovement::ComputeGroundMovementDelta(const FVector& Delta, const
 
 bool UPhysicsMovement::IsWalkable(const FHitResult & Hit) const
 {
-	if (!Hit.IsValidBlockingHit())
+	if (!Hit.bBlockingHit)
 	{
 		// No hit, or starting in penetration
 		return false;
@@ -759,11 +787,10 @@ bool UPhysicsMovement::IsWalkable(const FHitResult & Hit) const
 	{
 		return false;
 	}
-	PRINTF("Walkable");
 	return true;
 }
 
-void UPhysicsMovement::SetVelocity(FVector& velocity,FHitResult & sweep, float delta)
+void UPhysicsMovement::SetVelocity(FVector& velocity, FHitResult & sweep, float delta)
 {
 	if (!m_MovingTarget)
 	{
@@ -821,9 +848,9 @@ FVector UPhysicsMovement::SlideAlongOnSurface(const FVector& velocity, float del
 	if ((SlideDelta | velocity) > 0.f)
 	{
 		const FQuat Rotation = UpdatedComponent->GetComponentQuat();
-		FVector Location= UpdatedComponent->GetComponentLocation();
+		FVector Location = UpdatedComponent->GetComponentLocation();
 		//SetVelocity(SlideDelta, Hit, Time);
-		SweepCanMove(SlideDelta, deltaTime,Hit);
+		SweepCanMove(SlideDelta, deltaTime, Hit);
 		const float FirstHitPercent = Hit.Time;
 		PercentTimeApplied = FirstHitPercent;
 		if (Hit.IsValidBlockingHit())
@@ -843,11 +870,12 @@ FVector UPhysicsMovement::SlideAlongOnSurface(const FVector& velocity, float del
 	return SlideDelta;
 }
 
-bool UPhysicsMovement::SweepCanMove ( FVector  delta,float deltaTime,FHitResult& OutHit,float offset)
+bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult& OutHit, float offset)
 {
-	 FVector TraceStart = m_MovingTarget->GetComponentLocation();
+
+	FVector TraceStart = m_MovingTarget->GetComponentLocation();
 	TraceStart.Z += 50.f;//피봇이 땅에 안박혀있으면 이게문제임
-	const FVector TraceEnd = TraceStart + delta*(deltaTime+offset);
+	const FVector TraceEnd = TraceStart + delta * (deltaTime + offset);
 	float DeltaSizeSq = (TraceEnd - TraceStart).SizeSquared();				// Recalc here to account for precision loss of float addition
 	const FQuat InitialRotationQuat = m_MovingTarget->GetComponentTransform().GetRotation();
 
@@ -872,117 +900,111 @@ bool UPhysicsMovement::SweepCanMove ( FVector  delta,float deltaTime,FHitResult&
 	TArray<FOverlapInfo> PendingOverlaps;
 	AActor* const Actor = GetOwner();
 
+	TArray<FHitResult> Hits;
+	FVector NewLocation = TraceStart;
+	const bool bCollisionEnabled = m_MovingTarget->IsQueryCollisionEnabled();
+	if (bCollisionEnabled && (DeltaSizeSq > 0.f))
 	{
-		TArray<FHitResult> Hits;
-		FVector NewLocation = TraceStart;
-		const bool bCollisionEnabled = m_MovingTarget->IsQueryCollisionEnabled();
-		if (bCollisionEnabled && (DeltaSizeSq > 0.f))
+		UWorld* const MyWorld = GetWorld();
+
+		FComponentQueryParams Params(SCENE_QUERY_STAT(MoveComponent), Actor);
+		AddIgnoreActorsToQuery(Params);
+		FCollisionResponseParams ResponseParam;
+		m_MovingTarget->InitSweepCollisionParams(Params, ResponseParam);
+		bool const bHadBlockingHit = MyWorld->ComponentSweepMulti(Hits, m_MovingTarget, TraceStart, TraceEnd, InitialRotationQuat, Params);
+		//DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Red, false, -1.f, 0.1f, 3.f);
+		if (Hits.Num() > 0)
 		{
-			UWorld* const MyWorld = GetWorld();
-
-			FComponentQueryParams Params(SCENE_QUERY_STAT(MoveComponent), Actor);
-			FCollisionResponseParams ResponseParam;
-			m_MovingTarget->InitSweepCollisionParams(Params, ResponseParam);
-			bool const bHadBlockingHit = MyWorld->ComponentSweepMulti(Hits, m_MovingTarget, TraceStart, TraceEnd, InitialRotationQuat, Params);
-			//DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Red, false, -1.f, 0.1f, 3.f);
-			if (Hits.Num() > 0)
+			const float DeltaSize = FMath::Sqrt(DeltaSizeSq);
+			for (int32 HitIdx = 0; HitIdx < Hits.Num(); HitIdx++)
 			{
-				const float DeltaSize = FMath::Sqrt(DeltaSizeSq);
-				for (int32 HitIdx = 0; HitIdx < Hits.Num(); HitIdx++)
-				{
-					PullBackHit(Hits[HitIdx], TraceStart, TraceEnd, DeltaSize);
-				}
-			}
-			else
-			{
-				return true;
-			}
-
-			int32 FirstNonInitialOverlapIdx = INDEX_NONE;
-			if (bHadBlockingHit)
-			{
-				int32 BlockingHitIndex = INDEX_NONE;
-				float BlockingHitNormalDotDelta = BIG_NUMBER;
-				for (int32 HitIdx = 0; HitIdx < Hits.Num(); HitIdx++)
-				{
-					const FHitResult& TestHit = Hits[HitIdx];
-
-					if (TestHit.bBlockingHit)
-					{
-						
-						if (TestHit.Time == 0.f)
-						{
-							const float NormalDotDelta = (TestHit.ImpactNormal | delta);
-							if (NormalDotDelta < BlockingHitNormalDotDelta)
-							{
-								BlockingHitNormalDotDelta = NormalDotDelta;
-								BlockingHitIndex = HitIdx;
-								//각도차가 클수록 내적이 작아진다.
-							}
-						}
-						else if (BlockingHitIndex == INDEX_NONE)
-						{
-							BlockingHitIndex = HitIdx;
-							break;
-						}
-					}
-				}
-
-				if (BlockingHitIndex >= 0)
-				{
-					BlockingHit = Hits[BlockingHitIndex];
-					PRINTF("!!");
-					PRINTF("The Chosen : %s", *BlockingHit.Actor.Get()->GetName());
-					IsSimul = BlockingHit.GetComponent()->IsSimulatingPhysics();
-					bFilledHitResult = true;
-				}
-			}
-
-			if (!BlockingHit.bBlockingHit)
-			{
-				NewLocation = TraceEnd;
-			}
-			else
-			{
-				check(bFilledHitResult);
-				NewLocation = TraceStart + (BlockingHit.Time * (TraceEnd - TraceStart));
-
-				const FVector ToNewLocation = (NewLocation - TraceStart);
-				if (ToNewLocation.SizeSquared() <= MinMovementDistSq)
-				{
-					NewLocation = TraceStart;
-					BlockingHit.Time = 0.f;
-
-					if (FirstNonInitialOverlapIdx != INDEX_NONE)
-					{
-						const bool bAllowShrinking = false;
-						PendingOverlaps.SetNum(FirstNonInitialOverlapIdx, bAllowShrinking);
-					}
-				}
+				PullBackHit(Hits[HitIdx], TraceStart, TraceEnd, DeltaSize);
 			}
 		}
-		else if (DeltaSizeSq > 0.f)
-		{
-			NewLocation += delta;
-			bIncludesOverlapsAtEnd = false;
-		}
-		OutHit = BlockingHit;
-		if (IsSimul)
+		else
 		{
 			return true;
 		}
-		//else
-			m_MovingTarget->SetWorldLocationAndRotationNoPhysics(NewLocation, SelectTargetRotation(deltaTime));
-			PRINTF("SweepTeleported");
+
+		int32 FirstNonInitialOverlapIdx = INDEX_NONE;
+		if (bHadBlockingHit)
 		{
-		//	return true;
+			int32 BlockingHitIndex = INDEX_NONE;
+			float BlockingHitNormalDotDelta = BIG_NUMBER;
+			for (int32 HitIdx = 0; HitIdx < Hits.Num(); HitIdx++)
+			{
+				const FHitResult& TestHit = Hits[HitIdx];
+
+				if (TestHit.bBlockingHit)
+				{
+
+					if (TestHit.Time == 0.f)
+					{
+						const float NormalDotDelta = (TestHit.ImpactNormal | delta);
+						if (NormalDotDelta < BlockingHitNormalDotDelta)
+						{
+							BlockingHitNormalDotDelta = NormalDotDelta;
+							BlockingHitIndex = HitIdx;
+							//각도차가 클수록 내적이 작아진다.
+						}
+					}
+					else if (BlockingHitIndex == INDEX_NONE)
+					{
+						BlockingHitIndex = HitIdx;
+						break;
+					}
+				}
+			}
+
+			if (BlockingHitIndex >= 0)
+			{
+				BlockingHit = Hits[BlockingHitIndex];
+				PRINTF("The Chosen : %s", *BlockingHit.Actor.Get()->GetName());
+				IsSimul = BlockingHit.GetComponent()->IsSimulatingPhysics();
+				bFilledHitResult = true;
+			}
+		}
+
+		if (!BlockingHit.bBlockingHit)
+		{
+			NewLocation = TraceEnd;
+		}
+		else
+		{
+			check(bFilledHitResult);
+			NewLocation = TraceStart + (BlockingHit.Time * (TraceEnd - TraceStart));
+
+			const FVector ToNewLocation = (NewLocation - TraceStart);
+			if (ToNewLocation.SizeSquared() <= MinMovementDistSq)
+			{
+				NewLocation = TraceStart;
+				BlockingHit.Time = 0.f;
+
+				if (FirstNonInitialOverlapIdx != INDEX_NONE)
+				{
+					const bool bAllowShrinking = false;
+					PendingOverlaps.SetNum(FirstNonInitialOverlapIdx, bAllowShrinking);
+				}
+			}
 		}
 	}
+	else if (DeltaSizeSq > 0.f)
+	{
+		NewLocation += delta;
+		bIncludesOverlapsAtEnd = false;
+	}
+	OutHit = BlockingHit;
+	if (IsSimul)
+	{
+		return true;
+	}
+	m_MovingTarget->SetWorldLocationAndRotationNoPhysics(NewLocation, SelectTargetRotation(deltaTime));
+	PRINTF("SweepTeleported");
 
 	if (BlockingHit.bBlockingHit && !IsPendingKill())
 	{
-		//check(bFilledHitResult);
-		//m_MovingTarget->DispatchBlockingHit(*Actor, BlockingHit);
+		check(bFilledHitResult);
+		m_MovingTarget->DispatchBlockingHit(*Actor, BlockingHit);
 	}
 
 	return IsWalkable(BlockingHit);
@@ -1047,7 +1069,6 @@ FVector UPhysicsMovement::HandleSlopeBoosting(const FVector & SlideResult, const
 
 void UPhysicsMovement::DrawVectorFromHead(FVector wantVector, float length, FColor color) const
 {
-	static int b = 1;
 	FVector Start = UpdatedComponent->GetComponentLocation();
 	DrawDebugLine(GetWorld(), Start, Start + wantVector.GetSafeNormal()*length, color, false, -1.f, 1, 1.3f);
 }
@@ -1055,5 +1076,20 @@ void UPhysicsMovement::DrawVectorFromHead(FVector wantVector, float length, FCol
 UPrimitiveComponent * UPhysicsMovement::GetMovingTargetComponent() const
 {
 	return m_MovingTarget;
+}
+
+void UPhysicsMovement::ShowVelocityAccel()
+{
+	PRINTF("Velo:%s,:%f, Accel:%s,:%f", *Velocity.ToString(), Velocity.Size(),*m_Acceleration.ToString(),m_Acceleration.Size());
+	PRINTF("Physcs: %s,%f",*m_MovingTarget->GetPhysicsLinearVelocity().ToString(), m_MovingTarget->GetPhysicsLinearVelocity().Size())
+}
+
+void UPhysicsMovement::StopActiveMovement()
+{
+	Super::StopActiveMovement();
+
+	Velocity = FVector::ZeroVector;
+	m_Acceleration = FVector::ZeroVector;
+	m_MovingTarget->SetPhysicsLinearVelocity(FVector::ZeroVector);
 }
 

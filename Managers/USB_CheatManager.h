@@ -32,4 +32,10 @@ public:
 	void EnablePlayerAutoMove(float x, float y, float z,float timer);
 	void DisablePlayerAutoRot();
 	void EnablePlayerAutoRot(float pitch, float yaw, float roll, float timer);
+	UFUNCTION(exec)
+	void PrintPlayerVelocity();
+	UFUNCTION(exec)
+	void HidePlayerVelocity();
+
+	bool m_bShowVelo;
 };

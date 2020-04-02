@@ -157,4 +157,8 @@ public:
 	{
 		return m_CurrentTail;
 	}
+	FORCEINLINE UPhysicsMovement* GetMovement()
+	{
+		return m_UsbMovement;
+	}
 };

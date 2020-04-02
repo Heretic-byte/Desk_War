@@ -67,7 +67,7 @@ public:
 	float m_fWalkableSlopeAngle;
 	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
 	float m_fWalkableSlopeHeight;
-	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement_Jump", meta = (ClampMin = "0", UIMin = "0"))
+	UPROPERTY(BlueprintReadWrite, EditAnywhere,Category = "PhysicsMovement_Jump", meta = (ClampMin = "0", UIMin = "0"))
 	float m_fJumpZVelocity;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement_Jump", meta = (ClampMin = "0", UIMin = "0"))
 	float m_fMaxHoldTime;
@@ -109,9 +109,9 @@ private:
 	void ResetJumpState();
 	void CheckJumpInput(float delta);
 	void ClearJumpInput(float delta);
-	bool CanJump() const;
+	bool CanJump() ;
 public:
-	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement_Jump")
+	//UFUNCTION(BlueprintCallable, Category = "PhysicsMovement_Jump")
 	bool DoJump();
 private:
 	void TickCastGround();
@@ -183,4 +183,14 @@ public:
 	FRotator TargetRot;
 
 	UPrimitiveComponent* GetMovingTargetComponent() const;
+
+	UPROPERTY()
+	TArray<AActor*> m_IgnoreActor;
+
+	bool m_bGroundd = false;
+	bool m_bCanReset=false;
+
+	void ShowVelocityAccel();
+
+	virtual void StopActiveMovement() override;
 };
