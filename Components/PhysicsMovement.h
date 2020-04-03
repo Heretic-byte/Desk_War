@@ -18,8 +18,6 @@ public:
 private:
 	UPROPERTY()
 	UPhysicsSkMeshComponent* m_MovingTarget;
-	UPROPERTY()
-	UPhysicsSkMeshComponent* m_MovingTargetTail;
 	TArray<AActor*> m_AryTraceIgnoreActors;
 	FVector m_InputNormal;
 	FVector m_Acceleration;
@@ -32,6 +30,9 @@ private:
 	float m_fJumpKeyHoldTime;
 	int m_nJumpCurrentCount;
 	float m_fJumpForceTimeRemaining;
+	//
+	float m_fWalkableSlopeHeight;
+	float m_fMaxTimeStep;
 public:
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement")
 	bool m_bDebugShowForwardCast;
@@ -45,8 +46,7 @@ public:
 	FRotator m_RotationRate;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
 	float m_fWalkableSlopeAngle;
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
-	float m_fWalkableSlopeHeight;
+	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere,Category = "PhysicsMovement_Jump", meta = (ClampMin = "0", UIMin = "0"))
 	float m_fJumpZVelocity;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement_Jump", meta = (ClampMin = "0", UIMin = "0"))
@@ -66,7 +66,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement_Jump")
 	void StopJumping();
 
-	//virtual bool IsMovingOnGround() override const;
 	virtual bool IsMovingOnGround()  const override;
 
 	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
@@ -112,8 +111,7 @@ public:
 	float m_fMinAnalogSpeed;
 	UPROPERTY(Category = "PhysicsMovement", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
 	float m_fGroundFriction;
-	UPROPERTY(Category = "PhysicsMovement", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "30", UIMin = "30"))
-	float m_fMaxTimeStep;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement", meta = (ClampMin = "0.1", UIMin = "0.1"))
 	float m_fSweepZOffset;
 

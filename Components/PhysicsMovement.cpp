@@ -13,13 +13,13 @@ UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 {
 	m_fSweepZOffset = 0.1f;
 	m_fMaxTimeStep = 33.f;
-	m_fGroundFriction = 8.f;
-	m_fMaxSpeed = 10000.f;
-	m_fMaxBrakingDeceleration = 4500.f;
+	m_fGroundFriction = 2.f;
+	m_fMaxSpeed = 370.f;
+	m_fMaxBrakingDeceleration = 400.f;
 	m_fMinAnalogSpeed = 100.f;
 	m_MovingTarget = nullptr;
 	m_fJumpZVelocity = 540.f;
-	m_fMovingForce = 5000.f;
+	m_fMovingForce = 600.f;
 	m_bOnGround = false;
 	m_bPressedJump = false;
 	m_fGroundCastOffset = -45.f;
@@ -28,6 +28,9 @@ UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 	m_fAirControl = 0.05f;
 	m_fGroundCastBoxSize = 15.f;
 	m_fWalkableSlopeAngle = 65.f;
+	bUseAccelerationForPaths = true;
+	GetNavAgentPropertiesRef().bCanJump = true;
+	GetNavAgentPropertiesRef().bCanWalk = true;
 }
 
 void UPhysicsMovement::BeginPlay()
@@ -413,7 +416,7 @@ void UPhysicsMovement::AddImpulse(FVector impulseWant)
 	}
 
 	m_MovingTarget->AddImpulse(impulseWant);
-	m_MovingTargetTail->AddImpulse(impulseWant);
+	//m_MovingTargetTail->AddImpulse(impulseWant);
 }
 
 void UPhysicsMovement::CheckJumpInput(float DeltaTime)
@@ -884,6 +887,10 @@ void UPhysicsMovement::StopActiveMovement()
 {
 	Super::StopActiveMovement();
 
+	if (!m_MovingTarget)
+	{
+		return;
+	}
 	Velocity = FVector::ZeroVector;
 	m_Acceleration = FVector::ZeroVector;
 	m_MovingTarget->SetPhysicsLinearVelocity(FVector::ZeroVector);

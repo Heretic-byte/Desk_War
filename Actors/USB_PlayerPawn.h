@@ -9,9 +9,11 @@
 #include "Actors/USB_PhysicsPawn.h"
 #include "Components/PhysicsMovement.h"
 #include "USB_PlayerPawn.generated.h"
+
 class UPhysicsSkMeshComponent;
 class APlayerController;
 class UPortSkMeshComponent;
+
 UCLASS(BlueprintType, Blueprintable)
 class DESK_WAR_API AUSB_PlayerPawn : public AUSB_PhysicsPawn
 {
@@ -80,8 +82,7 @@ private:
 	FDelegateHandle m_ConnectChargingHandle;
 public:
 	UFUNCTION(BlueprintCallable, Category = "Connection")
-	void TryConnect(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, 
-		int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult);
+	void TryConnect(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult &SweepResult);
 	
 	UFUNCTION(BlueprintCallable, Category = "USB_Action")
 	void ChangeHeadTail();
