@@ -20,14 +20,8 @@ private:
 	UPhysicsSkMeshComponent* m_MovingTarget;
 	UPROPERTY()
 	UPhysicsSkMeshComponent* m_MovingTargetTail;
-	TArray<AActor*>* m_ptrAryTraceIgnoreActors;
-public:
-	FVoidVoid m_OnAutoMoveEnd;
-	FVoidVoid m_OnAutoRotateEnd;
-private:
-	FVector m_AutoMoveDir;
-	FRotator m_AutoRotateRot;
-	FVector m_vInputNormal;
+	TArray<AActor*> m_AryTraceIgnoreActors;
+	FVector m_InputNormal;
 	FVector m_Acceleration;
 	bool m_bOnGround;
 	bool m_bPressedJump;
@@ -38,20 +32,6 @@ private:
 	float m_fJumpKeyHoldTime;
 	int m_nJumpCurrentCount;
 	float m_fJumpForceTimeRemaining;
-	float m_fAdditionalTraceMultipleLength;
-	float m_fInitHeadMass;
-private://auto move,block move
-	bool m_bIsWallBlocking;
-	bool m_bAutoMove;
-	bool m_bBlockMove;
-	float m_fBlockMoveTime;
-	float m_fBlockMoveTimer;
-private://auto rot
-	bool m_bAutoRot;
-	float m_fAutoRotTime;
-	float m_fAutoRotTimer;
-private://rotflip
-	float m_fInitDesiredRotRollDelta;
 public:
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement")
 	bool m_bDebugShowForwardCast;
@@ -110,29 +90,15 @@ private:
 	void CheckJumpInput(float delta);
 	void ClearJumpInput(float delta);
 	bool CanJump() ;
-public:
-	//UFUNCTION(BlueprintCallable, Category = "PhysicsMovement_Jump")
 	bool DoJump();
 private:
 	void TickCastGround();
-	void TickCastFlipCheck();
 	void TickRotate(const FRotator rotateWant,float delta);
 	void TickMovement(float delta);
-	virtual void SetUpdatedComponent(USceneComponent* NewUpdatedComponent) override;
 	FRotator SelectTargetRotation(float delta);
 	bool SetAccel(float DeltaTime);
 public:
-	void EnableInputMove();
-	void DisableInputMove(float timeWant);
-	void EnableAutoMove(FVector dirWant, float timeWant);
-	void DisableAutoMove();
-	void EnableAutoRotate(FRotator rotWant, float timeWant);
-	void DisableAutoRotate();
-	void SetUpdatePhysicsMovement(UPhysicsSkMeshComponent* headUpdatedCompo, UPhysicsSkMeshComponent* tailUpdatedCompo);
-	void SetCastingLength(UPhysicsSkMeshComponent * headUpdatedCompo);
-	void SetTraceIgnoreActorAry(TArray<AActor*>* aryWant);
-	void SetDamping(float fLinDamp, float fAngDamp);
-	void SetInitHeadMass(float massHead);
+	virtual void SetUpdatedComponent(USceneComponent* NewUpdatedComponent) override;
 public:
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	void PhysSceneStep(FPhysScene* PhysScene, float DeltaTime);
@@ -148,6 +114,8 @@ public:
 	float m_fGroundFriction;
 	UPROPERTY(Category = "PhysicsMovement", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "30", UIMin = "30"))
 	float m_fMaxTimeStep;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement", meta = (ClampMin = "0.1", UIMin = "0.1"))
+	float m_fSweepZOffset;
 
 	float m_fAnalogInputModifier;
 	void CalcVelocity(float DeltaTime, float Friction);
@@ -180,17 +148,16 @@ public:
 
 	void DrawVectorFromHead(FVector wantVector, float length, FColor color) const;
 
-	FRotator TargetRot;
+	FRotator m_TargetRot;
 
 	UPrimitiveComponent* GetMovingTargetComponent() const;
 
-	UPROPERTY()
-	TArray<AActor*> m_IgnoreActor;
 
-	bool m_bGroundd = false;
-	bool m_bCanReset=false;
 
 	void ShowVelocityAccel();
 
 	virtual void StopActiveMovement() override;
+
+	void AddIgnoreTraceActor(AActor* actorWant);
+	void RemoveIgnoreTraceActor(AActor* actorWant);
 };

@@ -11,16 +11,12 @@
 
 UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 {
+	m_fSweepZOffset = 0.1f;
 	m_fMaxTimeStep = 33.f;
 	m_fGroundFriction = 8.f;
 	m_fMaxSpeed = 10000.f;
 	m_fMaxBrakingDeceleration = 4500.f;
 	m_fMinAnalogSpeed = 100.f;
-	m_bIsWallBlocking = false;
-	m_bAutoRot = false;
-	m_bAutoMove = false;
-	m_fInitHeadMass = 1.f;
-	m_bBlockMove = false;
 	m_MovingTarget = nullptr;
 	m_fJumpZVelocity = 540.f;
 	m_fMovingForce = 5000.f;
@@ -32,11 +28,6 @@ UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 	m_fAirControl = 0.05f;
 	m_fGroundCastBoxSize = 15.f;
 	m_fWalkableSlopeAngle = 65.f;
-	m_fBlockMoveTime = 0.f;
-	m_fBlockMoveTimer = 0.f;
-	m_fAutoRotTime = 0.f;
-	m_fAutoRotTimer = 0.f;
-	m_fAdditionalTraceMultipleLength = 1.f;
 }
 
 void UPhysicsMovement::BeginPlay()
@@ -51,7 +42,6 @@ void UPhysicsMovement::BeginPlay()
 			OnPhysSceneStepHandle = PScene->OnPhysSceneStep.AddUObject(this, &UPhysicsMovement::PhysSceneStep);
 		}
 	}
-	m_fInitDesiredRotRollDelta = m_RotationRate.Roll;
 
 	SetWalkableFloorAngle(m_fWalkableSlopeAngle);
 }
@@ -78,22 +68,13 @@ void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
 		return;
 	}
 
-
-	if (!m_bIsWallBlocking)
-	{
-		CalcVelocity(DeltaTime, m_fGroundFriction);
-		if (m_bBlockMove && !m_bAutoMove)
-		{
-			//only block move
-			return;
-		}
+	CalcVelocity(DeltaTime, m_fGroundFriction);
 
 		if (m_Acceleration.SizeSquared2D() < 1)//maybe square better?
 		{
 			return;
 		}
 		TickMovement(DeltaTime);
-	}
 
 	UpdateComponentVelocity();
 }
@@ -161,72 +142,6 @@ void UPhysicsMovement::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
-void UPhysicsMovement::EnableInputMove()
-{
-	m_bBlockMove = false;
-	m_fBlockMoveTime = 0.f;
-	m_fBlockMoveTimer = 0.f;
-}
-
-void UPhysicsMovement::DisableInputMove(float timeWant)
-{
-	m_bBlockMove = true;
-	m_fBlockMoveTime = timeWant;
-	m_fBlockMoveTimer = 0.f;
-}
-
-void UPhysicsMovement::EnableAutoMove(FVector dirWant, float timeWant)
-{
-	m_bAutoMove = true;
-	m_AutoMoveDir = dirWant;
-	DisableInputMove(timeWant);
-}
-
-void UPhysicsMovement::DisableAutoMove()
-{
-	m_bAutoMove = false;
-	m_AutoMoveDir = FVector::ZeroVector;
-	m_OnAutoMoveEnd.Broadcast();
-	EnableInputMove();
-}
-
-void UPhysicsMovement::EnableAutoRotate(FRotator rotWant, float timeWant)
-{
-	m_AutoRotateRot = rotWant;
-	m_fAutoRotTime = timeWant;
-	m_fAutoRotTimer = 0.f;
-	m_bAutoRot = true;
-}
-
-void UPhysicsMovement::DisableAutoRotate()
-{
-	m_fAutoRotTime = 0.f;
-	m_fAutoRotTimer = 0.f;
-	m_bAutoRot = false;
-	m_OnAutoRotateEnd.Broadcast();
-}
-
-void UPhysicsMovement::SetUpdatePhysicsMovement(UPhysicsSkMeshComponent * headUpdatedCompo, UPhysicsSkMeshComponent * tailUpdatedCompo)
-{
-	SetCastingLength(headUpdatedCompo);;
-	SetUpdatedComponent(headUpdatedCompo);
-	m_MovingTargetTail = tailUpdatedCompo;
-}
-
-void UPhysicsMovement::SetCastingLength(UPhysicsSkMeshComponent * headUpdatedCompo)
-{
-	//m_fGroundCastOffset /= m_fAddTraceMultipleLength;
-	m_fGroundCastBoxSize /= m_fAdditionalTraceMultipleLength;
-	m_fAdditionalTraceMultipleLength = headUpdatedCompo->GetMeshRadiusMultiple();
-	//m_fGroundCastOffset *= m_fAddTraceMultipleLength;
-	m_fGroundCastBoxSize *= m_fAdditionalTraceMultipleLength;
-}
-
-void UPhysicsMovement::SetTraceIgnoreActorAry(TArray<AActor*>* aryWant)
-{
-	m_ptrAryTraceIgnoreActors = aryWant;
-}
-
 void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent)
 {
 	if (NewUpdatedComponent)
@@ -239,16 +154,12 @@ void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent
 		}
 	}
 
-	USceneComponent* OldUpdatedComponent = UpdatedComponent;
+	if(PawnOwner)
+		RemoveIgnoreTraceActor(PawnOwner);
 
 	UMovementComponent::SetUpdatedComponent(NewUpdatedComponent);
 
 	PawnOwner = NewUpdatedComponent ? CastChecked<APawn>(NewUpdatedComponent->GetOwner()) : NULL;
-
-	//if (UpdatedComponent == NULL)
-	{
-		StopActiveMovement();
-	}
 
 	if (!m_MovingTarget->IsSimulatingPhysics())
 	{
@@ -256,29 +167,12 @@ void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent
 		m_MovingTarget->SetSimulatePhysics(true);
 	}
 
-	if (!m_ptrAryTraceIgnoreActors)
-	{
-		m_IgnoreActor.Add(m_MovingTarget->GetOwner());
-		m_ptrAryTraceIgnoreActors = &m_IgnoreActor;
-	}
+	AddIgnoreTraceActor(PawnOwner);
 }
 
 FRotator UPhysicsMovement::SelectTargetRotation(float delta)
 {
-	if (m_bAutoRot)
-	{
-		if (m_fAutoRotTime > 0)
-		{
-			m_fAutoRotTimer += delta;
-
-			if (m_fAutoRotTime <= m_fAutoRotTimer)
-			{
-				DisableAutoRotate();
-			}
-		}
-		//TargetRot = m_AutoRotateRot;
-		return m_AutoRotateRot;
-	}
+	
 
 	if (m_Acceleration.SizeSquared() < KINDA_SMALL_NUMBER)
 	{
@@ -286,7 +180,7 @@ FRotator UPhysicsMovement::SelectTargetRotation(float delta)
 		FRotator ROt2= m_MovingTarget->GetComponentRotation();
 		ROt2.Pitch = 0.f;
 		ROt2.Roll = 0.f;
-		//TargetRot = m_MovingTarget->GetComponentRotation();
+		//m_TargetRot = m_MovingTarget->GetComponentRotation();
 		return ROt2;
 	}
 
@@ -297,47 +191,19 @@ FRotator UPhysicsMovement::SelectTargetRotation(float delta)
 		ROt.Roll = 0.f;
 		return ROt;
 	}
-	TargetRot.Yaw = ROt.Yaw;
-	//TargetRot.Roll = ROt.Roll;
+	m_TargetRot.Yaw = ROt.Yaw;
+	//m_TargetRot.Roll = ROt.Roll;
 
-	return TargetRot;
+	return m_TargetRot;
 }
 
 bool UPhysicsMovement::SetAccel(float DeltaTime)
 {
 	FVector InputDir;
-	if (m_bBlockMove)
-	{
-		if (m_fBlockMoveTime > 0.f)
-		{
-			m_fBlockMoveTimer += DeltaTime;
-
-			if (m_fBlockMoveTime <= m_fBlockMoveTimer)//end
-			{
-				if (m_bAutoMove)
-				{
-					DisableAutoMove();
-				}
-				else
-				{
-					EnableInputMove();
-				}
-			}
-		}
-		//inf
-		if (m_bAutoMove)
-		{
-			InputDir = m_AutoMoveDir;
-		}
-		else
-		{
-			return false;
-		}
-	}
-	else
-	{
+	
+	
 		InputDir = ConsumeInputVector();
-	}
+	
 	SetAccelerationByDir(InputDir);
 
 	return true;
@@ -354,25 +220,6 @@ float UPhysicsMovement::ComputeAnalogInputModifier() const
 	return 0.f;
 }
 
-void UPhysicsMovement::SetDamping(float fLinDamp, float fAngDamp)
-{
-	if (!GetWorld())
-	{
-		return;
-	}
-
-	if (m_MovingTarget->GetBodyInstance())
-	{
-		m_MovingTarget->SetAngularDamping(fAngDamp);
-		m_MovingTarget->SetLinearDamping(fLinDamp);
-		m_MovingTarget->GetBodyInstance()->UpdateDampingProperties();
-	}
-}
-
-void UPhysicsMovement::SetInitHeadMass(float massHead)
-{
-	m_fInitHeadMass = massHead;
-}
 
 void UPhysicsMovement::TickMovement(float delta)
 {
@@ -383,7 +230,7 @@ void UPhysicsMovement::TickMovement(float delta)
 	if (SweepCanMove(RampVector, delta, Hit))
 	{
 		SetVelocity(RampVector, Hit, delta);
-		TargetRot = RampVector.GetSafeNormal().Rotation();
+		m_TargetRot = RampVector.GetSafeNormal().Rotation();
 		return;
 	}
 
@@ -414,7 +261,7 @@ void UPhysicsMovement::TickMovement(float delta)
 			ResultVector = SlideAlongOnSurface(Delta, delta, 1.f - PercentTimeApplied, Hit.Normal, Hit, true);
 		}
 	}
-	TargetRot = ResultVector.GetSafeNormal().Rotation();
+	m_TargetRot = ResultVector.GetSafeNormal().Rotation();
 	SetVelocity(ResultVector, Hit, delta);
 
 }
@@ -467,8 +314,7 @@ float UPhysicsMovement::GetAxisDeltaRotation(float InAxisRotationRate, float Del
 
 void UPhysicsMovement::AddIgnoreActorsToQuery(FCollisionQueryParams & queryParam)
 {
-	if (m_ptrAryTraceIgnoreActors)
-		queryParam.AddIgnoredActors(*m_ptrAryTraceIgnoreActors);
+	queryParam.AddIgnoredActors(m_AryTraceIgnoreActors);
 }
 
 bool UPhysicsMovement::IsFalling() const
@@ -510,41 +356,9 @@ void UPhysicsMovement::TickCastGround()
 	}
 
 
-	m_bCanReset = false;
-	if (m_bGroundd!=m_bOnGround)
-	{
-		m_bGroundd = m_bOnGround;
-		if(m_bOnGround)
-		m_bCanReset = true;
-		PRINTF("GrounddUpdated");
-	}
+	
 }
 
-void UPhysicsMovement::TickCastFlipCheck()
-{
-	FVector TraceStart = m_MovingTarget->GetComponentLocation();
-	FVector TraceEnd = TraceStart + (m_fGroundCastOffset*m_MovingTarget->GetUpVector());//groundoffset is minus
-
-#if WITH_EDITOR
-	if (m_bDebugShowForwardCast)
-	{
-		DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor(120, 255, 120), false, -1.f, 0.1f);
-	}
-#endif
-	FCollisionQueryParams QueryParam;
-	AddIgnoreActorsToQuery(QueryParam);
-	FHitResult HitResult;
-
-	if (GetWorld()->SweepSingleByChannel(HitResult, TraceStart, TraceEnd, FQuat::Identity, ECollisionChannel::ECC_Visibility, FCollisionShape::MakeSphere(3.f), QueryParam))
-	{
-		m_RotationRate.Roll = 0.f;
-	}
-	else
-	{
-		m_RotationRate.Roll = m_fInitDesiredRotRollDelta;
-	}
-
-}
 
 void UPhysicsMovement::SetWalkableFloorAngle(float InWalkableFloorAngle)
 {
@@ -554,9 +368,9 @@ void UPhysicsMovement::SetWalkableFloorAngle(float InWalkableFloorAngle)
 
 void UPhysicsMovement::SetAccelerationByDir(const FVector inputPure)
 {
-	m_vInputNormal = inputPure.GetSafeNormal2D();
+	m_InputNormal = inputPure.GetSafeNormal2D();
 
-	m_Acceleration = GetMaxForce() *m_vInputNormal;
+	m_Acceleration = GetMaxForce() *m_InputNormal;
 }
 
 
@@ -625,23 +439,8 @@ bool UPhysicsMovement::DoJump()
 	{
 		FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
 		CurrentV.Z = FMath::Max(m_fJumpZVelocity, CurrentV.Z);
-		//Velocity.Z = FMath::Max(Velocity.Z, m_fJumpZVelocity);
 
-		if (m_MovingTargetTail)
-		{
-			float CurrentTargetMass = m_MovingTarget->GetBodyInstance()->GetBodyMass();
-			float TargetTailMassRate = CurrentTargetMass / m_fInitHeadMass;
-
-			float CurrentTailMass = m_MovingTargetTail->GetBodyInstance()->GetBodyMass();
-			float TargetMassRate = CurrentTailMass / m_fInitHeadMass;
-
-			m_MovingTarget->SetPhysicsLinearVelocity(CurrentV * TargetMassRate);
-			m_MovingTargetTail->SetPhysicsLinearVelocity(CurrentV * TargetTailMassRate);
-		}
-		else
-		{
-			m_MovingTarget->SetPhysicsLinearVelocity(CurrentV);
-		}
+		m_MovingTarget->SetPhysicsLinearVelocity(CurrentV);
 
 		m_nJumpCurrentCount++;
 
@@ -668,7 +467,7 @@ void UPhysicsMovement::ClearJumpInput(float delta)
 		m_bWasJumping = false;
 	}
 
-	if (m_bGroundd && IsWalkable(m_GroundHitResult) && m_bCanReset)
+	if (IsWalkable(m_GroundHitResult))
 		ResetJumpState();
 }
 
@@ -872,9 +671,8 @@ FVector UPhysicsMovement::SlideAlongOnSurface(const FVector& velocity, float del
 
 bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult& OutHit, float offset)
 {
-
 	FVector TraceStart = m_MovingTarget->GetComponentLocation();
-	TraceStart.Z += 50.f;//피봇이 땅에 안박혀있으면 이게문제임
+	TraceStart.Z += m_fSweepZOffset;//피봇이 땅에 안박혀있으면 이게문제임
 	const FVector TraceEnd = TraceStart + delta * (deltaTime + offset);
 	float DeltaSizeSq = (TraceEnd - TraceStart).SizeSquared();				// Recalc here to account for precision loss of float addition
 	const FQuat InitialRotationQuat = m_MovingTarget->GetComponentTransform().GetRotation();
@@ -898,16 +696,14 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	bool bRotationOnly = false;
 	bool IsSimul = false;
 	TArray<FOverlapInfo> PendingOverlaps;
-	AActor* const Actor = GetOwner();
 
 	TArray<FHitResult> Hits;
 	FVector NewLocation = TraceStart;
-	const bool bCollisionEnabled = m_MovingTarget->IsQueryCollisionEnabled();
-	if (bCollisionEnabled && (DeltaSizeSq > 0.f))
+	if (DeltaSizeSq > 0.f)
 	{
 		UWorld* const MyWorld = GetWorld();
 
-		FComponentQueryParams Params(SCENE_QUERY_STAT(MoveComponent), Actor);
+		FComponentQueryParams Params(SCENE_QUERY_STAT(MoveComponent), PawnOwner);
 		AddIgnoreActorsToQuery(Params);
 		FCollisionResponseParams ResponseParam;
 		m_MovingTarget->InitSweepCollisionParams(Params, ResponseParam);
@@ -1004,7 +800,7 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	if (BlockingHit.bBlockingHit && !IsPendingKill())
 	{
 		check(bFilledHitResult);
-		m_MovingTarget->DispatchBlockingHit(*Actor, BlockingHit);
+		m_MovingTarget->DispatchBlockingHit(*PawnOwner, BlockingHit);
 	}
 
 	return IsWalkable(BlockingHit);
@@ -1091,5 +887,15 @@ void UPhysicsMovement::StopActiveMovement()
 	Velocity = FVector::ZeroVector;
 	m_Acceleration = FVector::ZeroVector;
 	m_MovingTarget->SetPhysicsLinearVelocity(FVector::ZeroVector);
+}
+
+void UPhysicsMovement::AddIgnoreTraceActor(AActor * actorWant)
+{
+	m_AryTraceIgnoreActors.Add(actorWant);
+}
+
+void UPhysicsMovement::RemoveIgnoreTraceActor(AActor * actorWant)
+{
+	m_AryTraceIgnoreActors.Remove(actorWant);
 }
 
