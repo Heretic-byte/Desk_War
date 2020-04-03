@@ -39,7 +39,7 @@ AUSB_PlayerPawn::AUSB_PlayerPawn(const FObjectInitializer& objInit):Super(objIni
 	m_bBlockChargeClick = false;
 	m_bBlockHeadChange = false;
 	m_bBlockJump = false;
-
+	
 }
 
 void AUSB_PlayerPawn::BeginPlay()
@@ -95,19 +95,20 @@ void AUSB_PlayerPawn::InitPlayerPawn()
 	
 	m_fConnectReadyDuration = 5.f;
 	m_fConnectPushDuration = 0.3f;
+
+	m_BaseHeadPin->SetGenerateOverlapEvents(false);
+	m_BaseTailPin->SetGenerateOverlapEvents(false);
 }
 
 void AUSB_PlayerPawn::CreatePhysicMovement()
 {
-	m_UsbMovement = CreateDefaultSubobject<UPhysicsMovement>(TEXT("Movement00"));
+	m_UsbMovement = CreateDefaultSubobject<UUSBMovement>(TEXT("Movement00"));
 
 	m_UsbMovement->SetUpdatedComponent(m_CurrentHead);
 
-	m_UsbMovement->m_fMovingForce=38000.f;
 	m_UsbMovement->m_fGroundCastBoxSize = 10.f;
 	m_UsbMovement->m_fGroundCastOffset = -20.f;
-	m_UsbMovement->m_fWalkableSlopeAngle = 55.f;
-	m_UsbMovement->m_fJumpZVelocity = 2000.f;
+	m_UsbMovement->m_fWalkableSlopeAngle = 49.f;
 	m_UsbMovement->m_nJumpMaxCount = 2;
 	m_UsbMovement->m_fAirControl = 0.6f;
 }
@@ -150,8 +151,8 @@ void AUSB_PlayerPawn::CreateSkFaceMesh()
 		m_MeshFaceSk->SetSkeletalMesh(FoundSkMesh.Object);
 	}
 
-	m_MeshFaceSk->SetRelativeLocation(FVector(-28.f,0, 0.8f));
-	m_MeshFaceSk->SetRelativeScale3D(FVector(2.64f, 2.64f, 2.64f));
+	m_MeshFaceSk->SetRelativeLocation(FVector(-10.245544f,0, 2.795712f));//(X=-10.245544,Y=0.000000,Z=2.795712)
+	m_MeshFaceSk->SetRelativeScale3D(FVector(2.4f, 2.4f, 2.4f));
 }
 
 void AUSB_PlayerPawn::SetHeadTail(UPhysicsSkMeshComponent * headWant, UPhysicsSkMeshComponent * tailWant)
@@ -161,7 +162,7 @@ void AUSB_PlayerPawn::SetHeadTail(UPhysicsSkMeshComponent * headWant, UPhysicsSk
 	m_CurrentHead = headWant;
 	m_CurrentTail = tailWant;
 
-	m_UsbMovement->SetUpdatedComponent(m_CurrentHead);
+	m_UsbMovement->SetUSBUpdateComponent(m_CurrentHead,m_CurrentTail);
 	
 	m_CamRoot->AttachToComponent(m_CurrentHead,FAttachmentTransformRules::KeepRelativeTransform);
 
@@ -200,7 +201,6 @@ void AUSB_PlayerPawn::InitTraceIgnoreAry()
 	m_AryTraceIgnoreActors.Reset();
 	m_AryTraceIgnoreActors.Reserve(10);
 	AddTraceIgnoreActor(this);
-	//m_UsbMovement->AddIgnoreActorsToQuery(&m_AryTraceIgnoreActors);
 }
 
 void AUSB_PlayerPawn::Tick(float DeltaTime)
@@ -437,10 +437,12 @@ bool AUSB_PlayerPawn::TryDisconnect()
 void AUSB_PlayerPawn::AddTraceIgnoreActor(AActor * actorWant)
 {
 	m_AryTraceIgnoreActors.Emplace(actorWant);
+	m_UsbMovement->AddIgnoreTraceActor(actorWant);
 }
 
 bool AUSB_PlayerPawn::RemoveTraceIgnoreActor(AActor * actorWant)
 {
+	m_UsbMovement->RemoveIgnoreTraceActor(actorWant);
 	return m_AryTraceIgnoreActors.Remove(actorWant);
 }
 

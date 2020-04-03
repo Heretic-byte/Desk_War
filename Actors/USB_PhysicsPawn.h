@@ -46,10 +46,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TArray<USplineMeshComponent*> m_ArySplineMeshCompos;
 protected:
-	UPROPERTY(EditDefaultsOnly, Category = "Spine_Physics")
-	float m_fLineExtraSpacing;
 	UPROPERTY(EditDefaultsOnly,  Category = "Spine_Physics")
-	float m_fLineRadius;
+	float m_fSpineRadius;
 	UPROPERTY(EditDefaultsOnly,  Category = "Spine_Physics")
 	float m_fSpineAngularDamping;
 	UPROPERTY(EditDefaultsOnly,  Category = "Spine_Physics")

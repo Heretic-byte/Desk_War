@@ -11,8 +11,7 @@ AUSB_PhysicsPawn::AUSB_PhysicsPawn(const FObjectInitializer& objInit):Super(objI
 	PrimaryActorTick.bCanEverTick = true;
 	SetTickGroup(ETickingGroup::TG_PostPhysics);
 
-	m_fLineRadius = 5.3f;
-	m_fLineExtraSpacing = 2.f;
+	m_fSpineRadius = 5.3f;
 	m_fCollMass = 0.5;
 	m_fSpineLinearDamping = 0.01f;
 	m_fSpineAngularDamping = 1.f;
@@ -60,7 +59,7 @@ void AUSB_PhysicsPawn::CreatePin5Pin()
 	check(FoundMeshPort4Pin.Object);
 	m_Pin5Pin->SetSkeletalMesh(FoundMeshPort4Pin.Object);
 	m_Pin5Pin->SetCollisionProfileName("USBActor");
-	m_Pin5Pin->RelativeLocation = FVector(-93.f, 0.f, 0.f);
+	m_Pin5Pin->RelativeLocation = FVector(-100.f, 0.f, 0.f);
 	m_Pin5Pin->RelativeRotation = FRotator(0.f, 180.f, 0.f);
 	m_Pin5Pin->bEditableWhenInherited = true;
 	m_Pin5Pin->SetUseCCD(true);
@@ -97,8 +96,8 @@ int AUSB_PhysicsPawn::SetTailLocation()
 	FVector SocketUSB = m_PinUSB->GetNeckLoc();
 	FVector Socket4Pin = m_Pin5Pin->GetNeckLoc();
 
-	float Dividend = (FVector::Distance(SocketUSB, Socket4Pin) / GetActorScale3D().X) - m_fLineExtraSpacing;
-	float Divisor = (m_fLineRadius * 2.f) + m_fLineExtraSpacing;
+	float Dividend = (FVector::Distance(SocketUSB, Socket4Pin) / GetActorScale3D().X);
+	float Divisor = (m_fSpineRadius * 2.f);
 
 	int Count = Dividend / Divisor;
 	float Offset = Dividend - (Count*Divisor);
@@ -113,7 +112,7 @@ void AUSB_PhysicsPawn::SpawnSpineColls()
 {
 	FVector ActorLoc = GetActorLocation();
 	float Offset = FVector::Distance(m_PinUSB->GetNeckLoc(), ActorLoc) / GetActorScale3D().X;
-	Offset += m_fLineExtraSpacing+ m_fLineRadius;
+	Offset +=  m_fSpineRadius;
 	Offset *= -1;
 
 	int SpineCount = m_nSphereSpineCount;
@@ -126,7 +125,7 @@ void AUSB_PhysicsPawn::SpawnSpineColls()
 
 		auto* SphereSpawned = AddSceneComponent<USphereComponent>(USphereComponent::StaticClass(), RootComponent, FTransform());
 		SphereSpawned->SetCollisionProfileName("USBActor");
-		SphereSpawned->SetSphereRadius(m_fLineRadius);
+		SphereSpawned->SetSphereRadius(m_fSpineRadius);
 		SphereSpawned->SetMassOverrideInKg(NAME_None, m_fCollMass);
 		SphereSpawned->SetAngularDamping(m_fSpineAngularDamping);
 		SphereSpawned->SetLinearDamping(m_fSpineLinearDamping);
@@ -138,7 +137,7 @@ void AUSB_PhysicsPawn::SpawnSpineColls()
 		SphereSpawned->SetEnableGravity(m_bEnableSpineGravity);
 		SphereSpawned->SetUseCCD(true);
 		m_ArySpineColls.Emplace(SphereSpawned);
-		Offset -= (m_fLineRadius * 2) + m_fLineExtraSpacing;
+		Offset -= (m_fSpineRadius * 2);
 	}
 }
 

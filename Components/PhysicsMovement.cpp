@@ -31,6 +31,7 @@ UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 	bUseAccelerationForPaths = true;
 	GetNavAgentPropertiesRef().bCanJump = true;
 	GetNavAgentPropertiesRef().bCanWalk = true;
+	m_bIsFalling = false;
 }
 
 void UPhysicsMovement::BeginPlay()
@@ -260,7 +261,6 @@ void UPhysicsMovement::TickMovement(float delta)
 		}
 		if (Hit.IsValidBlockingHit())
 		{
-			PRINTF("Blocked3");
 			ResultVector = SlideAlongOnSurface(Delta, delta, 1.f - PercentTimeApplied, Hit.Normal, Hit, true);
 		}
 	}
@@ -358,7 +358,15 @@ void UPhysicsMovement::TickCastGround()
 		m_fGroundDist = (TraceStart.Z - m_GroundHitResult.Location.Z);
 	}
 
+	if (m_bIsFalling==m_bOnGround)
+	{
+		m_bIsFalling = !m_bOnGround;
 
+		if (!m_bIsFalling)
+		{
+			Landing();
+		}
+	}
 	
 }
 
@@ -440,17 +448,28 @@ bool UPhysicsMovement::DoJump()
 {
 	if (CanJump())
 	{
+		PRINTF("DidJump");
 		FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
 		CurrentV.Z = FMath::Max(m_fJumpZVelocity, CurrentV.Z);
 
 		m_MovingTarget->SetPhysicsLinearVelocity(CurrentV);
 
 		m_nJumpCurrentCount++;
-
+		PRINTF("JumpCount:%d", m_nJumpCurrentCount);
+		
 		return true;
 	}
 
 	return false;
+}
+
+bool UPhysicsMovement::CanJump()
+{
+	if (m_nJumpCurrentCount >= m_nJumpMaxCount)
+	{
+		return false;
+	}
+	return true;
 }
 
 void UPhysicsMovement::ClearJumpInput(float delta)
@@ -470,24 +489,22 @@ void UPhysicsMovement::ClearJumpInput(float delta)
 		m_bWasJumping = false;
 	}
 
-	if (IsWalkable(m_GroundHitResult))
-		ResetJumpState();
+	bool Walkable = IsWalkable(m_GroundHitResult);
+	if (m_WasWalkable != Walkable)
+	{
+		m_WasWalkable = Walkable;
+
+		if (m_WasWalkable)
+		{
+			ResetJumpState();
+		}
+	}
+	
+	/*if (IsWalkable(m_GroundHitResult)&&IsMovingOnGround())
+		ResetJumpState();*/
 }
 
-bool UPhysicsMovement::CanJump()
-{
-	if (m_nJumpCurrentCount >= m_nJumpMaxCount)
-	{
-		return false;
-	}
 
-  	if (m_nJumpCurrentCount == 0)
-	{
-		return IsMovingOnGround();
-	}
-
-	return true;
-}
 
 void UPhysicsMovement::ResetJumpState()
 {
@@ -497,7 +514,6 @@ void UPhysicsMovement::ResetJumpState()
 	m_fJumpForceTimeRemaining = 0.0f;
 	m_nJumpCurrentCount = 0;
 	//
-	PRINTF("Reset");
 }
 
 void UPhysicsMovement::ApplyVelocityBraking(float DeltaTime, float Friction, float BrakingDeceleration)
@@ -600,6 +616,11 @@ void UPhysicsMovement::SetVelocity(FVector& velocity, FHitResult & sweep, float 
 	}
 	FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
 
+	if (!IsMovingOnGround())
+	{
+		velocity *= m_fAirControl;
+	}
+
 	velocity.Z = CurrentV.Z;
 	m_MovingTarget->SetPhysicsLinearVelocity(velocity);
 	DrawVectorFromHead(m_MovingTarget->GetPhysicsLinearVelocity(), 40, FColor::Emerald);
@@ -665,15 +686,14 @@ FVector UPhysicsMovement::SlideAlongOnSurface(const FVector& velocity, float del
 				PercentTimeApplied += SecondHitPercent;
 			}
 		}
-		PRINTF("Return1");
 		return SlideDelta;
 	}
-	PRINTF("Return2");
 	return SlideDelta;
 }
 
 bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult& OutHit, float offset)
 {
+	
 	FVector TraceStart = m_MovingTarget->GetComponentLocation();
 	TraceStart.Z += m_fSweepZOffset;//피봇이 땅에 안박혀있으면 이게문제임
 	const FVector TraceEnd = TraceStart + delta * (deltaTime + offset);
@@ -758,11 +778,20 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 			if (BlockingHitIndex >= 0)
 			{
 				BlockingHit = Hits[BlockingHitIndex];
-				PRINTF("The Chosen : %s", *BlockingHit.Actor.Get()->GetName());
 				IsSimul = BlockingHit.GetComponent()->IsSimulatingPhysics();
+
+				if (IsSimul)
+				{
+					return true;
+				}
 				bFilledHitResult = true;
 			}
 		}
+		else
+		{
+			return true;
+		}
+
 
 		if (!BlockingHit.bBlockingHit)
 		{
@@ -797,8 +826,12 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	{
 		return true;
 	}
+	if (BlockingHit.bBlockingHit)
+	{
 	m_MovingTarget->SetWorldLocationAndRotationNoPhysics(NewLocation, SelectTargetRotation(deltaTime));
-	PRINTF("SweepTeleported");
+	//PRINTF("SweepTeleported");
+
+	}
 
 	if (BlockingHit.bBlockingHit && !IsPendingKill())
 	{
@@ -904,5 +937,12 @@ void UPhysicsMovement::AddIgnoreTraceActor(AActor * actorWant)
 void UPhysicsMovement::RemoveIgnoreTraceActor(AActor * actorWant)
 {
 	m_AryTraceIgnoreActors.Remove(actorWant);
+}
+
+void UPhysicsMovement::Landing()
+{
+	PRINTF("Landing");
+	if(IsWalkable(m_GroundHitResult))
+		ResetJumpState();
 }
 

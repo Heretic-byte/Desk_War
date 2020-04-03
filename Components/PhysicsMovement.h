@@ -15,7 +15,7 @@ class DESK_WAR_API UPhysicsMovement : public UPawnMovementComponent
 	GENERATED_BODY()
 public:
 	UPhysicsMovement(const FObjectInitializer& objInit);
-private:
+protected:
 	UPROPERTY()
 	UPhysicsSkMeshComponent* m_MovingTarget;
 	TArray<AActor*> m_AryTraceIgnoreActors;
@@ -71,9 +71,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
 	float GetMaxForce() const;
 	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
-	void AddForce(FVector forceWant);
+	virtual void AddForce(FVector forceWant);
 	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
-	void AddImpulse(FVector impulseWant);
+	virtual void AddImpulse(FVector impulseWant);
 private:
 	void SetWalkableFloorAngle(float InWalkableFloorAngle);
 	void SetAccelerationByDir(const FVector inputPure);
@@ -84,13 +84,11 @@ protected:
 	virtual bool IsFalling()  const override;
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-private:
 	void ResetJumpState();
 	void CheckJumpInput(float delta);
 	void ClearJumpInput(float delta);
 	bool CanJump() ;
-	bool DoJump();
-private:
+	virtual bool DoJump();
 	void TickCastGround();
 	void TickRotate(const FRotator rotateWant,float delta);
 	void TickMovement(float delta);
@@ -129,7 +127,7 @@ public:
 
 	bool IsWalkable(const FHitResult& Hit) const;
 
-	void SetVelocity(FVector& velocity,FHitResult& sweep,float delta);
+	virtual void SetVelocity(FVector& velocity,FHitResult& sweep,float delta);
 
 	FVector SlideAlongOnSurface(const FVector& velocity, float deltaTime,float Time, const FVector& InNormal, FHitResult& Hit, bool bHandleImpact);
 
@@ -143,14 +141,11 @@ public:
 
 	virtual FVector HandleSlopeBoosting(const FVector& SlideResult, const FVector& Delta, const float Time, const FVector& Normal, const FHitResult& Hit) const;
 
-
 	void DrawVectorFromHead(FVector wantVector, float length, FColor color) const;
 
 	FRotator m_TargetRot;
 
 	UPrimitiveComponent* GetMovingTargetComponent() const;
-
-
 
 	void ShowVelocityAccel();
 
@@ -158,4 +153,10 @@ public:
 
 	void AddIgnoreTraceActor(AActor* actorWant);
 	void RemoveIgnoreTraceActor(AActor* actorWant);
+
+	void Landing();
+
+	bool m_bIsFalling;
+
+	bool m_WasWalkable;
 };

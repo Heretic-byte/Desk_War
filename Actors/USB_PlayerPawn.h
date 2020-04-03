@@ -7,7 +7,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/USB_SpringArm.h"
 #include "Actors/USB_PhysicsPawn.h"
-#include "Components/PhysicsMovement.h"
+#include "Components/USBMovement.h"
 #include "USB_PlayerPawn.generated.h"
 
 class UPhysicsSkMeshComponent;
@@ -50,7 +50,7 @@ protected:
 	bool m_bBlockChargeClick;
 protected://component
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly,Category="Movement")
-	UPhysicsMovement* m_UsbMovement;
+	UUSBMovement* m_UsbMovement;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
 	USceneComponent* m_CamRoot;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
