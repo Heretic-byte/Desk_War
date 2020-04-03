@@ -277,25 +277,25 @@ void AUSB_PlayerPawn::ConnectShot()
 
 
 
-	if (!m_UsbMovement->IsMovingOnGround())//sky connect
-	{ 
-		//공중삽입의 문제점
+	//if (!m_UsbMovement->IsMovingOnGround())//sky connect
+	//{ 
+	//	//공중삽입의 문제점
 
-		float Distance = FVector::Dist(m_CurrentHeadPin->GetComponentLocation(), m_CurrentFocusedPort->GetComponentLocation());
+	//	float Distance = FVector::Dist(m_CurrentHeadPin->GetComponentLocation(), m_CurrentFocusedPort->GetComponentLocation());
 
-		PRINTF("Distance is : %f", Distance);
-		//77 일때 3
-		float Rate = Distance / m_fPortTraceRange;
-		Rate *= m_fMaxConnectRotTime;
+	//	PRINTF("Distance is : %f", Distance);
+	//	//77 일때 3
+	//	float Rate = Distance / m_fPortTraceRange;
+	//	Rate *= m_fMaxConnectRotTime;
 
-		if (Rate < m_fMinConnectRotTime)
-		{
-			Rate = m_fMinConnectRotTime;
-		}
+	//	if (Rate < m_fMinConnectRotTime)
+	//	{
+	//		Rate = m_fMinConnectRotTime;
+	//	}
 
-		PRINTF("RateTime IS : %f", Rate);
+	//	PRINTF("RateTime IS : %f", Rate);
 
-	}
+	//}
 	ConnectChargingStart();
 }
 
@@ -333,9 +333,8 @@ void AUSB_PlayerPawn::ConnectChargingStart()
 {
 	PRINTF("Charging Start");
 	//m_bBlockChargeClick = true;
-	//m_CurrentHead->SetGenerateOverlapEvents(true);
+	m_CurrentHead->SetGenerateOverlapEvents(true);
 	//DisableUSBInput();
-	//m_ConnectChargingHandle = m_UsbMovement->m_OnAutoMoveEnd.AddUObject(this, &AUSB_PlayerPawn::ConnectChargingEnd);
 	//EnableAutoMove(m_CurrentHead->GetForwardVector(), 3.f);
 }
 
@@ -358,9 +357,9 @@ void AUSB_PlayerPawn::SuccessConnection(UPortSkMeshComponent* portConnect)
 	FRotator PortRot = portConnect->GetParentSkMesh()->GetComponentRotation();
 	m_CurrentHeadPin->SetWorldLocationAndRotationNoPhysics(ConnectPoint, PortRot);
 	portConnect->Connect(m_CurrentHeadPin);//이거 순서를 바꿔볼것
-	SetHeadTail(portConnect->GetParentSkMesh(), m_CurrentTail);
-	AddTraceIgnoreActor(portConnect->GetOwner());
-	AddPhysicsBody(portConnect->GetParentSkMesh());
+	SetHeadTail(portConnect->GetParentSkMesh(), m_CurrentTail);//얘다시발
+	//AddTraceIgnoreActor(portConnect->GetOwner());
+	//AddPhysicsBody(portConnect->GetParentSkMesh());
 }
 
 void AUSB_PlayerPawn::FailConnection(UPortSkMeshComponent* portConnect,const FHitResult & hitResult)

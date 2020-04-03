@@ -56,13 +56,11 @@ void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	CheckJumpInput(DeltaTime);
 	TickCastGround();
-	//TickCastFlipCheck();
 	SetAccel(DeltaTime);
 	m_fAnalogInputModifier = ComputeAnalogInputModifier();
-	TickRotate(SelectTargetRotation(DeltaTime), DeltaTime);
+	TickRotate(SelectTargetRotation(DeltaTime), DeltaTime);//얘다
 
 	ClearJumpInput(DeltaTime);
-	//PRINTF("V: %s :size: %f, A: %s :size: %f", *Velocity.ToString(), Velocity.Size(), *m_Acceleration.ToString(), m_Acceleration.Size());
 }
 
 void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
@@ -71,7 +69,6 @@ void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
 	{
 		return;
 	}
-
 	CalcVelocity(DeltaTime, m_fGroundFriction);
 
 		if (m_Acceleration.SizeSquared2D() < 1)//maybe square better?
@@ -162,29 +159,23 @@ void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent
 		RemoveIgnoreTraceActor(PawnOwner);
 
 	UMovementComponent::SetUpdatedComponent(NewUpdatedComponent);
-
 	PawnOwner = NewUpdatedComponent ? CastChecked<APawn>(NewUpdatedComponent->GetOwner()) : NULL;
 
 	if (!m_MovingTarget->IsSimulatingPhysics())
 	{
-		m_MovingTarget->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		m_MovingTarget->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
 		m_MovingTarget->SetSimulatePhysics(true);
 	}
 
-	AddIgnoreTraceActor(PawnOwner);
+	//AddIgnoreTraceActor(PawnOwner);
 }
 
 FRotator UPhysicsMovement::SelectTargetRotation(float delta)
 {
-	
-
 	if (m_Acceleration.SizeSquared() < KINDA_SMALL_NUMBER)
 	{
 		//NPC는 가만히 있을때 원위치로 돌아와야한다
 		FRotator ROt2= m_MovingTarget->GetComponentRotation();
-		ROt2.Pitch = 0.f;
-		ROt2.Roll = 0.f;
-		//m_TargetRot = m_MovingTarget->GetComponentRotation();
 		return ROt2;
 	}
 
@@ -196,8 +187,6 @@ FRotator UPhysicsMovement::SelectTargetRotation(float delta)
 		return ROt;
 	}
 	m_TargetRot.Yaw = ROt.Yaw;
-	//m_TargetRot.Roll = ROt.Roll;
-
 	return m_TargetRot;
 }
 
