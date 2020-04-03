@@ -134,15 +134,6 @@ protected:
 	void ConnectChargingStart();
 	void ConnectChargingEnd();
 public:
-	void EnableUSBInput();
-	void DisableUSBInput();
-	void EnableInputMove();
-	void DisableInputMove(float timer);
-	void EnableAutoMove(FVector wantDir,float timer);
-	void DisableAutoMove();
-	void EnableAutoRotate(FRotator wantRot,float timer);
-	void DisableAutoRotate();
-public:
 	virtual void Tick(float DeltaTime) override;
 public:
 	FORCEINLINE float GetTotalMass()

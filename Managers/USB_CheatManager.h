@@ -26,12 +26,6 @@ protected:
 protected:
 	virtual void InitCheatManager() override;
 public:
-	void EnablePlayerInputMove();
-	void DisablePlayerInputMove(float timer);
-	void DisablePlayerAutoMove();
-	void EnablePlayerAutoMove(float x, float y, float z,float timer);
-	void DisablePlayerAutoRot();
-	void EnablePlayerAutoRot(float pitch, float yaw, float roll, float timer);
 	UFUNCTION(exec)
 	void PrintPlayerVelocity();
 	UFUNCTION(exec)

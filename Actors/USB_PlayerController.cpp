@@ -23,7 +23,8 @@ AUSB_PlayerController::AUSB_PlayerController()
 {
 	PlayerCameraManagerClass = AUSB_CameraManager::StaticClass();
 	CheatClass = UUSB_CheatManager::StaticClass();
-	bShowMouseCursor = true;
+	m_bUseNavMove = false;
+	//
 	DefaultMouseCursor = EMouseCursor::Crosshairs;
 	m_PathFollowComp = CreateDefaultSubobject<UPhysicsPathFollowingComponent>("PathFollowComp00");
 	m_PathFollowComp->Initialize();
@@ -35,6 +36,11 @@ void AUSB_PlayerController::BeginPlay()
 	Super::BeginPlay();
 	
 	m_PathFollowComp->SetMovementComponent( GetPawn()->GetMovementComponent());
+
+	if (m_bUseNavMove)
+	{
+		bShowMouseCursor = true;
+	}
 }
 
 
@@ -42,7 +48,7 @@ void AUSB_PlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
 
-	if (bMoveToMouseCursor)
+	if (bMoveToMouseCursor&&m_bUseNavMove)
 	{
 		MoveToMouseCursor();
 	}
@@ -50,27 +56,22 @@ void AUSB_PlayerController::PlayerTick(float DeltaTime)
 
 void AUSB_PlayerController::SetupInputComponent()
 {
-	// set up gameplay key bindings
 	Super::SetupInputComponent();
 
 	InputComponent->BindAction("SetDestination", IE_Pressed, this, &AUSB_PlayerController::OnSetDestinationPressed);
 	InputComponent->BindAction("SetDestination", IE_Released, this, &AUSB_PlayerController::OnSetDestinationReleased);
-
 }
 
 
 void AUSB_PlayerController::MoveToMouseCursor()
 {
-	
-		// Trace to see what is under the mouse cursor
-		FHitResult Hit;
-		GetHitResultUnderCursor(ECC_Visibility, false, Hit);
-		
-		if (Hit.bBlockingHit)
-		{
-			// We hit something, move there
-			SetNewMoveDestination(Hit.ImpactPoint);
-		}
+	FHitResult Hit;
+	GetHitResultUnderCursor(ECC_Visibility, false, Hit);
+
+	if (Hit.bBlockingHit)
+	{
+		SetNewMoveDestination(Hit.ImpactPoint);
+	}
 }
 
 void AUSB_PlayerController::SetNewMoveDestination(const FVector DestLocation)

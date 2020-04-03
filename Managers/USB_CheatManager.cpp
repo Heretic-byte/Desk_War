@@ -13,35 +13,6 @@ void UUSB_CheatManager::InitCheatManager()
 	m_Player = Cast<AUSB_PlayerPawn>( m_PlayerController->GetPawn());
 }
 
-void UUSB_CheatManager::EnablePlayerInputMove()
-{
-	m_Player->EnableInputMove();
-}
-
-void UUSB_CheatManager::DisablePlayerInputMove(float timer)
-{
-	m_Player->DisableInputMove(timer);
-}
-
-void UUSB_CheatManager::DisablePlayerAutoMove()
-{
-	m_Player->DisableAutoMove();
-}
-
-void UUSB_CheatManager::EnablePlayerAutoMove(float x, float y, float z,float timer)
-{
-	m_Player->EnableAutoMove(FVector(x, y, z), timer);
-}
-
-void UUSB_CheatManager::DisablePlayerAutoRot()
-{
-	m_Player->DisableAutoRotate();
-}
-
-void UUSB_CheatManager::EnablePlayerAutoRot(float pitch, float yaw, float roll, float timer)
-{
-	m_Player->EnableAutoRotate(FRotator(pitch,yaw,roll),timer);
-}
 
 void UUSB_CheatManager::PrintPlayerVelocity()
 {

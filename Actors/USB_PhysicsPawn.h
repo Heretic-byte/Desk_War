@@ -83,7 +83,6 @@ public:
 private:
 	void CreatePinUSB();
 	void CreatePin5Pin();
-	void CreateBoundCapsule();
 	void CreateSpline();
 	void UpdateSplinePoint();
 	void UpdateSplineMesh();

@@ -21,7 +21,6 @@ void APortPawn::CreateMesh()
 	m_Mesh->SetupAttachment(RootComponent);
 	m_Mesh->SetCollisionProfileName("PhysicsActor");
 	m_Mesh->SetSimulatePhysics(true);
-	m_Mesh->SetMeshRadiusMultiple(1.2f);
 }
 
 void APortPawn::CreatePhyCon()
