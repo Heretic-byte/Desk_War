@@ -279,21 +279,6 @@ void AUSB_PlayerPawn::ConnectShot()
 
 	if (!m_UsbMovement->IsMovingOnGround())//sky connect
 	{ 
-		//공중삽입의 문제점
-
-		//float Distance = FVector::Dist(m_CurrentHeadPin->GetComponentLocation(), m_CurrentFocusedPort->GetComponentLocation());
-
-		//PRINTF("Distance is : %f", Distance);
-		////77 일때 3
-		//float Rate = Distance / m_fPortTraceRange;
-		//Rate *= m_fMaxConnectRotTime;
-
-		//if (Rate < m_fMinConnectRotTime)
-		//{
-		//	Rate = m_fMinConnectRotTime;
-		//}
-
-		//PRINTF("RateTime IS : %f", Rate);
 		PRINTF("AirCharging Start");
 		//m_bBlockChargeClick = true;
 		m_CurrentHead->SetGenerateOverlapEvents(true);

@@ -49,6 +49,9 @@ void UPhysicsMovement::BeginPlay()
 	}
 
 	SetWalkableFloorAngle(m_fWalkableSlopeAngle);
+
+	TickCastGround();
+	m_bIsFalling = !m_bOnGround;
 }
 
 
@@ -168,30 +171,25 @@ void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent
 		m_MovingTarget->SetSimulatePhysics(true);
 	}
 
-	//AddIgnoreTraceActor(PawnOwner);
+	AddIgnoreTraceActor(PawnOwner);
 }
 
 FRotator UPhysicsMovement::SelectTargetRotation(float delta)
 {
 	if (m_Acceleration.SizeSquared() < KINDA_SMALL_NUMBER)
 	{
-		//NPC는 가만히 있을때 원위치로 돌아와야한다
-		FRotator ROt2= m_MovingTarget->GetComponentRotation();
-		PRINTF("11");
-		return ROt2;
+		return m_MovingTarget->GetComponentRotation();
 	}
 
-	FRotator ROt = m_Acceleration.GetSafeNormal().Rotation();
+	FRotator AccelRot = m_Acceleration.GetSafeNormal().Rotation();
+
 	if (!IsMovingOnGround())
 	{
-		ROt.Pitch = 0.f;
-		ROt.Roll = 0.f;
-		PRINTF("22");
-		return ROt;
+		m_OnAirTargetRot.Yaw = AccelRot.Yaw;
+		return m_OnAirTargetRot;
 	}
-	m_TargetRot.Yaw = ROt.Yaw;
-	PRINTF("SelectTargetRot:%s", *m_TargetRot.ToString());
-	return m_TargetRot;
+	m_OnGroundRampRot.Yaw = AccelRot.Yaw;
+	return m_OnGroundRampRot;
 }
 
 bool UPhysicsMovement::SetAccel(float DeltaTime)
@@ -226,7 +224,7 @@ void UPhysicsMovement::TickMovement(float delta)
 	if (SweepCanMove(RampVector, delta, Hit))
 	{
 		SetVelocity(RampVector, Hit, delta);
-		m_TargetRot = RampVector.GetSafeNormal().Rotation();
+		m_OnGroundRampRot = RampVector.GetSafeNormal().Rotation();
 		return;
 	}
 
@@ -256,7 +254,7 @@ void UPhysicsMovement::TickMovement(float delta)
 			ResultVector = SlideAlongOnSurface(Delta, delta, 1.f - PercentTimeApplied, Hit.Normal, Hit, true);
 		}
 	}
-	m_TargetRot = ResultVector.GetSafeNormal().Rotation();
+	m_OnGroundRampRot = ResultVector.GetSafeNormal().Rotation();
 	SetVelocity(ResultVector, Hit, delta);
 
 }
@@ -310,6 +308,7 @@ float UPhysicsMovement::GetAxisDeltaRotation(float InAxisRotationRate, float Del
 void UPhysicsMovement::AddIgnoreActorsToQuery(FCollisionQueryParams & queryParam)
 {
 	queryParam.AddIgnoredActors(m_AryTraceIgnoreActors);
+	PRINTF("AryTraceIgnore : %d", m_AryTraceIgnoreActors.Num());
 }
 
 bool UPhysicsMovement::IsFalling() const
@@ -320,6 +319,7 @@ bool UPhysicsMovement::IsFalling() const
 
 void UPhysicsMovement::TickCastGround()
 {
+	m_GroundHitResult.Reset(1.f, false);
 	FVector TraceStart = m_MovingTarget->GetComponentLocation();
 	TraceStart.Z -= m_fGroundCastBoxSize;
 
@@ -335,7 +335,6 @@ void UPhysicsMovement::TickCastGround()
 	if (m_bDebugShowForwardCast)
 	{
 		DrawDebugBox(GetWorld(), TraceStart, FVector(m_fGroundCastBoxSize, m_fGroundCastBoxSize, m_fGroundCastBoxSize), FColor(120, 0, 120), false, -1.f, 0.1f);
-		DrawDebugBox(GetWorld(), TraceEnd, FVector(m_fGroundCastBoxSize, m_fGroundCastBoxSize, m_fGroundCastBoxSize), FColor(120, 0, 120), false, -1.f, 0.1f);
 	}
 #endif
 
@@ -501,10 +500,11 @@ void UPhysicsMovement::ClearJumpInput(float delta)
 void UPhysicsMovement::ResetJumpState()
 {
 	m_bPressedJump = false;
-	m_bWasJumping = false;
+ 	m_bWasJumping = false;
 	m_fJumpKeyHoldTime = 0.0f;
 	m_fJumpForceTimeRemaining = 0.0f;
 	m_nJumpCurrentCount = 0;
+	PRINTF("ResetJump");
 	//
 }
 
@@ -932,7 +932,7 @@ void UPhysicsMovement::Landing()
 	if (IsWalkable(m_GroundHitResult))
 	{
 		ResetJumpState();
-		PRINTF("Landing-ResetJump by %s",*m_GroundHitResult.Actor.Get()->GetName());
 	}
 }
+
 

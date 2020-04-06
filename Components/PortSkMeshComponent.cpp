@@ -89,8 +89,6 @@ void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)//should call
 {
 	DisablePhysicsCollision();
 	m_ConnectedPin = connector;
-	m_ConnectedPin->SetPhysicsLinearVelocity(FVector::ZeroVector);//자식까지 전부 멈춰야하지않을까?
-	m_MeshParentActor->SetPhysicsLinearVelocity(FVector::ZeroVector);
 	ConstraintPinPort();
 	m_OnConnected.Broadcast(m_ConnectedPin);
 	EnablePhysicsCollision();

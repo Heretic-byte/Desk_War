@@ -61,9 +61,8 @@ void UUSBMovement::RequestConnectChargeMove(const FVector & normalHorizon, float
 
 void UUSBMovement::RequestAirConnectChargeMove(FRotator portRot, const FVector & normalHorizon, float timeWant)
 {
-	m_TargetRot = portRot;
+	m_OnAirTargetRot = portRot;
 	RequestConnectChargeMove(normalHorizon, timeWant);
-	PRINTF("Requested:%s", *m_TargetRot.ToString());
 }
 
 void UUSBMovement::StopUSBMove()

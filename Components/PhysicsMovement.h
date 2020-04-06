@@ -145,7 +145,8 @@ public:
 
 	void DrawVectorFromHead(FVector wantVector, float length, FColor color) const;
 
-	FRotator m_TargetRot;
+	FRotator m_OnGroundRampRot;
+	FRotator m_OnAirTargetRot;
 
 	UPrimitiveComponent* GetMovingTargetComponent() const;
 
@@ -161,4 +162,5 @@ public:
 	bool m_bIsFalling;
 
 	bool m_WasWalkable;
+
 };
