@@ -75,11 +75,11 @@ void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
 	}
 	CalcVelocity(DeltaTime, m_fGroundFriction);
 
-		if (m_Acceleration.SizeSquared2D() < 1)//maybe square better?
-		{
-			return;
-		}
-		TickMovement(DeltaTime);
+	if (m_Acceleration.SizeSquared2D() < 1)//maybe square better?
+	{
+		return;
+	}
+	TickMovement(DeltaTime);
 
 	UpdateComponentVelocity();
 }
@@ -159,8 +159,7 @@ void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent
 		}
 	}
 
-	if(PawnOwner)
-		RemoveIgnoreTraceActor(PawnOwner);
+
 
 	UMovementComponent::SetUpdatedComponent(NewUpdatedComponent);
 	PawnOwner = NewUpdatedComponent ? CastChecked<APawn>(NewUpdatedComponent->GetOwner()) : NULL;
@@ -171,7 +170,34 @@ void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent
 		m_MovingTarget->SetSimulatePhysics(true);
 	}
 
-	AddIgnoreTraceActor(PawnOwner);
+
+}
+
+void UPhysicsMovement::SetMovingComponent(USceneComponent* NewUpdatedComponent, bool bRemoveIgnoreActorOld)
+{
+	auto* OldTarget = PawnOwner;
+	if (!OldTarget)
+	{
+		SetUpdatedComponent(NewUpdatedComponent);
+		return;
+	}
+
+	if (!PawnOwner)
+	{
+		//set fail
+		return;
+	}
+
+	if (OldTarget != PawnOwner)
+	{
+
+		if (bRemoveIgnoreActorOld)
+		{
+			RemoveIgnoreTraceActor(OldTarget);
+		}
+		AddIgnoreTraceActor(PawnOwner);
+	}
+	SetUpdatedComponent(NewUpdatedComponent);
 }
 
 FRotator UPhysicsMovement::SelectTargetRotation(float delta)
@@ -195,9 +221,9 @@ FRotator UPhysicsMovement::SelectTargetRotation(float delta)
 bool UPhysicsMovement::SetAccel(float DeltaTime)
 {
 	FVector InputDir;
-	
+
 	InputDir = ConsumeInputVector();
-	
+
 	SetAccelerationByDir(InputDir);
 
 	return true;
@@ -308,7 +334,6 @@ float UPhysicsMovement::GetAxisDeltaRotation(float InAxisRotationRate, float Del
 void UPhysicsMovement::AddIgnoreActorsToQuery(FCollisionQueryParams & queryParam)
 {
 	queryParam.AddIgnoredActors(m_AryTraceIgnoreActors);
-	PRINTF("AryTraceIgnore : %d", m_AryTraceIgnoreActors.Num());
 }
 
 bool UPhysicsMovement::IsFalling() const
@@ -349,16 +374,25 @@ void UPhysicsMovement::TickCastGround()
 		m_fGroundDist = (TraceStart.Z - m_GroundHitResult.Location.Z);
 	}
 
-	if (m_bIsFalling==m_bOnGround)
+
+	if (m_bOnGround && 0 > m_GroundHitResult.Component.Get()->GetPhysicsLinearVelocity().Z)//공중에서 떨어지고 있는 오브젝트는 디딤체크안함
+	{
+		m_bOnGround = false;
+		m_GroundHitResult.Reset(1.f, false);
+	}
+
+	if (m_bIsFalling == m_bOnGround)
 	{
 		m_bIsFalling = !m_bOnGround;
 
 		if (!m_bIsFalling)
 		{
-			Landing();
+			
+				Landing();
+				
 		}
 	}
-	
+
 }
 
 
@@ -447,7 +481,7 @@ bool UPhysicsMovement::DoJump()
 
 		m_nJumpCurrentCount++;
 		PRINTF("JumpCount:%d", m_nJumpCurrentCount);
-		
+
 		return true;
 	}
 
@@ -490,7 +524,7 @@ void UPhysicsMovement::ClearJumpInput(float delta)
 			ResetJumpState();
 		}
 	}
-	
+
 	/*if (IsWalkable(m_GroundHitResult)&&IsMovingOnGround())
 		ResetJumpState();*/
 }
@@ -500,7 +534,7 @@ void UPhysicsMovement::ClearJumpInput(float delta)
 void UPhysicsMovement::ResetJumpState()
 {
 	m_bPressedJump = false;
- 	m_bWasJumping = false;
+	m_bWasJumping = false;
 	m_fJumpKeyHoldTime = 0.0f;
 	m_fJumpForceTimeRemaining = 0.0f;
 	m_nJumpCurrentCount = 0;
@@ -685,7 +719,7 @@ FVector UPhysicsMovement::SlideAlongOnSurface(const FVector& velocity, float del
 
 bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult& OutHit)
 {
-	
+
 	FVector TraceStart = m_MovingTarget->GetComponentLocation();
 	TraceStart.Z += m_fSweepZOffset;//피봇이 땅에 안박혀있으면 이게문제임
 	const FVector TraceEnd = TraceStart + delta * (deltaTime + m_fSweepFowardOffset);
@@ -815,8 +849,8 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	}
 	if (BlockingHit.bBlockingHit)
 	{
-	m_MovingTarget->SetWorldLocationAndRotationNoPhysics(NewLocation, SelectTargetRotation(deltaTime));
-	PRINTF("SweepTeleported");
+		m_MovingTarget->SetWorldLocationAndRotationNoPhysics(NewLocation, SelectTargetRotation(deltaTime));
+		PRINTF("SweepTeleported");
 
 	}
 
@@ -899,8 +933,8 @@ UPrimitiveComponent * UPhysicsMovement::GetMovingTargetComponent() const
 
 void UPhysicsMovement::ShowVelocityAccel()
 {
-	PRINTF("Velo:%s,:%f, Accel:%s,:%f", *Velocity.ToString(), Velocity.Size(),*m_Acceleration.ToString(),m_Acceleration.Size());
-	PRINTF("Physcs: %s,%f",*m_MovingTarget->GetPhysicsLinearVelocity().ToString(), m_MovingTarget->GetPhysicsLinearVelocity().Size())
+	PRINTF("Velo:%s,:%f, Accel:%s,:%f", *Velocity.ToString(), Velocity.Size(), *m_Acceleration.ToString(), m_Acceleration.Size());
+	PRINTF("Physcs: %s,%f", *m_MovingTarget->GetPhysicsLinearVelocity().ToString(), m_MovingTarget->GetPhysicsLinearVelocity().Size())
 }
 
 void UPhysicsMovement::StopActiveMovement()

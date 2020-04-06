@@ -24,10 +24,12 @@ protected:
 	float m_fAutoMoveTimeWant;
 	float m_fAutoMoveTimer;
 	FVector m_fAutoMoveInput;
+	float m_fInitHeadMass;
 public:
 	virtual void PhysSceneStep(FPhysScene* PhysScene, float DeltaTime) override;
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-	void SetUSBUpdateComponent(AUSB_PlayerPawn* playerPawn,UPhysicsSkMeshComponent* head, UPhysicsSkMeshComponent* tail);
+	void InitUSBUpdateComponent(AUSB_PlayerPawn* playerPawn,UPhysicsSkMeshComponent* head, UPhysicsSkMeshComponent* tail);
+	void SetUSBUpdateComponent(UPhysicsSkMeshComponent * head, UPhysicsSkMeshComponent * tail, bool bRemoveTraceOld);
 	virtual void AddForce(FVector forceWant) override;
 	virtual void AddImpulse(FVector impulseWant) override;
 	virtual void BeginPlay() override;

@@ -5,11 +5,13 @@ UUSBMovement::UUSBMovement(const FObjectInitializer& objInit):Super(objInit)
 {
 	m_fAutoMoveTimeWant = -1.f;
 	m_fAutoMoveTimer = -1.f;
+	m_fInitHeadMass = 2.5f;
 }
 
 void UUSBMovement::BeginPlay()
 {
 	Super::BeginPlay();
+	m_fInitHeadMass = m_MovingTarget->GetBodyInstance()->GetBodyMass();
 }
 
 void UUSBMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction)
@@ -33,11 +35,16 @@ void UUSBMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
 	Super::PhysSceneStep(PhysScene, DeltaTime);
 }
 
-void UUSBMovement::SetUSBUpdateComponent(AUSB_PlayerPawn* playerPawn, UPhysicsSkMeshComponent * head, UPhysicsSkMeshComponent * tail)
+void UUSBMovement::InitUSBUpdateComponent(AUSB_PlayerPawn* playerPawn, UPhysicsSkMeshComponent * head, UPhysicsSkMeshComponent * tail)
 {
-	SetUpdatedComponent(head);
-	m_MovingTargetTail = tail;
+	SetUSBUpdateComponent(head, tail,false);
 	m_PlayerPawn = playerPawn;
+}
+
+void UUSBMovement::SetUSBUpdateComponent(UPhysicsSkMeshComponent * head, UPhysicsSkMeshComponent * tail, bool bRemoveTraceOld)
+{
+	SetMovingComponent(head,bRemoveTraceOld);
+	m_MovingTargetTail = tail;
 }
 
 void UUSBMovement::AddForce(FVector forceWant)
@@ -76,11 +83,21 @@ void UUSBMovement::StopUSBMove()
 }
 bool UUSBMovement::DoJump()
 {
-	if (Super::DoJump())
+	if (CanJump())
 	{
+		PRINTF("DidJump");
+		m_nJumpCurrentCount++;
+		PRINTF("JumpCount:%d", m_nJumpCurrentCount);
+
 		FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
 		CurrentV.Z = FMath::Max(m_fJumpZVelocity, CurrentV.Z);
-		m_MovingTargetTail->SetPhysicsLinearVelocity(CurrentV);
+		float CurrentHeadMass = m_MovingTarget->GetBodyInstance()->GetBodyMass();
+		float CurrentTailMass = m_MovingTargetTail->GetBodyInstance()->GetBodyMass();
+		float HeadMassRate = CurrentHeadMass / m_fInitHeadMass;
+		float TailMassRate = CurrentTailMass / m_fInitHeadMass;
+
+		m_MovingTarget->SetPhysicsLinearVelocity(CurrentV*TailMassRate);
+		m_MovingTargetTail->SetPhysicsLinearVelocity(CurrentV *HeadMassRate);
 
 		return true;
 	}

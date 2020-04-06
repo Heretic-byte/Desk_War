@@ -25,32 +25,25 @@ public:
 	AUSB_PlayerPawn(const FObjectInitializer& objInit);
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
-	float m_fMaxConnectRotTime;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
-	float m_fMinConnectRotTime;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
 	float m_fDefaultFailImpulsePower;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
-	float m_fConnectReadyDuration;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
-	float m_fConnectPushDuration;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
 	float m_fPortTraceRange;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
-	float m_fConnectHorizontalAngle;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
 	float m_fEjectionPower;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
 	float m_fBlockMoveTimeWhenEject;
+	float m_fBlockMoveTimeWhenEjectTimer;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
 	float m_fHeadChangeCD;
 	float m_fHeadChangeCDTimer;
 	UPROPERTY()
 	TArray<UPrimitiveComponent*> m_AryPhysicsBody;
+	
 	float m_fTotalMass;
 	bool m_bBlockHeadChange;
 	bool m_bBlockJump;
 	bool m_bBlockChargeClick;
+	bool m_bBlockInputMove;
 protected://component
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly,Category="Movement")
 	UUSBMovement* m_UsbMovement;
@@ -117,7 +110,7 @@ private://construct
 	void CreateCameraFamily();
 	void CreateSkFaceMesh();
 private:
-	void SetHeadTail(UPhysicsSkMeshComponent* headWant, UPhysicsSkMeshComponent* tailWant);
+	void SetHeadTail(UPhysicsSkMeshComponent* headWant, UPhysicsSkMeshComponent* tailWant,bool bRemoveIgnoreOld=false);
 	void MoveForward(float v);
 	void MoveRight(float v);
 	void RotateYaw(float v);
@@ -141,6 +134,8 @@ protected:
 	void TickTracePortable();
 public:
 	virtual void Tick(float DeltaTime) override;
+	void EnableUSBInput();
+	void DisableUSBInput(float dur=0.f);
 public:
 	FORCEINLINE float GetTotalMass()
 	{

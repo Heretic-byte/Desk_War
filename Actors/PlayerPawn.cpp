@@ -52,7 +52,7 @@ APlayerPawn::APlayerPawn()
 void APlayerPawn::BeginPlay()
 {
 	Super::BeginPlay();
-	m_UsbMovement->SetUpdatedComponent(m_SkMesh);
+	//m_UsbMovement->SetUpdatedComponent(m_SkMesh);
 }
 
 // Called every frame

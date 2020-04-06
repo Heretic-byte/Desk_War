@@ -24,8 +24,7 @@
 //분리해야한다
 AUSB_PlayerPawn::AUSB_PlayerPawn(const FObjectInitializer& objInit):Super(objInit)
 {
-	m_fMaxConnectRotTime = 3.f;
-	m_fMinConnectRotTime = 1.f;
+	m_fBlockMoveTimeWhenEjectTimer = 0.f;
 	m_fDefaultFailImpulsePower = 1000.f;
 	InitPlayerPawn();
 	CreatePhysicMovement();
@@ -39,7 +38,7 @@ AUSB_PlayerPawn::AUSB_PlayerPawn(const FObjectInitializer& objInit):Super(objIni
 	m_bBlockChargeClick = false;
 	m_bBlockHeadChange = false;
 	m_bBlockJump = false;
-	
+	m_bBlockInputMove = false;
 }
 
 void AUSB_PlayerPawn::BeginPlay()
@@ -75,7 +74,6 @@ void AUSB_PlayerPawn::ZoomOut()
 
 void AUSB_PlayerPawn::InitPlayerPawn()
 {
-	m_fConnectHorizontalAngle = 0.06f;
 	m_fEjectionPower = 4200.f;
 	m_fSpineAngularDamping = 1.f;
 	m_fSpineLinearDamping = 0.01f;
@@ -93,9 +91,6 @@ void AUSB_PlayerPawn::InitPlayerPawn()
 	m_fHeadChangeCD = 0.5f;
 	m_fHeadChangeCDTimer = 0.f;
 	
-	m_fConnectReadyDuration = 5.f;
-	m_fConnectPushDuration = 0.3f;
-
 	m_BaseHeadPin->SetGenerateOverlapEvents(false);
 	m_BaseTailPin->SetGenerateOverlapEvents(false);
 }
@@ -104,7 +99,7 @@ void AUSB_PlayerPawn::CreatePhysicMovement()
 {
 	m_UsbMovement = CreateDefaultSubobject<UUSBMovement>(TEXT("Movement00"));
 
-	m_UsbMovement->SetUpdatedComponent(m_CurrentHead);
+	m_UsbMovement->InitUSBUpdateComponent(this,m_CurrentHead,m_CurrentTail);
 
 	m_UsbMovement->m_fGroundCastBoxSize = 10.f;
 	m_UsbMovement->m_fGroundCastOffset = -20.f;
@@ -155,14 +150,14 @@ void AUSB_PlayerPawn::CreateSkFaceMesh()
 	m_MeshFaceSk->SetRelativeScale3D(FVector(2.4f, 2.4f, 2.4f));
 }
 
-void AUSB_PlayerPawn::SetHeadTail(UPhysicsSkMeshComponent * headWant, UPhysicsSkMeshComponent * tailWant)
+void AUSB_PlayerPawn::SetHeadTail(UPhysicsSkMeshComponent * headWant, UPhysicsSkMeshComponent * tailWant, bool bRemoveIgnoreOld)
 {
 	m_CurrentHead->OnComponentBeginOverlap.RemoveAll(this);//remove from older
 
 	m_CurrentHead = headWant;
 	m_CurrentTail = tailWant;
 
-	m_UsbMovement->SetUSBUpdateComponent(this,m_CurrentHead,m_CurrentTail);
+	m_UsbMovement->SetUSBUpdateComponent(m_CurrentHead,m_CurrentTail, bRemoveIgnoreOld);
 	
 	m_CamRoot->AttachToComponent(m_CurrentHead,FAttachmentTransformRules::KeepRelativeTransform);
 
@@ -205,8 +200,21 @@ void AUSB_PlayerPawn::InitTraceIgnoreAry()
 
 void AUSB_PlayerPawn::Tick(float DeltaTime)
 {
-	m_fHeadChangeCDTimer += DeltaTime;
 	Super::Tick(DeltaTime);
+	m_fHeadChangeCDTimer += DeltaTime;
+
+
+	if (m_fBlockMoveTimeWhenEjectTimer > m_fBlockMoveTimeWhenEject)//0
+	{
+		m_fBlockMoveTimeWhenEjectTimer -= DeltaTime;
+
+		if (m_fBlockMoveTimeWhenEjectTimer <= m_fBlockMoveTimeWhenEject)
+		{
+			EnableUSBInput();
+			m_fBlockMoveTimeWhenEjectTimer = 0.f;
+		}
+	}
+	
 	TickTracePortable();
 
 	if (!m_CurrentFocusedPort)
@@ -217,11 +225,33 @@ void AUSB_PlayerPawn::Tick(float DeltaTime)
 	FVector HeadPos = GetHead()->GetComponentLocation();
 	FVector PortPst = m_CurrentFocusedPort->GetComponentLocation();
 	DrawDebugLine(GetWorld(), HeadPos, PortPst, FColor::Cyan, false, -1, 0.1f);
+
+
+	
+}
+
+void AUSB_PlayerPawn::EnableUSBInput()
+{
+	m_bBlockChargeClick = false;
+	m_bBlockHeadChange = false;
+	m_bBlockInputMove = false;
+	m_bBlockJump = false;
+	m_fBlockMoveTimeWhenEjectTimer = 0.f;
+}
+
+void AUSB_PlayerPawn::DisableUSBInput(float dur)
+{
+	m_bBlockChargeClick = true;
+	m_bBlockHeadChange = true;
+	m_bBlockInputMove = true;
+	m_bBlockJump = true;
+
+	m_fBlockMoveTimeWhenEjectTimer = dur;
 }
 
 void AUSB_PlayerPawn::MoveForward(float v)
 {
-	if ((Controller != NULL) && (v != 0.0f))
+	if ((Controller != NULL) && (v != 0.0f)&& !m_bBlockInputMove)
 	{
 		const FRotator Rotation = Controller->GetControlRotation();
 		const FRotator YawRotation(0, Rotation.Yaw, 0);
@@ -233,7 +263,7 @@ void AUSB_PlayerPawn::MoveForward(float v)
 
 void AUSB_PlayerPawn::MoveRight(float v)
 {
-	if ((Controller != NULL) && (v != 0.0f))
+	if ((Controller != NULL) && (v != 0.0f) && !m_bBlockInputMove)
 	{
 		const FRotator Rotation = Controller->GetControlRotation();
 		const FRotator YawRotation(0, Rotation.Yaw, 0);
@@ -276,7 +306,7 @@ void AUSB_PlayerPawn::ConnectShot()
 	}
 
 
-
+	DisableUSBInput();
 	if (!m_UsbMovement->IsMovingOnGround())//sky connect
 	{ 
 		PRINTF("AirCharging Start");
@@ -330,19 +360,10 @@ void AUSB_PlayerPawn::ConnectChargingStart()
 	m_UsbMovement->RequestConnectChargeMove(For,3.f);
 }
 
-//void AUSB_PlayerPawn::ConnectChargingEnd()//사실상 실패랑 똑같은데 팅기는것만 없어야함
-//{ 
-//	//지속시간 끝나고 불리는데 성공이후로도 불리고 있음
-//	PRINTF("Charging End, it should be call once");
-//	//m_bBlockChargeClick = false;
-//	//m_CurrentHead->SetGenerateOverlapEvents(false);
-//	//EnableUSBInput();
-//	//m_UsbMovement->m_OnAutoMoveEnd.Remove(m_ConnectChargingHandle);
-//}
-//움직임 끊기 존재해야함
 void AUSB_PlayerPawn::SuccessConnection(UPortSkMeshComponent* portConnect)
 {
 	PRINTF("SuccessConnection");
+	EnableUSBInput();
 	m_CurrentHead->SetGenerateOverlapEvents(false);
 	m_UsbMovement->StopUSBMove();
 
@@ -390,6 +411,7 @@ void AUSB_PlayerPawn::FailConnection(UPortSkMeshComponent* portConnect,const FHi
 		break;
 	}
 	PRINTF("FailConnection");
+	EnableUSBInput();
 	m_CurrentHead->SetGenerateOverlapEvents(false);
 	m_UsbMovement->StopUSBMove();
 
@@ -455,7 +477,7 @@ bool AUSB_PlayerPawn::TryDisconnect()
 	RemoveTraceIgnoreActor(Tail->GetPortConnected()->GetOwner());
 	RemovePhysicsBody(Tail->GetPortConnected());
 	Tail->Disconnect();
-	SetHeadTail(m_CurrentHead, Tail);
+	SetHeadTail(m_CurrentHead, Tail,true);
 	return true;
 }
 
@@ -485,6 +507,7 @@ void AUSB_PlayerPawn::DisconnectShot()
 {
 	if (TryDisconnect())
 	{
+		DisableUSBInput(m_fBlockMoveTimeWhenEject);
 		FVector ImpulseDir = GetTail()->GetForwardVector()*-1.f * m_fEjectionPower;
 		m_UsbMovement->AddImpulse(ImpulseDir);
 		m_PlayerCon->PlayerCameraManager->PlayCameraShake(UEjectionCamShake::StaticClass(),1.0f);

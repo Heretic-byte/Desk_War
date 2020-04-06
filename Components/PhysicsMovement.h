@@ -96,9 +96,11 @@ protected:
 	void TickMovement(float delta);
 	FRotator SelectTargetRotation(float delta);
 	bool SetAccel(float DeltaTime);
-public:
+
+private:
 	virtual void SetUpdatedComponent(USceneComponent* NewUpdatedComponent) override;
 public:
+	void SetMovingComponent(USceneComponent* NewUpdatedComponent,bool bRemoveIgnoreActorOld);
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void PhysSceneStep(FPhysScene* PhysScene, float DeltaTime);
 	FDelegateHandle OnPhysSceneStepHandle;
