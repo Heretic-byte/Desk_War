@@ -36,7 +36,7 @@ void AUSB_PhysicsPawn::CreatePinUSB()
 {
 	m_PinUSB = CreateDefaultSubobject<UPinSkMeshComponent>(TEXT("Pin_USB_00"));
 	m_PinUSB->SetupAttachment(RootComponent);
-	m_PinUSB->SetPinType(E_PinPortType::EUSB);
+	m_PinUSB->SetPinType(EPinPortType::EUSB);
 
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FoundMeshPinUSB(TEXT("SkeletalMesh'/Game/Meshes/Characters/Player_USB/SK_USB_Head.SK_USB_Head'"));
 
@@ -53,7 +53,7 @@ void AUSB_PhysicsPawn::CreatePin5Pin()
 {
 	m_Pin5Pin = CreateDefaultSubobject<UPinSkMeshComponent>(TEXT("m_Pin_5Pin_00"));
 	m_Pin5Pin->SetupAttachment(RootComponent);
-	m_Pin5Pin->SetPinType(E_PinPortType::E5Pin);
+	m_Pin5Pin->SetPinType(EPinPortType::E5Pin);
 
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FoundMeshPort4Pin(TEXT("SkeletalMesh'/Game/Meshes/Characters/Player_USB/SK_USB_Tail.SK_USB_Tail'"));
 	check(FoundMeshPort4Pin.Object);

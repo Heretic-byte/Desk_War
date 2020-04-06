@@ -11,6 +11,7 @@
 
 UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 {
+	m_fSweepFowardOffset = 0.03f;
 	m_fSweepZOffset = 0.1f;
 	m_fMaxTimeStep = 33.f;
 	m_fGroundFriction = 2.f;
@@ -176,6 +177,7 @@ FRotator UPhysicsMovement::SelectTargetRotation(float delta)
 	{
 		//NPC는 가만히 있을때 원위치로 돌아와야한다
 		FRotator ROt2= m_MovingTarget->GetComponentRotation();
+		PRINTF("11");
 		return ROt2;
 	}
 
@@ -184,9 +186,11 @@ FRotator UPhysicsMovement::SelectTargetRotation(float delta)
 	{
 		ROt.Pitch = 0.f;
 		ROt.Roll = 0.f;
+		PRINTF("22");
 		return ROt;
 	}
 	m_TargetRot.Yaw = ROt.Yaw;
+	PRINTF("SelectTargetRot:%s", *m_TargetRot.ToString());
 	return m_TargetRot;
 }
 
@@ -194,8 +198,7 @@ bool UPhysicsMovement::SetAccel(float DeltaTime)
 {
 	FVector InputDir;
 	
-	
-		InputDir = ConsumeInputVector();
+	InputDir = ConsumeInputVector();
 	
 	SetAccelerationByDir(InputDir);
 
@@ -680,13 +683,13 @@ FVector UPhysicsMovement::SlideAlongOnSurface(const FVector& velocity, float del
 	return SlideDelta;
 }
 
-bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult& OutHit, float offset)
+bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult& OutHit)
 {
 	
 	FVector TraceStart = m_MovingTarget->GetComponentLocation();
 	TraceStart.Z += m_fSweepZOffset;//피봇이 땅에 안박혀있으면 이게문제임
-	const FVector TraceEnd = TraceStart + delta * (deltaTime + offset);
-	float DeltaSizeSq = (TraceEnd - TraceStart).SizeSquared();				// Recalc here to account for precision loss of float addition
+	const FVector TraceEnd = TraceStart + delta * (deltaTime + m_fSweepFowardOffset);
+	float DeltaSizeSq = (TraceEnd - TraceStart).SizeSquared();
 	const FQuat InitialRotationQuat = m_MovingTarget->GetComponentTransform().GetRotation();
 
 	const float MinMovementDistSq = FMath::Square(4.f*KINDA_SMALL_NUMBER);
@@ -707,8 +710,6 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	bool bIncludesOverlapsAtEnd = false;
 	bool bRotationOnly = false;
 	bool IsSimul = false;
-	TArray<FOverlapInfo> PendingOverlaps;
-
 	TArray<FHitResult> Hits;
 	FVector NewLocation = TraceStart;
 	if (DeltaSizeSq > 0.f)
@@ -720,7 +721,9 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 		FCollisionResponseParams ResponseParam;
 		m_MovingTarget->InitSweepCollisionParams(Params, ResponseParam);
 		bool const bHadBlockingHit = MyWorld->ComponentSweepMulti(Hits, m_MovingTarget, TraceStart, TraceEnd, InitialRotationQuat, Params);
-		//DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Red, false, -1.f, 0.1f, 3.f);
+
+		DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Red, false, -1.f, 0.1f, 3.f);
+
 		if (Hits.Num() > 0)
 		{
 			const float DeltaSize = FMath::Sqrt(DeltaSizeSq);
@@ -734,7 +737,6 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 			return true;
 		}
 
-		int32 FirstNonInitialOverlapIdx = INDEX_NONE;
 		if (bHadBlockingHit)
 		{
 			int32 BlockingHitIndex = INDEX_NONE;
@@ -774,6 +776,8 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 					return true;
 				}
 				bFilledHitResult = true;
+
+				PRINTF("Blocked by : %s", *BlockingHit.GetActor()->GetName());
 			}
 		}
 		else
@@ -796,12 +800,6 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 			{
 				NewLocation = TraceStart;
 				BlockingHit.Time = 0.f;
-
-				if (FirstNonInitialOverlapIdx != INDEX_NONE)
-				{
-					const bool bAllowShrinking = false;
-					PendingOverlaps.SetNum(FirstNonInitialOverlapIdx, bAllowShrinking);
-				}
 			}
 		}
 	}
@@ -818,7 +816,7 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	if (BlockingHit.bBlockingHit)
 	{
 	m_MovingTarget->SetWorldLocationAndRotationNoPhysics(NewLocation, SelectTargetRotation(deltaTime));
-	//PRINTF("SweepTeleported");
+	PRINTF("SweepTeleported");
 
 	}
 
@@ -931,7 +929,10 @@ void UPhysicsMovement::RemoveIgnoreTraceActor(AActor * actorWant)
 void UPhysicsMovement::Landing()
 {
 	PRINTF("Landing");
-	if(IsWalkable(m_GroundHitResult))
+	if (IsWalkable(m_GroundHitResult))
+	{
 		ResetJumpState();
+		PRINTF("Landing-ResetJump by %s",*m_GroundHitResult.Actor.Get()->GetName());
+	}
 }
 

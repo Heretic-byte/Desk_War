@@ -4,20 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "Components/PhysicsSkMeshComponent.h"
+#include "Datas/USB_Enum.h"
 #include "PinSkMeshComponent.generated.h"
 
 /**
  * 
  */
-UENUM(BlueprintType)
-enum class E_PinPortType :uint8
-{
-	ENoneType,
-	EUSB,
-	E5Pin,
-	EHDMI,
-	ELength
-};
+
 
 class UPortSkMeshComponent;
 UCLASS(ClassGroup = (Custom), hidecategories = Object, config = Engine, editinlinenew, meta = (BlueprintSpawnableComponent),BlueprintType, Blueprintable)
@@ -41,23 +34,23 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Body_Bones")
 	FName m_NameVelocityPivotBone;
 	UPROPERTY(EditDefaultsOnly, Category = "PinType")
-	E_PinPortType m_Pintype;
+	EPinPortType m_Pintype;
 protected:
 	UPROPERTY()
 	UPortSkMeshComponent* m_PortConnected;
 	UPROPERTY()
 	UObject* m_PortOwner;
 private:
-	bool m_AryTypeMatch[(int)E_PinPortType::ELength];
+	bool m_AryTypeMatch[(int)EPinPortType::ELength];
 public:
 	FOnConnectPortOwner m_OnConnectedPortOwner;
 	FOnConnectPort m_OnConnectedPort;
 public:
-	void SetPinType(E_PinPortType pinType);
+	void SetPinType(EPinPortType pinType);
 	FVector GetNeckLoc() const;
 	virtual bool Connect(UPortSkMeshComponent* port);
 	virtual bool Disconnect();
-	virtual bool CheckTypeMatch(E_PinPortType portsType);
+	virtual bool CheckTypeMatch(EPinPortType portsType);
 	void SetNeckName(FName nameWant);
 	void SetVelocityPivotName(FName nameWant);
 	void FailConnection(const FHitResult & hitResult);

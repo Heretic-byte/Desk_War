@@ -42,6 +42,8 @@ public:
 	float m_fGroundCastOffset;
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMin = "1", UIMin = "1"))
 	float m_fMovingForce;
+	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
+	float m_fSweepFowardOffset;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement_Rotate")
 	FRotator m_RotationRate;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
@@ -98,7 +100,7 @@ public:
 	virtual void SetUpdatedComponent(USceneComponent* NewUpdatedComponent) override;
 public:
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-	void PhysSceneStep(FPhysScene* PhysScene, float DeltaTime);
+	virtual void PhysSceneStep(FPhysScene* PhysScene, float DeltaTime);
 	FDelegateHandle OnPhysSceneStepHandle;
 	//
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
@@ -131,7 +133,7 @@ public:
 
 	FVector SlideAlongOnSurface(const FVector& velocity, float deltaTime,float Time, const FVector& InNormal, FHitResult& Hit, bool bHandleImpact);
 
-	bool SweepCanMove(FVector  delta, float deltaTime, FHitResult& OutHit, float offset = 0.03f);
+	bool SweepCanMove(FVector  delta, float deltaTime, FHitResult& OutHit);
 
 	void PullBackHit(FHitResult& Hit, const FVector& Start, const FVector& End, const float Dist);
 

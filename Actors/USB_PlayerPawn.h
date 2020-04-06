@@ -8,11 +8,14 @@
 #include "Components/USB_SpringArm.h"
 #include "Actors/USB_PhysicsPawn.h"
 #include "Components/USBMovement.h"
+#include "Datas/USB_Enum.h"
 #include "USB_PlayerPawn.generated.h"
 
 class UPhysicsSkMeshComponent;
 class APlayerController;
 class UPortSkMeshComponent;
+
+
 
 UCLASS(BlueprintType, Blueprintable)
 class DESK_WAR_API AUSB_PlayerPawn : public AUSB_PhysicsPawn
@@ -123,8 +126,12 @@ private:
 	void AddPhysicsBody(UPrimitiveComponent* wantP);
 	void RemovePhysicsBody(UPrimitiveComponent* wantP);
 protected:
+	void ConnectChargingStart();
 	void SuccessConnection(UPortSkMeshComponent* portConnect);
-	void FailConnection(UPortSkMeshComponent* portConnect,const FHitResult & hitResult);
+	void AdjustPinTransform(UPortSkMeshComponent * portConnect);
+public:
+	void FailConnection(UPortSkMeshComponent* portConnect,const FHitResult * hitResult, EFailConnectionReason reason);
+protected:
 	void SetPhysicsVelocityAllBody(FVector linearV);
 	bool TryDisconnect();
 	void AddIgnoreActorsToQuery(FCollisionQueryParams& queryParam);
@@ -132,8 +139,6 @@ protected:
 	virtual void BeginPlay() override;
 	void InitTraceIgnoreAry();
 	void TickTracePortable();
-	void ConnectChargingStart();
-	void ConnectChargingEnd();
 public:
 	virtual void Tick(float DeltaTime) override;
 public:

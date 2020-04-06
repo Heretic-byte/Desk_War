@@ -19,7 +19,7 @@ UPortSkMeshComponent::UPortSkMeshComponent(const FObjectInitializer & objInit)
 	m_NamePortConnectSocket = "PortPoint";
 	m_NamePortConnectStartSocket = "ConnectStart";
 	m_NamePortConnectPushPointSocket = "PushPoint";
-	m_PortType = E_PinPortType::ENoneType;
+	m_PortType = EPinPortType::ENoneType;
 	m_fEjectPower = 999.f;
 	m_fConnectableDistSqr = 25.f;
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FoundMesh(TEXT("SkeletalMesh'/Game/Meshes/Characters/Port/SK_PortPoint.SK_PortPoint'"));
@@ -37,12 +37,12 @@ void UPortSkMeshComponent::BeginPlay()
 	Super::BeginPlay();
 }
 
-void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, UPhysicsSkMeshComponent* parentMesh,E_PinPortType portType, FName namePinBone)
+void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, UPhysicsSkMeshComponent* parentMesh,EPinPortType portType, FName namePinBone)
 {
 	m_ParentPhysicsConst = physicsJoint;
 	m_MeshParentActor = parentMesh;
 
-	if (portType != E_PinPortType::ENoneType)
+	if (portType != EPinPortType::ENoneType)
 	{
 		m_PortType = portType;
 	}
@@ -87,9 +87,9 @@ UPhysicsSkMeshComponent * UPortSkMeshComponent::GetParentSkMesh()
 
 void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)//should call last
 {
-	//m_MeshParentActor->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	DisablePhysicsCollision();
 	m_ConnectedPin = connector;
+	m_ConnectedPin->SetPhysicsLinearVelocity(FVector::ZeroVector);//자식까지 전부 멈춰야하지않을까?
 	m_MeshParentActor->SetPhysicsLinearVelocity(FVector::ZeroVector);
 	ConstraintPinPort();
 	m_OnConnected.Broadcast(m_ConnectedPin);
@@ -132,7 +132,7 @@ void UPortSkMeshComponent::DisablePhysicsCollision()
 	m_MeshParentActor->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
 }
 
-E_PinPortType UPortSkMeshComponent::GetPortType() const
+EPinPortType UPortSkMeshComponent::GetPortType() const
 {
 	return _inline_GetPortType();
 }

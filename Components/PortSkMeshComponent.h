@@ -8,6 +8,7 @@
 #include "Components/PrimitiveComponent.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 #include "Components/PinSkMeshComponent.h"
+#include "Datas/USB_Enum.h"
 #include "PortSkMeshComponent.generated.h"
 
 
@@ -45,7 +46,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interact")
 	FName m_NameWantMovePoint;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interact")
-	E_PinPortType m_PortType;
+	EPinPortType m_PortType;
 	UPROPERTY(VisibleAnywhere)
 	UPinSkMeshComponent* m_ConnectedPin;
 	UPROPERTY()
@@ -58,7 +59,7 @@ private:
 	void ConstraintPinPort();
 public:
 	UFUNCTION(BlueprintCallable, Category = "Connection")
-	virtual void InitPort(UPhysicsConstraintComponent* physicsJoint, UPhysicsSkMeshComponent* parentMesh,E_PinPortType portType = E_PinPortType::ENoneType,FName namePinBone = NAME_None);
+	virtual void InitPort(UPhysicsConstraintComponent* physicsJoint, UPhysicsSkMeshComponent* parentMesh,EPinPortType portType = EPinPortType::ENoneType,FName namePinBone = NAME_None);
 	UFUNCTION(BlueprintCallable, Category = "Interact")
 	virtual void Connect(UPinSkMeshComponent* connector);
 	UFUNCTION(BlueprintCallable, Category = "Interact")
@@ -66,7 +67,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Interact")
 	bool IsConnected();
 	UFUNCTION(BlueprintCallable, Category = "Interact")
-	E_PinPortType GetPortType() const;
+	EPinPortType GetPortType() const;
 
 	void FailConnection(const FHitResult & hitResult);
 protected:
@@ -79,7 +80,7 @@ public:
 	FName GetMovePointWant();
 	UPhysicsSkMeshComponent* GetParentSkMesh();
 
-	FORCEINLINE E_PinPortType _inline_GetPortType() const
+	FORCEINLINE EPinPortType _inline_GetPortType() const
 	{
 		return m_PortType;
 	}

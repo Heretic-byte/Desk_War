@@ -162,7 +162,7 @@ void AUSB_PlayerPawn::SetHeadTail(UPhysicsSkMeshComponent * headWant, UPhysicsSk
 	m_CurrentHead = headWant;
 	m_CurrentTail = tailWant;
 
-	m_UsbMovement->SetUSBUpdateComponent(m_CurrentHead,m_CurrentTail);
+	m_UsbMovement->SetUSBUpdateComponent(this,m_CurrentHead,m_CurrentTail);
 	
 	m_CamRoot->AttachToComponent(m_CurrentHead,FAttachmentTransformRules::KeepRelativeTransform);
 
@@ -187,13 +187,13 @@ void AUSB_PlayerPawn::SetupPlayerInputComponent(UInputComponent * PlayerInputCom
 	PlayerInputComponent->BindAxis("Turn", this, &AUSB_PlayerPawn::RotateYaw);
 	PlayerInputComponent->BindAxis("LookUp", this, &AUSB_PlayerPawn::RotatePitch);
 	//Connect
-	PlayerInputComponent->BindAction(FName("Connect"),EInputEvent::IE_Pressed,this, &AUSB_PlayerPawn::ConnectShot);
-	PlayerInputComponent->BindAction(FName("Jump"), EInputEvent::IE_Pressed, this, &AUSB_PlayerPawn::Jump);
-	PlayerInputComponent->BindAction(FName("Jump"), EInputEvent::IE_Released, this, &AUSB_PlayerPawn::StopJumping);
-	PlayerInputComponent->BindAction(FName("HeadChange"), EInputEvent::IE_Pressed, this, &AUSB_PlayerPawn::ChangeHeadTail);
-	PlayerInputComponent->BindAction(FName("Disconnect"), EInputEvent::IE_Pressed, this, &AUSB_PlayerPawn::DisconnectShot);
-	PlayerInputComponent->BindAction(FName("ZoomIn"), EInputEvent::IE_Pressed, this, &AUSB_PlayerPawn::ZoomIn);
-	PlayerInputComponent->BindAction(FName("ZoomOut"), EInputEvent::IE_Pressed, this, &AUSB_PlayerPawn::ZoomOut);
+	PlayerInputComponent->BindAction("Connect",EInputEvent::IE_Pressed,this, &AUSB_PlayerPawn::ConnectShot);
+	PlayerInputComponent->BindAction("Jump", EInputEvent::IE_Pressed, this, &AUSB_PlayerPawn::Jump);
+	PlayerInputComponent->BindAction("Jump", EInputEvent::IE_Released, this, &AUSB_PlayerPawn::StopJumping);
+	PlayerInputComponent->BindAction("HeadChange", EInputEvent::IE_Pressed, this, &AUSB_PlayerPawn::ChangeHeadTail);
+	PlayerInputComponent->BindAction("Disconnect", EInputEvent::IE_Pressed, this, &AUSB_PlayerPawn::DisconnectShot);
+	PlayerInputComponent->BindAction("ZoomIn", EInputEvent::IE_Pressed, this, &AUSB_PlayerPawn::ZoomIn);
+	PlayerInputComponent->BindAction("ZoomOut", EInputEvent::IE_Pressed, this, &AUSB_PlayerPawn::ZoomOut);
 }
 
 void AUSB_PlayerPawn::InitTraceIgnoreAry()
@@ -277,25 +277,31 @@ void AUSB_PlayerPawn::ConnectShot()
 
 
 
-	//if (!m_UsbMovement->IsMovingOnGround())//sky connect
-	//{ 
-	//	//공중삽입의 문제점
+	if (!m_UsbMovement->IsMovingOnGround())//sky connect
+	{ 
+		//공중삽입의 문제점
 
-	//	float Distance = FVector::Dist(m_CurrentHeadPin->GetComponentLocation(), m_CurrentFocusedPort->GetComponentLocation());
+		//float Distance = FVector::Dist(m_CurrentHeadPin->GetComponentLocation(), m_CurrentFocusedPort->GetComponentLocation());
 
-	//	PRINTF("Distance is : %f", Distance);
-	//	//77 일때 3
-	//	float Rate = Distance / m_fPortTraceRange;
-	//	Rate *= m_fMaxConnectRotTime;
+		//PRINTF("Distance is : %f", Distance);
+		////77 일때 3
+		//float Rate = Distance / m_fPortTraceRange;
+		//Rate *= m_fMaxConnectRotTime;
 
-	//	if (Rate < m_fMinConnectRotTime)
-	//	{
-	//		Rate = m_fMinConnectRotTime;
-	//	}
+		//if (Rate < m_fMinConnectRotTime)
+		//{
+		//	Rate = m_fMinConnectRotTime;
+		//}
 
-	//	PRINTF("RateTime IS : %f", Rate);
-
-	//}
+		//PRINTF("RateTime IS : %f", Rate);
+		PRINTF("AirCharging Start");
+		//m_bBlockChargeClick = true;
+		m_CurrentHead->SetGenerateOverlapEvents(true);
+		FVector For = m_CurrentHead->GetForwardVector();
+		//DisableUSBInput();
+		m_UsbMovement->RequestAirConnectChargeMove(m_CurrentFocusedPort->GetComponentRotation(),For, 3.f);
+		return;
+	}
 	ConnectChargingStart();
 }
 
@@ -307,22 +313,22 @@ void AUSB_PlayerPawn::TryConnect(UPrimitiveComponent * OverlappedComponent, AAct
 
 	if(!PortCompo)
 	{
-		PRINTF("FailConnect - Port Is Different");
-		FailConnection(PortCompo,SweepResult);
+	
+		FailConnection(PortCompo,&SweepResult,EFailConnectionReason::PortNotFoundCast);
 		return;
 	}
 
 	if (!PortCompo->CheckConnectTransform(GetHead(), m_UsbMovement->IsMovingOnGround()))
 	{
-		PRINTF("FailConnect - Rotation");
-		FailConnection(PortCompo, SweepResult);
+		
+		FailConnection(PortCompo, &SweepResult,EFailConnectionReason::RotationNotMatch);
 		return;
 	}
 
 	if (!m_CurrentHeadPin->Connect(PortCompo))
 	{
-		PRINTF("FailConnect - PinType");
-		FailConnection(PortCompo, SweepResult);
+		
+		FailConnection(PortCompo, &SweepResult,EFailConnectionReason::PinTypeNotMatch);
 		return;
 	}
 
@@ -334,39 +340,74 @@ void AUSB_PlayerPawn::ConnectChargingStart()
 	PRINTF("Charging Start");
 	//m_bBlockChargeClick = true;
 	m_CurrentHead->SetGenerateOverlapEvents(true);
+	FVector For = m_CurrentHead->GetForwardVector();
 	//DisableUSBInput();
-	//EnableAutoMove(m_CurrentHead->GetForwardVector(), 3.f);
+	m_UsbMovement->RequestConnectChargeMove(For,3.f);
 }
 
-void AUSB_PlayerPawn::ConnectChargingEnd()//사실상 실패랑 똑같은데 팅기는것만 없어야함
-{ 
-	//지속시간 끝나고 불리는데 성공이후로도 불리고 있음
-	PRINTF("Charging End, it should be call once");
-	//m_bBlockChargeClick = false;
-	//m_CurrentHead->SetGenerateOverlapEvents(false);
-	//EnableUSBInput();
-	//m_UsbMovement->m_OnAutoMoveEnd.Remove(m_ConnectChargingHandle);
-}
+//void AUSB_PlayerPawn::ConnectChargingEnd()//사실상 실패랑 똑같은데 팅기는것만 없어야함
+//{ 
+//	//지속시간 끝나고 불리는데 성공이후로도 불리고 있음
+//	PRINTF("Charging End, it should be call once");
+//	//m_bBlockChargeClick = false;
+//	//m_CurrentHead->SetGenerateOverlapEvents(false);
+//	//EnableUSBInput();
+//	//m_UsbMovement->m_OnAutoMoveEnd.Remove(m_ConnectChargingHandle);
+//}
 //움직임 끊기 존재해야함
 void AUSB_PlayerPawn::SuccessConnection(UPortSkMeshComponent* portConnect)
 {
 	PRINTF("SuccessConnection");
-	
+	m_CurrentHead->SetGenerateOverlapEvents(false);
+	m_UsbMovement->StopUSBMove();
+
+	AdjustPinTransform(portConnect);
+
+	portConnect->Connect(m_CurrentHeadPin);
+
+	SetHeadTail(portConnect->GetParentSkMesh(), m_CurrentTail);
+	AddTraceIgnoreActor(portConnect->GetOwner());
+	AddPhysicsBody(portConnect->GetParentSkMesh());
+}
+
+void AUSB_PlayerPawn::AdjustPinTransform(UPortSkMeshComponent * portConnect)
+{
 	FVector PortPoint = portConnect->GetParentSkMesh()->GetBoneLocation("PortPoint");
 	FVector ConnectPoint = PortPoint + (m_CurrentHeadPin->GetComponentLocation() - m_CurrentHeadPin->GetSocketLocation("PinPoint"));
 	FRotator PortRot = portConnect->GetParentSkMesh()->GetComponentRotation();
 	m_CurrentHeadPin->SetWorldLocationAndRotationNoPhysics(ConnectPoint, PortRot);
-	portConnect->Connect(m_CurrentHeadPin);//이거 순서를 바꿔볼것
-	SetHeadTail(portConnect->GetParentSkMesh(), m_CurrentTail);//얘다시발
-	//AddTraceIgnoreActor(portConnect->GetOwner());
-	//AddPhysicsBody(portConnect->GetParentSkMesh());
 }
 
-void AUSB_PlayerPawn::FailConnection(UPortSkMeshComponent* portConnect,const FHitResult & hitResult)
-{//움직이는 중간에 끊기는거
+void AUSB_PlayerPawn::FailConnection(UPortSkMeshComponent* portConnect,const FHitResult * hitResult,EFailConnectionReason reason)
+{
+	switch (reason)
+	{
+	case EFailConnectionReason::PinTypeNotMatch:
+		PRINTF("FailConnect - PinType");
+		portConnect->FailConnection(*hitResult);
+		m_CurrentHeadPin->FailConnection(*hitResult);
+		break;
+	case EFailConnectionReason::RotationNotMatch:
+		PRINTF("FailConnect - Rotation");
+		portConnect->FailConnection(*hitResult);
+		m_CurrentHeadPin->FailConnection(*hitResult);
+		break;
+	case EFailConnectionReason::PortNotFoundCast:
+		PRINTF("FailConnect - Port Is Different");
+		portConnect->FailConnection(*hitResult);
+		m_CurrentHeadPin->FailConnection(*hitResult);
+		break;
+	case EFailConnectionReason::PortNotFoundTimeEnd:
+		PRINTF("FailConnect - TimeEnd");
+		
+		break;
+	default:
+		break;
+	}
 	PRINTF("FailConnection");
-	portConnect->FailConnection(hitResult);
-	m_CurrentHeadPin->FailConnection(hitResult);
+	m_CurrentHead->SetGenerateOverlapEvents(false);
+	m_UsbMovement->StopUSBMove();
+
 }
 
 
@@ -460,7 +501,7 @@ void AUSB_PlayerPawn::DisconnectShot()
 	if (TryDisconnect())
 	{
 		FVector ImpulseDir = GetTail()->GetForwardVector()*-1.f * m_fEjectionPower;
-		//m_UsbMovement->AddImpulse(ImpulseDir);
+		m_UsbMovement->AddImpulse(ImpulseDir);
 		m_PlayerCon->PlayerCameraManager->PlayCameraShake(UEjectionCamShake::StaticClass(),1.0f);
 	}
 }

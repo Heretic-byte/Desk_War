@@ -15,36 +15,24 @@ class DESK_WAR_API UUSB_Enum : public UObject
 	GENERATED_BODY()
 	
 };
-
 UENUM(BlueprintType)
-enum class  EUSB_HeadType : uint8
+enum class EPinPortType :uint8
 {
-	Basic,
-	FourPin,
-	OldCom,
-	ArduinoSoft,
-	ArduinoPower,
+	ENoneType,
+	EUSB,
+	E5Pin,
+	EHDMI,
+	ELength
+};
+UENUM(BlueprintType)
+enum class  EFailConnectionReason : uint8
+{
+	PinTypeNotMatch,
+	RotationNotMatch,
+	PortNotFoundCast,
+	PortNotFoundTimeEnd,
 	_Length
 };
 
-
-UENUM(BlueprintType)
-enum class EUSB_CameraViewType : uint8
-{
-	Default,
-	Bottleneck,
-	LevelCamera,
-	LookAtUsb,
-	_Length
-};
-
-UENUM(BlueprintType)
-enum class EUSB_PortTracePoint : uint8
-{
-	Center,
-	Left,
-	Right,
-	_Length
-};
 
 

@@ -16,15 +16,19 @@ UPinSkMeshComponent::UPinSkMeshComponent(const FObjectInitializer& objInit) :Sup
 	m_NameNeckBone = FName(TEXT("NeckPoint"));
 	m_NamePinBone = FName(TEXT("PinPoint"));
 	m_NameVelocityPivotBone = FName(TEXT("PinPoint"));
-	m_Pintype = E_PinPortType::ENoneType;
+	m_Pintype = EPinPortType::ENoneType;
 
 	for (auto& b : m_AryTypeMatch)
 	{
 		b = false;
 	}
 }
-
-void UPinSkMeshComponent::SetPinType(E_PinPortType pinType)
+void UPinSkMeshComponent::BeginPlay()
+{
+	Super::BeginPlay();
+	SetPinType(m_Pintype);
+}
+void UPinSkMeshComponent::SetPinType(EPinPortType pinType)
 {
 	m_AryTypeMatch[(int)m_Pintype] = false;
 	m_Pintype = pinType;
@@ -42,6 +46,7 @@ bool UPinSkMeshComponent::Connect(UPortSkMeshComponent * port)
 	{
 		return false;
 	}
+
 	m_PortConnected = port;
 	m_PortOwner = m_PortConnected->GetOwner();
 
@@ -63,13 +68,7 @@ bool UPinSkMeshComponent::Disconnect()
 	return true;
 }
 
-void UPinSkMeshComponent::BeginPlay()
-{
-	Super::BeginPlay();
-	SetPinType(m_Pintype);
-}
-
-bool UPinSkMeshComponent::CheckTypeMatch(E_PinPortType portsType)
+bool UPinSkMeshComponent::CheckTypeMatch(EPinPortType portsType)
 {
 	return m_AryTypeMatch[(int)portsType];
 }
