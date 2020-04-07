@@ -758,13 +758,10 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	{
 		FComponentQueryParams Params(SCENE_QUERY_STAT(MoveComponent), PawnOwner);
 		AddIgnoreActorsToQuery(Params);
-		Params.AddIgnoredActor(m_GroundHitResult.GetActor());
 		FCollisionResponseParams ResponseParam;
 		m_MovingTarget->InitSweepCollisionParams(Params, ResponseParam);
-		//bool const bHadBlockingHit = GetWorld()->ComponentSweepMulti(Hits, m_MovingTarget, TraceStart, TraceEnd, InitialRotationQuat, Params);
 		bool const bHadBlockingHit = GetWorld()->SweepMultiByProfile(Hits,TraceStart,TraceEnd, InitialRotationQuat,"PhysicsActor",Shape);
 		DrawDebugBox(GetWorld(), TraceEnd, Box.GetExtent(), FColor::Red, false, -1.f, 0, 2.f);
-		//()->Sweep
 		if (Hits.Num() > 0)
 		{
 			const float DeltaSize = FMath::Sqrt(DeltaSizeSq);
