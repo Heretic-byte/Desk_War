@@ -165,4 +165,5 @@ public:
 
 	bool m_WasWalkable;
 
+	FCollisionShape m_CollShape;
 };

@@ -718,15 +718,20 @@ FVector UPhysicsMovement::SlideAlongOnSurface(const FVector& velocity, float del
 
 bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult& OutHit)
 {
-	FVector TraceStart = m_MovingTarget->GetComponentLocation();
-	TraceStart.Z += m_fSweepZOffset;//피봇이 땅에 안박혀있으면 이게문제임
-	const FVector TraceEnd = TraceStart + delta * (deltaTime + m_fSweepFowardOffset);
-	float DeltaSizeSq = (TraceEnd - TraceStart).SizeSquared();
-	const FQuat InitialRotationQuat = m_MovingTarget->GetComponentTransform().GetRotation();
 
 	auto Box = m_MovingTarget->GetBodyInstance()->GetBodyBounds();
+	float X = Box.GetExtent().X;
+	float Y = Box.GetExtent().Y;
+	float Lg = FMath::Sqrt((X*X)+(Y*Y));
 	DrawDebugBox(GetWorld(), Box.GetCenter(), Box.GetExtent(), FColor::Green, false, -1.f, 0, 0.2f);
-	PRINTF("ExtentZ: %f", Box.GetExtent().Z / 2.f);
+	FVector TraceStart = m_MovingTarget->GetComponentLocation();
+	TraceStart.Z += m_fSweepZOffset;//피봇이 땅에 안박혀있으면 이게문제임
+	const FVector TraceEnd = TraceStart + (delta*deltaTime);
+	float DeltaSizeSq = (TraceEnd - TraceStart).SizeSquared();
+	const FQuat InitialRotationQuat = m_MovingTarget->GetComponentTransform().GetRotation();
+	FCollisionShape Shape;
+	Shape.SetBox(Box.GetExtent()*1.1f);
+
 	DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Blue, false, -1,1,0.18f);
 
 	const float MinMovementDistSq = FMath::Square(4.f*KINDA_SMALL_NUMBER);
@@ -753,9 +758,12 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	{
 		FComponentQueryParams Params(SCENE_QUERY_STAT(MoveComponent), PawnOwner);
 		AddIgnoreActorsToQuery(Params);
+		Params.AddIgnoredActor(m_GroundHitResult.GetActor());
 		FCollisionResponseParams ResponseParam;
 		m_MovingTarget->InitSweepCollisionParams(Params, ResponseParam);
-		bool const bHadBlockingHit = GetWorld()->ComponentSweepMulti(Hits, m_MovingTarget, TraceStart, TraceEnd, InitialRotationQuat, Params);
+		//bool const bHadBlockingHit = GetWorld()->ComponentSweepMulti(Hits, m_MovingTarget, TraceStart, TraceEnd, InitialRotationQuat, Params);
+		bool const bHadBlockingHit = GetWorld()->SweepMultiByProfile(Hits,TraceStart,TraceEnd, InitialRotationQuat,"PhysicsActor",Shape);
+		DrawDebugBox(GetWorld(), TraceEnd, Box.GetExtent(), FColor::Red, false, -1.f, 0, 2.f);
 		//()->Sweep
 		if (Hits.Num() > 0)
 		{
