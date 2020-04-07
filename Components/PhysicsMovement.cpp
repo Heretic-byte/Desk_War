@@ -649,7 +649,6 @@ void UPhysicsMovement::SetVelocity(FVector& velocity, FHitResult & sweep, float 
 
 	velocity.Z = CurrentV.Z;
 	m_MovingTarget->SetPhysicsLinearVelocity(velocity);
-	DrawVectorFromHead(m_MovingTarget->GetPhysicsLinearVelocity(), 40, FColor::Emerald);
 }
 
 FVector UPhysicsMovement::SlideAlongOnSurface(const FVector& velocity, float deltaTime, float Time, const FVector & InNormal, FHitResult & Hit, bool bHandleImpact)
@@ -719,12 +718,16 @@ FVector UPhysicsMovement::SlideAlongOnSurface(const FVector& velocity, float del
 
 bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult& OutHit)
 {
-
 	FVector TraceStart = m_MovingTarget->GetComponentLocation();
 	TraceStart.Z += m_fSweepZOffset;//피봇이 땅에 안박혀있으면 이게문제임
 	const FVector TraceEnd = TraceStart + delta * (deltaTime + m_fSweepFowardOffset);
 	float DeltaSizeSq = (TraceEnd - TraceStart).SizeSquared();
 	const FQuat InitialRotationQuat = m_MovingTarget->GetComponentTransform().GetRotation();
+
+	auto Box = m_MovingTarget->GetBodyInstance()->GetBodyBounds();
+	DrawDebugBox(GetWorld(), Box.GetCenter(), Box.GetExtent(), FColor::Green, false, -1.f, 0, 0.2f);
+	PRINTF("ExtentZ: %f", Box.GetExtent().Z / 2.f);
+	DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Blue, false, -1,1,0.18f);
 
 	const float MinMovementDistSq = FMath::Square(4.f*KINDA_SMALL_NUMBER);
 
@@ -748,16 +751,12 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	FVector NewLocation = TraceStart;
 	if (DeltaSizeSq > 0.f)
 	{
-		UWorld* const MyWorld = GetWorld();
-
 		FComponentQueryParams Params(SCENE_QUERY_STAT(MoveComponent), PawnOwner);
 		AddIgnoreActorsToQuery(Params);
 		FCollisionResponseParams ResponseParam;
 		m_MovingTarget->InitSweepCollisionParams(Params, ResponseParam);
-		bool const bHadBlockingHit = MyWorld->ComponentSweepMulti(Hits, m_MovingTarget, TraceStart, TraceEnd, InitialRotationQuat, Params);
-
-		DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Red, false, -1.f, 0.1f, 3.f);
-
+		bool const bHadBlockingHit = GetWorld()->ComponentSweepMulti(Hits, m_MovingTarget, TraceStart, TraceEnd, InitialRotationQuat, Params);
+		//()->Sweep
 		if (Hits.Num() > 0)
 		{
 			const float DeltaSize = FMath::Sqrt(DeltaSizeSq);

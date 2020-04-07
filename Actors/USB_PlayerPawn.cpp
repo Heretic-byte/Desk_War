@@ -200,15 +200,17 @@ void AUSB_PlayerPawn::InitTraceIgnoreAry()
 
 void AUSB_PlayerPawn::Tick(float DeltaTime)
 {
+	
+
+	
 	Super::Tick(DeltaTime);
 	m_fHeadChangeCDTimer += DeltaTime;
 
-
-	if (m_fBlockMoveTimeWhenEjectTimer > m_fBlockMoveTimeWhenEject)//0
+	if (m_fBlockMoveTimeWhenEjectTimer > 0)//0
 	{
 		m_fBlockMoveTimeWhenEjectTimer -= DeltaTime;
 
-		if (m_fBlockMoveTimeWhenEjectTimer <= m_fBlockMoveTimeWhenEject)
+		if (m_fBlockMoveTimeWhenEjectTimer <= 0)
 		{
 			EnableUSBInput();
 			m_fBlockMoveTimeWhenEjectTimer = 0.f;
@@ -378,7 +380,7 @@ void AUSB_PlayerPawn::SuccessConnection(UPortSkMeshComponent* portConnect)
 
 void AUSB_PlayerPawn::AdjustPinTransform(UPortSkMeshComponent * portConnect)
 {
-	FVector PortPoint = portConnect->GetParentSkMesh()->GetBoneLocation("PortPoint");
+	FVector PortPoint = portConnect->GetComponentLocation();
 	FVector ConnectPoint = PortPoint + (m_CurrentHeadPin->GetComponentLocation() - m_CurrentHeadPin->GetSocketLocation("PinPoint"));
 	FRotator PortRot = portConnect->GetParentSkMesh()->GetComponentRotation();
 	m_CurrentHeadPin->SetWorldLocationAndRotationNoPhysics(ConnectPoint, PortRot);
