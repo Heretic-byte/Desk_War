@@ -249,6 +249,7 @@ void UPhysicsMovement::TickMovement(float delta)
 	FVector ResultVector;
 	if (SweepCanMove(RampVector, delta, Hit))
 	{
+		PRINTF("11");
 		SetVelocity(RampVector, Hit, delta);
 		m_OnGroundRampRot = RampVector.GetSafeNormal().Rotation();
 		return;
@@ -699,6 +700,7 @@ FVector UPhysicsMovement::SlideAlongOnSurface(const FVector& velocity, float del
 		FVector Location = UpdatedComponent->GetComponentLocation();
 		//SetVelocity(SlideDelta, Hit, Time);
 		SweepCanMove(SlideDelta, deltaTime, Hit);
+		PRINTF("22");
 		const float FirstHitPercent = Hit.Time;
 		PercentTimeApplied = FirstHitPercent;
 		if (Hit.IsValidBlockingHit())
@@ -707,6 +709,7 @@ FVector UPhysicsMovement::SlideAlongOnSurface(const FVector& velocity, float del
 			if (!SlideDelta.IsNearlyZero(1e-3f) && (SlideDelta | velocity) > 0.f)
 			{
 				SweepCanMove(SlideDelta, deltaTime, Hit);
+				PRINTF("33");
 				const float SecondHitPercent = Hit.Time * (1.f - FirstHitPercent);
 				PercentTimeApplied += SecondHitPercent;
 			}
@@ -730,7 +733,10 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	float DeltaSizeSq = (TraceEnd - TraceStart).SizeSquared();
 	const FQuat InitialRotationQuat = m_MovingTarget->GetComponentTransform().GetRotation();
 	FCollisionShape Shape;
-	Shape.SetBox(Box.GetExtent()*1.1f);
+	FVector Extent = Box.GetExtent();
+	Extent.Z *= 0.6f;
+	Extent *= 1.1f;
+	Shape.SetBox(Extent);
 
 	DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Blue, false, -1,1,0.18f);
 
