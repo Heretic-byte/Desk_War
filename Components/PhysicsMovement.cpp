@@ -343,33 +343,42 @@ void UPhysicsMovement::TickCastGround()
 	FVector TraceStart = m_MovingTarget->GetComponentLocation();
 
 	FVector TraceEnd = TraceStart;
-	TraceEnd.Z -= BoxShape.GetExtent().Z;
+	TraceEnd.Z -= (BoxShape.GetExtent().Z)*2.f;
 
 	FCollisionQueryParams QueryParam;
 	AddIgnoreActorsToQuery(QueryParam);
+
+	ECollisionChannel Channel = UpdatedComponent->GetCollisionObjectType();
 
 	FVector Ex = BoxShape.GetExtent();
 	Ex *= 0.3f;
 	BoxShape.SetBox(Ex);
 
 
-	m_bOnGround = GetWorld()->SweepSingleByChannel(m_GroundHitResult, TraceStart, TraceEnd, FQuat(FVector(0.f, 0.f, -1.f), PI * 0.25f), ECollisionChannel::ECC_Visibility, BoxShape, QueryParam);
+	m_bOnGround = GetWorld()->SweepSingleByChannel(m_GroundHitResult, TraceStart, TraceEnd, FQuat(FVector(0.f, 0.f, -1.f), PI * 0.25f), Channel, BoxShape, QueryParam);
 	m_fGroundDist = (TraceStart.Z - m_GroundHitResult.Location.Z);
 	if (!m_bOnGround)//간혹 실패할경우 각도차이인지 확인
 	{
 		m_GroundHitResult.Reset(1.f, false);
 
-		m_bOnGround = GetWorld()->SweepSingleByChannel(m_GroundHitResult, TraceStart, TraceEnd, FQuat::Identity, ECollisionChannel::ECC_Visibility, BoxShape, QueryParam);
+		m_bOnGround = GetWorld()->SweepSingleByChannel(m_GroundHitResult, TraceStart, TraceEnd, FQuat::Identity, Channel, BoxShape, QueryParam);
 
 		m_fGroundDist = (TraceStart.Z - m_GroundHitResult.Location.Z);
 	}
 
 
+	if (m_bOnGround)
+	{
+		//PRINTF("Ground: %s", *m_GroundHitResult.GetActor()->GetName());
+	}
 	if (m_bOnGround && 0 > m_GroundHitResult.Component.Get()->GetPhysicsLinearVelocity().Z)//공중에서 떨어지고 있는 오브젝트는 디딤체크안함
 	{
+		PRINTF("Reset It it simul");
 		m_bOnGround = false;
 		m_GroundHitResult.Reset(1.f, false);
 	}
+
+	
 
 	if (m_bIsFalling == m_bOnGround)
 	{
@@ -606,6 +615,11 @@ bool UPhysicsMovement::IsWalkable(const FHitResult & Hit) const
 	const UPrimitiveComponent* HitComponent = Hit.Component.Get();
 	if (HitComponent)
 	{
+		if (HitComponent->IsSimulatingPhysics())
+		{
+			return true;
+		}
+
 		const FWalkableSlopeOverride& SlopeOverride = HitComponent->GetWalkableSlopeOverride();
 		TestWalkableZ = SlopeOverride.ModifyWalkableFloorZ(TestWalkableZ);
 	}
@@ -796,7 +810,7 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 				bFilledHitResult = true;
 
 				if(m_bShowDebug)
-				PRINTF("Blocked by : %s", *BlockingHit.GetActor()->GetName());
+				PRINTF("Blocked by : %s", *BlockingHit.GetComponent()->GetName());
 			}
 		}
 		else
