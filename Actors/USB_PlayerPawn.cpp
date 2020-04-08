@@ -43,7 +43,7 @@ AUSB_PlayerPawn::AUSB_PlayerPawn(const FObjectInitializer& objInit):Super(objIni
 
 void AUSB_PlayerPawn::BeginPlay()
 {
-	Super::BeginPlay();
+	m_UsbMovement->InitUSBUpdateComponent(this, m_CurrentHead, m_CurrentTail);
 	for (auto* Sphere : m_ArySpineColls)
 	{
 		AddPhysicsBody(Sphere);
@@ -55,6 +55,7 @@ void AUSB_PlayerPawn::BeginPlay()
 	InitTraceIgnoreAry();
 	Cast<UPinSkMeshComponent>(m_CurrentHead)->m_fFailImpulsePower = m_fDefaultFailImpulsePower;
 	Cast<UPinSkMeshComponent>(m_CurrentTail)->m_fFailImpulsePower = m_fDefaultFailImpulsePower;
+	Super::BeginPlay();
 }
 
 USceneComponent * AUSB_PlayerPawn::GetFocusedPortTarget()
@@ -99,7 +100,7 @@ void AUSB_PlayerPawn::CreatePhysicMovement()
 {
 	m_UsbMovement = CreateDefaultSubobject<UUSBMovement>(TEXT("Movement00"));
 
-	m_UsbMovement->InitUSBUpdateComponent(this,m_CurrentHead,m_CurrentTail);
+	
 
 	m_UsbMovement->m_fWalkableSlopeAngle = 49.f;
 	m_UsbMovement->m_nJumpMaxCount = 2;
@@ -198,16 +199,6 @@ void AUSB_PlayerPawn::InitTraceIgnoreAry()
 
 void AUSB_PlayerPawn::Tick(float DeltaTime)
 {
-	if (m_bBlockInputMove)
-	{
-		PRINTF("Blocked");
-	}
-	else
-	{
-		PRINTF("NotBlock");
-	}
-
-	
 	Super::Tick(DeltaTime);
 	m_fHeadChangeCDTimer += DeltaTime;
 
@@ -232,9 +223,6 @@ void AUSB_PlayerPawn::Tick(float DeltaTime)
 	FVector HeadPos = GetHead()->GetComponentLocation();
 	FVector PortPst = m_CurrentFocusedPort->GetComponentLocation();
 	DrawDebugLine(GetWorld(), HeadPos, PortPst, FColor::Cyan, false, -1, 0.1f);
-
-
-	
 }
 
 void AUSB_PlayerPawn::EnableUSBInput()
@@ -415,18 +403,13 @@ void AUSB_PlayerPawn::FailConnection(UPortSkMeshComponent* portConnect,const FHi
 		break;
 	case EFailConnectionReason::PortNotFoundTimeEnd:
 		PRINTF("FailConnect - TimeEnd");
-		
-		break;
-	default:
 		break;
 	}
 	PRINTF("FailConnection");
 	EnableUSBInput();
 	m_CurrentHead->SetGenerateOverlapEvents(false);
-	//m_UsbMovement->StopUSBMove();
+	m_UsbMovement->StopUSBMove();
 }
-
-
 
 void AUSB_PlayerPawn::ChangeHeadTail()
 {

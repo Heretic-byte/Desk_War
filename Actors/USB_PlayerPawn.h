@@ -40,6 +40,7 @@ protected:
 	TArray<UPrimitiveComponent*> m_AryPhysicsBody;
 	
 	float m_fTotalMass;
+private:
 	bool m_bBlockHeadChange;
 	bool m_bBlockJump;
 	bool m_bBlockChargeClick;

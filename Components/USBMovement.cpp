@@ -25,7 +25,7 @@ void UUSBMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActorCom
 
 		if (m_fAutoMoveTimer >= m_fAutoMoveTimeWant)
 		{
-			m_PlayerPawn->FailConnection(nullptr, nullptr, EFailConnectionReason::PortNotFoundTimeEnd);
+			m_PlayerPawn->FailConnection(nullptr,nullptr,EFailConnectionReason::PortNotFoundTimeEnd); 
 		}
 	}
 }

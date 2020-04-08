@@ -349,7 +349,7 @@ void UPhysicsMovement::TickCastGround()
 	AddIgnoreActorsToQuery(QueryParam);
 
 	FVector Ex = BoxShape.GetExtent();
-	Ex *= 0.7f;
+	Ex *= 0.3f;
 	BoxShape.SetBox(Ex);
 
 
