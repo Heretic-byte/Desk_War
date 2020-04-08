@@ -11,23 +11,19 @@
 
 UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 {
-	m_fSweepFowardOffset = 0.03f;
-	m_fSweepZOffset = 0.1f;
+	m_bShowDebug = false;
 	m_fMaxTimeStep = 33.f;
 	m_fGroundFriction = 2.f;
 	m_fMaxSpeed = 370.f;
 	m_fMaxBrakingDeceleration = 400.f;
-	m_fMinAnalogSpeed = 100.f;
+	m_fMinAnalogSpeed = 10.f;
 	m_MovingTarget = nullptr;
 	m_fJumpZVelocity = 540.f;
 	m_fMovingForce = 600.f;
 	m_bOnGround = false;
 	m_bPressedJump = false;
-	m_fGroundCastOffset = -45.f;
 	m_RotationRate = FRotator(180.f, 180.f, 500.f);
-	m_bDebugShowForwardCast = false;
-	m_fAirControl = 0.05f;
-	m_fGroundCastBoxSize = 15.f;
+	m_fAirControl = 0.5f;
 	m_fWalkableSlopeAngle = 65.f;
 	bUseAccelerationForPaths = true;
 	GetNavAgentPropertiesRef().bCanJump = true;
@@ -356,12 +352,6 @@ void UPhysicsMovement::TickCastGround()
 	Ex *= 0.7f;
 	BoxShape.SetBox(Ex);
 
-#if WITH_EDITOR
-	if (m_bDebugShowForwardCast)
-	{
-		DrawDebugBox(GetWorld(), TraceStart, BoxShape.GetExtent(), FColor(120, 0, 120), false, -1.f, 0.1f);
-	}
-#endif
 
 	m_bOnGround = GetWorld()->SweepSingleByChannel(m_GroundHitResult, TraceStart, TraceEnd, FQuat(FVector(0.f, 0.f, -1.f), PI * 0.25f), ECollisionChannel::ECC_Visibility, BoxShape, QueryParam);
 	m_fGroundDist = (TraceStart.Z - m_GroundHitResult.Location.Z);
@@ -469,7 +459,6 @@ bool UPhysicsMovement::DoJump()
 {
 	if (CanJump())
 	{
-		PRINTF("DidJump");
 		FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
 		CurrentV.Z = FMath::Max(m_fJumpZVelocity, CurrentV.Z);
 
@@ -691,7 +680,6 @@ FVector UPhysicsMovement::SlideAlongOnSurface(const FVector& velocity, float del
 	{
 		const FQuat Rotation = UpdatedComponent->GetComponentQuat();
 		FVector Location = UpdatedComponent->GetComponentLocation();
-		//SetVelocity(SlideDelta, Hit, Time);
 		SweepCanMove(SlideDelta, deltaTime, Hit);
 		const float FirstHitPercent = Hit.Time;
 		PercentTimeApplied = FirstHitPercent;
@@ -726,6 +714,7 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	const FVector TraceEnd = TraceStart + (delta*deltaTime);
 	float DeltaSizeSq = (TraceEnd - TraceStart).SizeSquared();
 
+	if(m_bShowDebug)
 	DrawDebugBox(GetWorld(), TraceEnd, Ex, FColor::Red, false, -1.f, 0, 0.2f);
 
 	if (DeltaSizeSq <= MinMovementDistSq)//너무작으면 스윕 안한다
@@ -752,7 +741,6 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 		FCollisionResponseParams ResponseParam;
 		m_MovingTarget->InitSweepCollisionParams(Params, ResponseParam);
 		bool const bHadBlockingHit = GetWorld()->SweepMultiByProfile(Hits,TraceStart,TraceEnd, InitialRotationQuat,"PhysicsActor",Shape);
-		DrawDebugBox(GetWorld(), TraceEnd, Ex, FColor::Red, false, -1.f, 0, 2.f);
 
 		if (Hits.Num() > 0)
 		{
@@ -807,6 +795,7 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 				}
 				bFilledHitResult = true;
 
+				if(m_bShowDebug)
 				PRINTF("Blocked by : %s", *BlockingHit.GetActor()->GetName());
 			}
 		}
@@ -912,6 +901,10 @@ FVector UPhysicsMovement::HandleSlopeBoosting(const FVector & SlideResult, const
 
 void UPhysicsMovement::DrawVectorFromHead(FVector wantVector, float length, FColor color) const
 {
+	if (!m_bShowDebug)
+	{
+		return;
+	}
 	FVector Start = UpdatedComponent->GetComponentLocation();
 	DrawDebugLine(GetWorld(), Start, Start + wantVector.GetSafeNormal()*length, color, false, -1.f, 1, 1.3f);
 }

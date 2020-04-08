@@ -34,16 +34,10 @@ protected:
 	float m_fWalkableSlopeHeight;
 	float m_fMaxTimeStep;
 public:
-	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement")
-	bool m_bDebugShowForwardCast;
-	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMin = "1", UIMin = "1"))
-	float m_fGroundCastBoxSize;
-	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMax = "0", UIMax = "0"))
-	float m_fGroundCastOffset;
+	UPROPERTY(EditDefaultsOnly, Category = "Debug")
+	bool m_bShowDebug;
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMin = "1", UIMin = "1"))
 	float m_fMovingForce;
-	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
-	float m_fSweepFowardOffset;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement_Rotate")
 	FRotator m_RotationRate;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
@@ -114,8 +108,6 @@ public:
 	UPROPERTY(Category = "PhysicsMovement", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
 	float m_fGroundFriction;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement", meta = (ClampMin = "0.1", UIMin = "0.1"))
-	float m_fSweepZOffset;
 
 	float m_fAnalogInputModifier;
 	void CalcVelocity(float DeltaTime, float Friction);

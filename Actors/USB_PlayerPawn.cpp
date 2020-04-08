@@ -101,8 +101,6 @@ void AUSB_PlayerPawn::CreatePhysicMovement()
 
 	m_UsbMovement->InitUSBUpdateComponent(this,m_CurrentHead,m_CurrentTail);
 
-	m_UsbMovement->m_fGroundCastBoxSize = 10.f;
-	m_UsbMovement->m_fGroundCastOffset = -20.f;
 	m_UsbMovement->m_fWalkableSlopeAngle = 49.f;
 	m_UsbMovement->m_nJumpMaxCount = 2;
 	m_UsbMovement->m_fAirControl = 0.6f;
@@ -200,7 +198,14 @@ void AUSB_PlayerPawn::InitTraceIgnoreAry()
 
 void AUSB_PlayerPawn::Tick(float DeltaTime)
 {
-	
+	if (m_bBlockInputMove)
+	{
+		PRINTF("Blocked");
+	}
+	else
+	{
+		PRINTF("NotBlock");
+	}
 
 	
 	Super::Tick(DeltaTime);
@@ -239,6 +244,7 @@ void AUSB_PlayerPawn::EnableUSBInput()
 	m_bBlockInputMove = false;
 	m_bBlockJump = false;
 	m_fBlockMoveTimeWhenEjectTimer = 0.f;
+	PRINTF("EnableINput");
 }
 
 void AUSB_PlayerPawn::DisableUSBInput(float dur)
@@ -249,6 +255,8 @@ void AUSB_PlayerPawn::DisableUSBInput(float dur)
 	m_bBlockJump = true;
 
 	m_fBlockMoveTimeWhenEjectTimer = dur;
+
+	PRINTF("DisableInput");
 }
 
 void AUSB_PlayerPawn::MoveForward(float v)
@@ -415,8 +423,7 @@ void AUSB_PlayerPawn::FailConnection(UPortSkMeshComponent* portConnect,const FHi
 	PRINTF("FailConnection");
 	EnableUSBInput();
 	m_CurrentHead->SetGenerateOverlapEvents(false);
-	m_UsbMovement->StopUSBMove();
-
+	//m_UsbMovement->StopUSBMove();
 }
 
 
@@ -545,10 +552,14 @@ void AUSB_PlayerPawn::TickTracePortable()
 			return;
 		}
 
-		UPortSkMeshComponent* PortableCompo = Cast<UPortSkMeshComponent>(HitResult.GetActor()->GetComponentByClass(UPortSkMeshComponent::StaticClass())); 
+		UPortSkMeshComponent* PortableCompo = Cast<UPortSkMeshComponent>(HitResult.GetComponent()); 
+
+		
 
 		if (PortableCompo&& !PortableCompo->GetPinConnected())
 		{
+			float YawDiff = FMath::Abs(PortableCompo->GetComponentRotation().Yaw - GetHead()->GetComponentRotation().Yaw);
+			//PRINTF("YawDiff:%f", YawDiff);
 			m_CurrentFocusedPort = PortableCompo;
 			return;
 		}
