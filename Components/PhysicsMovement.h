@@ -131,7 +131,7 @@ public:
 
 	bool IsWalkable(const FHitResult& Hit) const;
 
-	virtual void SetVelocity(FVector& velocity,FHitResult& sweep,float delta);
+	virtual void SetVelocity(FVector& velocity,FHitResult& sweep);
 
 	FVector SlideAlongOnSurface(const FVector& velocity, float deltaTime,float Time, const FVector& InNormal, FHitResult& Hit, bool bHandleImpact);
 
@@ -166,4 +166,6 @@ public:
 	bool m_WasWalkable;
 
 	FCollisionShape m_CollShape;
+
+	FCollisionShape MakeMovingTargetBox();
 };

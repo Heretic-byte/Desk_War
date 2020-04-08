@@ -249,8 +249,7 @@ void UPhysicsMovement::TickMovement(float delta)
 	FVector ResultVector;
 	if (SweepCanMove(RampVector, delta, Hit))
 	{
-		PRINTF("11");
-		SetVelocity(RampVector, Hit, delta);
+		SetVelocity(RampVector, Hit);
 		m_OnGroundRampRot = RampVector.GetSafeNormal().Rotation();
 		return;
 	}
@@ -265,8 +264,6 @@ void UPhysicsMovement::TickMovement(float delta)
 		float PercentTimeApplied = Hit.Time;//시작에서 끝까지 어디서 부딫혔는지의 퍼센트
 		if ((Hit.Time > 0.f) && (Hit.Normal.Z > KINDA_SMALL_NUMBER) && IsWalkable(Hit))	//Hit된 지면이 경사면으로 추정된다면 경사면을 따라 걸음
 		{
-			PRINTF("ClimbRamp");
-			//Another walkable ramp.
 			const float InitialPercentRemaining = 1.f - PercentTimeApplied;
 			RampVector = ComputeGroundMovementDelta(Delta * InitialPercentRemaining, Hit);
 			LastMoveTimeSlice = InitialPercentRemaining * LastMoveTimeSlice;
@@ -282,7 +279,7 @@ void UPhysicsMovement::TickMovement(float delta)
 		}
 	}
 	m_OnGroundRampRot = ResultVector.GetSafeNormal().Rotation();
-	SetVelocity(ResultVector, Hit, delta);
+	SetVelocity(ResultVector, Hit);
 
 }
 void UPhysicsMovement::TickRotate(const FRotator rotateWant, float delta)
@@ -346,21 +343,23 @@ bool UPhysicsMovement::IsFalling() const
 void UPhysicsMovement::TickCastGround()
 {
 	m_GroundHitResult.Reset(1.f, false);
+	FCollisionShape BoxShape = MakeMovingTargetBox();
 	FVector TraceStart = m_MovingTarget->GetComponentLocation();
-	TraceStart.Z -= m_fGroundCastBoxSize;
 
 	FVector TraceEnd = TraceStart;
-	TraceEnd.Z += m_fGroundCastOffset;
+	TraceEnd.Z -= BoxShape.GetExtent().Z;
 
 	FCollisionQueryParams QueryParam;
 	AddIgnoreActorsToQuery(QueryParam);
 
-	const FCollisionShape BoxShape = FCollisionShape::MakeBox(FVector(m_fGroundCastBoxSize, m_fGroundCastBoxSize, m_fGroundCastBoxSize));
+	FVector Ex = BoxShape.GetExtent();
+	Ex *= 0.7f;
+	BoxShape.SetBox(Ex);
 
 #if WITH_EDITOR
 	if (m_bDebugShowForwardCast)
 	{
-		DrawDebugBox(GetWorld(), TraceStart, FVector(m_fGroundCastBoxSize, m_fGroundCastBoxSize, m_fGroundCastBoxSize), FColor(120, 0, 120), false, -1.f, 0.1f);
+		DrawDebugBox(GetWorld(), TraceStart, BoxShape.GetExtent(), FColor(120, 0, 120), false, -1.f, 0.1f);
 	}
 #endif
 
@@ -388,12 +387,9 @@ void UPhysicsMovement::TickCastGround()
 
 		if (!m_bIsFalling)
 		{
-			
-				Landing();
-				
+			Landing();
 		}
 	}
-
 }
 
 
@@ -450,7 +446,6 @@ void UPhysicsMovement::AddImpulse(FVector impulseWant)
 	}
 
 	m_MovingTarget->AddImpulse(impulseWant);
-	//m_MovingTargetTail->AddImpulse(impulseWant);
 }
 
 void UPhysicsMovement::CheckJumpInput(float DeltaTime)
@@ -526,8 +521,6 @@ void UPhysicsMovement::ClearJumpInput(float delta)
 		}
 	}
 
-	/*if (IsWalkable(m_GroundHitResult)&&IsMovingOnGround())
-		ResetJumpState();*/
 }
 
 
@@ -635,7 +628,7 @@ bool UPhysicsMovement::IsWalkable(const FHitResult & Hit) const
 	return true;
 }
 
-void UPhysicsMovement::SetVelocity(FVector& velocity, FHitResult & sweep, float delta)
+void UPhysicsMovement::SetVelocity(FVector& velocity, FHitResult & sweep)
 {
 	if (!m_MovingTarget)
 	{
@@ -700,7 +693,6 @@ FVector UPhysicsMovement::SlideAlongOnSurface(const FVector& velocity, float del
 		FVector Location = UpdatedComponent->GetComponentLocation();
 		//SetVelocity(SlideDelta, Hit, Time);
 		SweepCanMove(SlideDelta, deltaTime, Hit);
-		PRINTF("22");
 		const float FirstHitPercent = Hit.Time;
 		PercentTimeApplied = FirstHitPercent;
 		if (Hit.IsValidBlockingHit())
@@ -709,7 +701,6 @@ FVector UPhysicsMovement::SlideAlongOnSurface(const FVector& velocity, float del
 			if (!SlideDelta.IsNearlyZero(1e-3f) && (SlideDelta | velocity) > 0.f)
 			{
 				SweepCanMove(SlideDelta, deltaTime, Hit);
-				PRINTF("33");
 				const float SecondHitPercent = Hit.Time * (1.f - FirstHitPercent);
 				PercentTimeApplied += SecondHitPercent;
 			}
@@ -721,26 +712,21 @@ FVector UPhysicsMovement::SlideAlongOnSurface(const FVector& velocity, float del
 
 bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult& OutHit)
 {
+	const float MinMovementDistSq = FMath::Square(4.f*KINDA_SMALL_NUMBER);
+	const FQuat InitialRotationQuat = m_MovingTarget->GetComponentTransform().GetRotation();
 
-	auto Box = m_MovingTarget->GetBodyInstance()->GetBodyBounds();
-	float X = Box.GetExtent().X;
-	float Y = Box.GetExtent().Y;
-	float Lg = FMath::Sqrt((X*X)+(Y*Y));
-	DrawDebugBox(GetWorld(), Box.GetCenter(), Box.GetExtent(), FColor::Green, false, -1.f, 0, 0.2f);
+	FCollisionShape Shape = MakeMovingTargetBox();
+	FVector Ex = Shape.GetExtent();
+	Ex.Z *= 0.6f;
+	Ex.X *= 1.1f;
+	Ex.Y *= 1.1f;
+	Shape.SetBox(Ex);
+
 	FVector TraceStart = m_MovingTarget->GetComponentLocation();
-	TraceStart.Z += m_fSweepZOffset;//피봇이 땅에 안박혀있으면 이게문제임
 	const FVector TraceEnd = TraceStart + (delta*deltaTime);
 	float DeltaSizeSq = (TraceEnd - TraceStart).SizeSquared();
-	const FQuat InitialRotationQuat = m_MovingTarget->GetComponentTransform().GetRotation();
-	FCollisionShape Shape;
-	FVector Extent = Box.GetExtent();
-	Extent.Z *= 0.6f;
-	Extent *= 1.1f;
-	Shape.SetBox(Extent);
 
-	DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Blue, false, -1,1,0.18f);
-
-	const float MinMovementDistSq = FMath::Square(4.f*KINDA_SMALL_NUMBER);
+	DrawDebugBox(GetWorld(), TraceEnd, Ex, FColor::Red, false, -1.f, 0, 0.2f);
 
 	if (DeltaSizeSq <= MinMovementDistSq)//너무작으면 스윕 안한다
 	{
@@ -755,11 +741,10 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	BlockingHit.bBlockingHit = false;
 	BlockingHit.Time = 1.f;
 	bool bFilledHitResult = false;
-	bool bIncludesOverlapsAtEnd = false;
-	bool bRotationOnly = false;
 	bool IsSimul = false;
 	TArray<FHitResult> Hits;
 	FVector NewLocation = TraceStart;
+
 	if (DeltaSizeSq > 0.f)
 	{
 		FComponentQueryParams Params(SCENE_QUERY_STAT(MoveComponent), PawnOwner);
@@ -767,7 +752,8 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 		FCollisionResponseParams ResponseParam;
 		m_MovingTarget->InitSweepCollisionParams(Params, ResponseParam);
 		bool const bHadBlockingHit = GetWorld()->SweepMultiByProfile(Hits,TraceStart,TraceEnd, InitialRotationQuat,"PhysicsActor",Shape);
-		DrawDebugBox(GetWorld(), TraceEnd, Box.GetExtent(), FColor::Red, false, -1.f, 0, 2.f);
+		DrawDebugBox(GetWorld(), TraceEnd, Ex, FColor::Red, false, -1.f, 0, 2.f);
+
 		if (Hits.Num() > 0)
 		{
 			const float DeltaSize = FMath::Sqrt(DeltaSizeSq);
@@ -847,11 +833,6 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 			}
 		}
 	}
-	else if (DeltaSizeSq > 0.f)
-	{
-		NewLocation += delta;
-		bIncludesOverlapsAtEnd = false;
-	}
 	OutHit = BlockingHit;
 	if (IsSimul)
 	{
@@ -862,12 +843,11 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 		m_MovingTarget->SetWorldLocationAndRotationNoPhysics(NewLocation, SelectTargetRotation(deltaTime));
 		PRINTF("SweepTeleported");
 
-	}
-
-	if (BlockingHit.bBlockingHit && !IsPendingKill())
-	{
-		check(bFilledHitResult);
-		m_MovingTarget->DispatchBlockingHit(*PawnOwner, BlockingHit);
+		if (!IsPendingKill())
+		{
+			check(bFilledHitResult);
+			m_MovingTarget->DispatchBlockingHit(*PawnOwner, BlockingHit);
+		}
 	}
 
 	return IsWalkable(BlockingHit);
@@ -977,6 +957,12 @@ void UPhysicsMovement::Landing()
 	{
 		ResetJumpState();
 	}
+}
+
+FCollisionShape UPhysicsMovement::MakeMovingTargetBox()
+{
+	FCollisionShape BoxShape = FCollisionShape::MakeBox(m_MovingTarget->GetBodyInstance()->GetBodyBounds().GetExtent());
+	return BoxShape;
 }
 
 
