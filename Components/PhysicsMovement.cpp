@@ -518,7 +518,10 @@ void UPhysicsMovement::ClearJumpInput(float delta)
 			ResetJumpState();
 		}
 	}
-
+	else if (Walkable&&!IsFalling() && m_MovingTarget->GetPhysicsLinearVelocity().Z <10.f)
+	{
+		ResetJumpState();
+	}
 }
 
 

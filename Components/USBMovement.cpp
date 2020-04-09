@@ -83,7 +83,7 @@ void UUSBMovement::StopUSBMove()
 }
 bool UUSBMovement::DoJump()
 {
-	if (CanJump())
+ 	if (CanJump())
 	{
 		PRINTF("DidJump");
 		m_nJumpCurrentCount++;
