@@ -409,7 +409,6 @@ void UPhysicsMovement::SetAccelerationByDir(const FVector inputPure)
 void UPhysicsMovement::Jump()
 {
 	m_bPressedJump = true;
-	m_fJumpKeyHoldTime = 0.0f;
 }
 
 void UPhysicsMovement::StopJumping()
@@ -455,12 +454,7 @@ void UPhysicsMovement::CheckJumpInput(float DeltaTime)
 		if (bDidJump)
 		{
 			m_bPressedJump = false;
-			if (!m_bWasJumping)
-			{
-				m_fJumpForceTimeRemaining = m_fMaxHoldTime;
-			}
 		}
-		m_bWasJumping = bDidJump;
 	}
 }
 
@@ -495,17 +489,7 @@ void UPhysicsMovement::ClearJumpInput(float delta)
 {
 	if (m_bPressedJump)
 	{
-		m_fJumpKeyHoldTime += delta;
-
-		if (m_fJumpKeyHoldTime >= m_fMaxHoldTime)
-		{
-			m_bPressedJump = false;
-		}
-	}
-	else
-	{
-		m_fJumpForceTimeRemaining = 0.0f;
-		m_bWasJumping = false;
+		m_bPressedJump = false;
 	}
 
 	bool Walkable = IsWalkable(m_GroundHitResult);
@@ -529,9 +513,6 @@ void UPhysicsMovement::ClearJumpInput(float delta)
 void UPhysicsMovement::ResetJumpState()
 {
 	m_bPressedJump = false;
-	m_bWasJumping = false;
-	m_fJumpKeyHoldTime = 0.0f;
-	m_fJumpForceTimeRemaining = 0.0f;
 	m_nJumpCurrentCount = 0;
 	PRINTF("ResetJump");
 	//

@@ -26,10 +26,7 @@ protected:
 	FHitResult m_GroundHitResult;
 	float m_fGroundDist;
 	//jump
-	bool m_bWasJumping;
-	float m_fJumpKeyHoldTime;
 	int m_nJumpCurrentCount;
-	float m_fJumpForceTimeRemaining;
 	//
 	float m_fWalkableSlopeHeight;
 	float m_fMaxTimeStep;
@@ -45,8 +42,6 @@ public:
 	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere,Category = "PhysicsMovement_Jump", meta = (ClampMin = "0", UIMin = "0"))
 	float m_fJumpZVelocity;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement_Jump", meta = (ClampMin = "0", UIMin = "0"))
-	float m_fMaxHoldTime;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PhysicsMovement_Jump", meta = (ClampMin = "0", UIMin = "0"))
 	int m_nJumpMaxCount;
 	UPROPERTY(Category = "PhysicsMovement_Jump", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
