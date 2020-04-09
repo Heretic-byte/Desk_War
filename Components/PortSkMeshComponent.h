@@ -9,6 +9,8 @@
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 #include "Components/PinSkMeshComponent.h"
 #include "Datas/USB_Enum.h"
+#include "Materials/MaterialInstanceDynamic.h"
+
 #include "PortSkMeshComponent.generated.h"
 
 
@@ -29,6 +31,18 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Body_Bones")
 	float m_fFailImpulsePower;
 protected:
+	UPROPERTY(EditDefaultsOnly, Category = "Blink")
+	float m_fBlinkDelayFar;
+	UPROPERTY(EditDefaultsOnly, Category = "Blink")
+	float m_fBlinkDelayNear;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category = "Blink")
+	float m_fMatBrightness;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Blink")
+	FName m_NameMatParam;
+	UPROPERTY()
+	UMaterialInterface* m_BlinkMat;
+	UPROPERTY()
+	UMaterialInstanceDynamic* m_BlinkMatDynamic;
 	UPROPERTY(EditDefaultsOnly, Category = "Connection")
 	FRotator m_ConnectableRotation;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Body")
@@ -55,9 +69,15 @@ protected:
 	UPhysicsSkMeshComponent* m_MeshParentActor;
 protected:
 	FName m_NameParentBonePortPoint;
+	float m_fCurrentBlinkDelay;
+	float m_fCurrentBlinkDelayTimer;
+	bool m_bIsBlinked;
+	bool m_bIsBlinkStart;
+	float m_fBlinkInterpCache;
 private:
 	void ConstraintPinPort();
 public:
+	
 	UFUNCTION(BlueprintCallable, Category = "Connection")
 	virtual void InitPort(UPhysicsConstraintComponent* physicsJoint, UPhysicsSkMeshComponent* parentMesh,EPinPortType portType = EPinPortType::ENoneType,FName namePinBone = NAME_None);
 	UFUNCTION(BlueprintCallable, Category = "Interact")
@@ -73,6 +93,11 @@ public:
 protected:
 	virtual void BeginPlay() override;
 public:
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction) override;
+	void StartBlink(float blinkDe);
+	void EndBlink();
+	void SetPortMat(FName paramName, float scalar);
+	void SetPortMatOriginal();
 	bool CheckConnectTransform(USceneComponent * connector,bool isConnectorGround);
 	void EnablePhysicsCollision();
 	void DisablePhysicsCollision();

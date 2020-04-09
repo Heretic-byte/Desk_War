@@ -6,9 +6,15 @@
 #include "UObject/ConstructorHelpers.h"
 #include "GameFramework/PlayerController.h"
 #include "DrawDebugHelpers.h"
+#include "Kismet/KismetMathLibrary.h"
+
 
 UPortSkMeshComponent::UPortSkMeshComponent(const FObjectInitializer & objInit)
 {
+	m_fBlinkDelayFar = 1.0f;
+	m_fBlinkDelayNear = 0.5f;
+	m_NameMatParam = "Brightness";
+	m_fMatBrightness = 0.5f;
 	m_fFailImpulsePower = 10000.f;
 	m_ConnectableRotation.Yaw = 30.f;
 	m_ConnectableRotation.Roll = 5.f;
@@ -35,6 +41,10 @@ UPortSkMeshComponent::UPortSkMeshComponent(const FObjectInitializer & objInit)
 void UPortSkMeshComponent::BeginPlay()
 {
 	Super::BeginPlay();
+	m_BlinkMat = GetMaterials()[0];
+	m_BlinkMatDynamic = UMaterialInstanceDynamic::Create(m_BlinkMat, this);
+	SetPortMat(m_NameMatParam, m_fMatBrightness);
+	StartBlink(m_fBlinkDelayNear);
 }
 
 void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, UPhysicsSkMeshComponent* parentMesh,EPinPortType portType, FName namePinBone)
@@ -51,6 +61,79 @@ void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, 
 	{
 		m_NameParentBonePortPoint = namePinBone;
 	}
+
+	
+}
+
+
+
+void UPortSkMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime,TickType,ThisTickFunction);
+
+
+	if (m_bIsBlinkStart)
+	{
+
+		if (m_fCurrentBlinkDelayTimer < m_fCurrentBlinkDelay)
+		{
+			m_fCurrentBlinkDelayTimer += DeltaTime;
+
+		}
+		else
+		{
+			m_fCurrentBlinkDelayTimer = 0.f;
+
+			if (m_bIsBlinked)
+			{
+				
+				SetPortMat(m_NameMatParam, m_fMatBrightness);
+			}
+			else
+			{
+				SetPortMat(m_NameMatParam, 0.f);
+			}
+
+			if (m_fBlinkInterpCache < m_fMatBrightness)
+			{
+
+			}
+
+
+			m_fBlinkInterpCache = UKismetMathLibrary::FInterpTo(m_fBlinkInterpCache, m_fMatBrightness, DeltaTime, 0.5f);
+			SetPortMat(m_NameMatParam, m_fBlinkInterpCache);
+			m_bIsBlinked = !m_bIsBlinked;
+		}
+	}
+}
+
+void UPortSkMeshComponent::StartBlink(float blinkDe)
+{
+	m_fCurrentBlinkDelay = blinkDe;
+	m_fCurrentBlinkDelayTimer = 0.f;
+	SetPortMat(m_NameMatParam, m_fMatBrightness);
+	m_bIsBlinked = true;
+	m_bIsBlinkStart = true;
+}
+
+void UPortSkMeshComponent::EndBlink()
+{
+	m_bIsBlinked = false;
+	m_bIsBlinkStart = false;
+	SetPortMat(m_NameMatParam, 0.f);
+	m_fCurrentBlinkDelay = 0.f;
+	m_fCurrentBlinkDelayTimer = 0.f;
+}
+
+void UPortSkMeshComponent::SetPortMat(FName paramName, float scalar)
+{
+	m_BlinkMatDynamic->SetScalarParameterValue(paramName, scalar);
+	SetMaterial(0, m_BlinkMatDynamic);
+}
+
+void UPortSkMeshComponent::SetPortMatOriginal()
+{
+	SetMaterial(0, m_BlinkMat);
 }
 
 bool UPortSkMeshComponent::CheckConnectTransform(USceneComponent * connector, bool isConnectorGround)

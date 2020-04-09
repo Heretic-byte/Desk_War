@@ -326,21 +326,18 @@ void AUSB_PlayerPawn::TryConnect(UPrimitiveComponent * OverlappedComponent, AAct
 
 	if(!PortCompo)
 	{
-	
 		FailConnection(PortCompo,&SweepResult,EFailConnectionReason::PortNotFoundCast);
 		return;
 	}
 
 	if (!PortCompo->CheckConnectTransform(GetHead(), m_UsbMovement->IsMovingOnGround()))
 	{
-		
 		FailConnection(PortCompo, &SweepResult,EFailConnectionReason::RotationNotMatch);
 		return;
 	}
 
 	if (!m_CurrentHeadPin->Connect(PortCompo))
 	{
-		
 		FailConnection(PortCompo, &SweepResult,EFailConnectionReason::PinTypeNotMatch);
 		return;
 	}
@@ -351,10 +348,8 @@ void AUSB_PlayerPawn::TryConnect(UPrimitiveComponent * OverlappedComponent, AAct
 void AUSB_PlayerPawn::ConnectChargingStart()
 {
 	PRINTF("Charging Start");
-	//m_bBlockChargeClick = true;
 	m_CurrentHead->SetGenerateOverlapEvents(true);
 	FVector For = m_CurrentHead->GetForwardVector();
-	//DisableUSBInput();
 	m_UsbMovement->RequestConnectChargeMove(For,3.f);
 }
 

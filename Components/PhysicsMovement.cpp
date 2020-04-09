@@ -514,7 +514,6 @@ void UPhysicsMovement::ResetJumpState()
 {
 	m_bPressedJump = false;
 	m_nJumpCurrentCount = 0;
-	PRINTF("ResetJump");
 	//
 }
 
