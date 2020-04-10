@@ -11,9 +11,13 @@
 
 UPortSkMeshComponent::UPortSkMeshComponent(const FObjectInitializer & objInit)
 {
+	m_MatInitColor = FColor::White;
+	m_MatPortFailColor = FColor::Red;
+	m_MatPortSuccessColor = FColor::Cyan;
+
 	m_fBlinkDelayFar = 1.0f;
 	m_fBlinkDelayNear = 0.5f;
-	m_NameMatParam = "Brightness";
+	m_NameMatScalarParam = "Brightness";
 	m_fMatBrightness = 0.5f;
 	m_fFailImpulsePower = 10000.f;
 	m_ConnectableRotation.Yaw = 30.f;
@@ -43,11 +47,10 @@ void UPortSkMeshComponent::BeginPlay()
 	Super::BeginPlay();
 	m_BlinkMat = GetMaterials()[0];
 	m_BlinkMatDynamic = UMaterialInstanceDynamic::Create(m_BlinkMat, this);
-	SetPortMat(m_NameMatParam, m_fMatBrightness);
 	StartBlink(m_fBlinkDelayNear);
 }
 
-void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, UPhysicsSkMeshComponent* parentMesh,EPinPortType portType, FName namePinBone)
+void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, UPhysicsSkMeshComponent* parentMesh, EPinPortType portType, FName namePinBone)
 {
 	m_ParentPhysicsConst = physicsJoint;
 	m_MeshParentActor = parentMesh;
@@ -62,46 +65,25 @@ void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, 
 		m_NameParentBonePortPoint = namePinBone;
 	}
 
-	
+
 }
-
-
 
 void UPortSkMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction)
 {
-	Super::TickComponent(DeltaTime,TickType,ThisTickFunction);
-
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	if (m_bIsBlinkStart)
 	{
+		m_fCurrentBlinkDelayTimer += DeltaTime;
 
 		if (m_fCurrentBlinkDelayTimer < m_fCurrentBlinkDelay)
 		{
-			m_fCurrentBlinkDelayTimer += DeltaTime;
-
+			m_fBlinkInterpCache = UKismetMathLibrary::FInterpTo(m_fBlinkInterpCache, m_bIsBlinked ? 0.f : m_fMatBrightness, DeltaTime, 4.0f);
+			SetPortMatScalar(m_NameMatScalarParam, m_fBlinkInterpCache);
 		}
-		else
+		else if (m_fCurrentBlinkDelayTimer >= m_fCurrentBlinkDelay)
 		{
 			m_fCurrentBlinkDelayTimer = 0.f;
-
-			if (m_bIsBlinked)
-			{
-				
-				SetPortMat(m_NameMatParam, m_fMatBrightness);
-			}
-			else
-			{
-				SetPortMat(m_NameMatParam, 0.f);
-			}
-
-			if (m_fBlinkInterpCache < m_fMatBrightness)
-			{
-
-			}
-
-
-			m_fBlinkInterpCache = UKismetMathLibrary::FInterpTo(m_fBlinkInterpCache, m_fMatBrightness, DeltaTime, 0.5f);
-			SetPortMat(m_NameMatParam, m_fBlinkInterpCache);
 			m_bIsBlinked = !m_bIsBlinked;
 		}
 	}
@@ -109,31 +91,34 @@ void UPortSkMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType, F
 
 void UPortSkMeshComponent::StartBlink(float blinkDe)
 {
+	m_bIsBlinked = false;
+	m_bIsBlinkStart = true;
+	m_fBlinkInterpCache = 0.f;
 	m_fCurrentBlinkDelay = blinkDe;
 	m_fCurrentBlinkDelayTimer = 0.f;
-	SetPortMat(m_NameMatParam, m_fMatBrightness);
-	m_bIsBlinked = true;
-	m_bIsBlinkStart = true;
 }
 
 void UPortSkMeshComponent::EndBlink()
 {
-	m_bIsBlinked = false;
+	m_bIsBlinked = true;
 	m_bIsBlinkStart = false;
-	SetPortMat(m_NameMatParam, 0.f);
+	m_fBlinkInterpCache = 0.f;
 	m_fCurrentBlinkDelay = 0.f;
 	m_fCurrentBlinkDelayTimer = 0.f;
+
+	SetPortMatScalar(m_NameMatScalarParam,0.f);
 }
 
-void UPortSkMeshComponent::SetPortMat(FName paramName, float scalar)
+void UPortSkMeshComponent::SetPortMatScalar(FName paramName, float scalar)
 {
 	m_BlinkMatDynamic->SetScalarParameterValue(paramName, scalar);
 	SetMaterial(0, m_BlinkMatDynamic);
 }
 
-void UPortSkMeshComponent::SetPortMatOriginal()
+void UPortSkMeshComponent::SetPortMatColor(FName paramName, FLinearColor color)
 {
-	SetMaterial(0, m_BlinkMat);
+	m_BlinkMatDynamic->SetVectorParameterValue(paramName, color);
+	SetMaterial(0, m_BlinkMatDynamic);
 }
 
 bool UPortSkMeshComponent::CheckConnectTransform(USceneComponent * connector, bool isConnectorGround)
@@ -168,6 +153,33 @@ UPhysicsSkMeshComponent * UPortSkMeshComponent::GetParentSkMesh()
 	return m_MeshParentActor;
 }
 
+void UPortSkMeshComponent::OnFocus(UPinSkMeshComponent * aimingPin,bool isConnectorGround)
+{
+	FRotator PortRot = GetComponentRotation();
+	FRotator PinRot = aimingPin->GetComponentRotation();
+	
+	float RollDiff = FMath::Abs(PortRot.Roll - PinRot.Roll);
+	bool RollCheck = isConnectorGround ? RollDiff <= m_ConnectableRotation.Roll : true;
+
+	if (!RollCheck)
+	{
+		//SetPortMatOriginal();
+		//cant
+		//red
+		SetPortMatColor(m_NameMatVectorParam, m_MatPortFailColor);
+	}
+	else
+	{
+		SetPortMatColor(m_NameMatVectorParam, m_MatPortSuccessColor);
+	}
+}
+
+void UPortSkMeshComponent::OnFocusEnd(UPinSkMeshComponent * aimingPin)
+{
+	SetPortMatColor(m_NameMatVectorParam, m_MatInitColor);
+	SetPortMatScalar(m_NameMatScalarParam, m_fMatBrightness);
+}
+
 void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)//should call last
 {
 	DisablePhysicsCollision();
@@ -175,6 +187,9 @@ void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)//should call
 	ConstraintPinPort();
 	m_OnConnected.Broadcast(m_ConnectedPin);
 	EnablePhysicsCollision();
+	SetPortMatColor(m_NameMatVectorParam, m_MatInitColor);
+	SetPortMatScalar(m_NameMatScalarParam, m_fMatBrightness);
+	EndBlink();
 }
 
 void UPortSkMeshComponent::ConstraintPinPort()
@@ -194,6 +209,7 @@ bool UPortSkMeshComponent::Disconnect()
 
 	m_MeshParentActor->AddImpulse(GetForwardVector()*m_fEjectPower);
 
+	//blink의 시작과끝은 범위 들어오는것으로 처리해줘야함
 	return true;
 }
 
@@ -220,7 +236,7 @@ EPinPortType UPortSkMeshComponent::GetPortType() const
 
 void UPortSkMeshComponent::FailConnection(const FHitResult & hitResult)
 {
-	m_MeshParentActor->AddImpulseAtLocation((GetUpVector()+GetForwardVector())*m_fFailImpulsePower, hitResult.ImpactPoint);
+	m_MeshParentActor->AddImpulseAtLocation((GetUpVector() + GetForwardVector())*m_fFailImpulsePower, hitResult.ImpactPoint);
 }
 
 

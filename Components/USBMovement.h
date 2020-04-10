@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Components/PhysicsMovement.h"
 
+#include "Datas/USB_Macros.h"
 #include "USBMovement.generated.h"
 
 
@@ -14,6 +15,11 @@ UCLASS()
 class DESK_WAR_API UUSBMovement : public UPhysicsMovement
 {
 	GENERATED_BODY()
+public:
+	UPROPERTY(BlueprintAssignable, Category = "PhysicsMovement_Jump")
+	FVoidVoidBP m_OnJumpBP;
+	UPROPERTY(BlueprintAssignable, Category = "PhysicsMovement_Jump")
+	FVoidIntBP m_OnJumpSeveralBP;
 public:
 	UUSBMovement(const FObjectInitializer& objInit);
 protected:
@@ -36,6 +42,7 @@ public:
 	void RequestConnectChargeMove(const FVector& normalHorizon,float timeWant);
 	void RequestAirConnectChargeMove(FRotator portRot,const FVector& normalHorizon, float timeWant);
 	void StopUSBMove();
+	void ClearAirRotation();
 protected:
 	virtual bool DoJump() override;
 };

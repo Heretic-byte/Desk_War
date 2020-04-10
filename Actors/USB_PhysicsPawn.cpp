@@ -177,6 +177,9 @@ void AUSB_PhysicsPawn::InitSplineMesh()
 	float Scale = GetActorScale3D().X * 4.f;
 	FVector2D SplineScale(Scale, Scale);
 	m_ArySplineMeshCompos.Reset(MaxSplinePoints);
+	
+	auto* mat = m_MeshSpine->GetMaterial(0);
+	
 	while (MaxSplinePoints--)
 	{
 		USplineMeshComponent* SplineMesh =
@@ -185,6 +188,7 @@ void AUSB_PhysicsPawn::InitSplineMesh()
 		SplineMesh->SetStaticMesh(m_MeshSpine);
 		SplineMesh->SetStartScale(SplineScale);
 		SplineMesh->SetEndScale(SplineScale);
+		SplineMesh->SetMaterial(0, mat);
 		m_ArySplineMeshCompos.Emplace(SplineMesh);
 	}
 

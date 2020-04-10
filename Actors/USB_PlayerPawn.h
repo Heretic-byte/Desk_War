@@ -154,4 +154,9 @@ public:
 	{
 		return m_UsbMovement;
 	}
+
+	FORCEINLINE bool IsMovingOnGround()
+	{
+		return m_UsbMovement->IsMovingOnGround();
+	}
 };

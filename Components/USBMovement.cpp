@@ -6,6 +6,7 @@ UUSBMovement::UUSBMovement(const FObjectInitializer& objInit):Super(objInit)
 	m_fAutoMoveTimeWant = -1.f;
 	m_fAutoMoveTimer = -1.f;
 	m_fInitHeadMass = 2.5f;
+	m_PlayerPawn = nullptr;
 }
 
 void UUSBMovement::BeginPlay()
@@ -80,6 +81,11 @@ void UUSBMovement::StopUSBMove()
 	PRINTF("StopAutoMove");
 
 	StopMovementImmediately();
+	ClearAirRotation();
+}
+void UUSBMovement::ClearAirRotation()
+{
+	m_OnAirTargetRot = FRotator::ZeroRotator;
 }
 bool UUSBMovement::DoJump()
 {
@@ -88,6 +94,15 @@ bool UUSBMovement::DoJump()
 		PRINTF("DidJump");
 		m_nJumpCurrentCount++;
 		PRINTF("JumpCount:%d", m_nJumpCurrentCount);
+
+		if (m_nJumpCurrentCount == 1)
+		{
+			m_OnJumpBP.Broadcast();
+		}
+		else
+		{
+			m_OnJumpSeveralBP.Broadcast(m_nJumpCurrentCount);
+		}
 
 		FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
 		CurrentV.Z = FMath::Max(m_fJumpZVelocity, CurrentV.Z);

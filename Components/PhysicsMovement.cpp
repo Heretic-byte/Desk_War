@@ -367,11 +367,7 @@ void UPhysicsMovement::TickCastGround()
 	}
 
 
-	if (m_bOnGround)
-	{
-		//PRINTF("Ground: %s", *m_GroundHitResult.GetActor()->GetName());
-	}
-	if (m_bOnGround && 0 > m_GroundHitResult.Component.Get()->GetPhysicsLinearVelocity().Z)//공중에서 떨어지고 있는 오브젝트는 디딤체크안함
+	if (m_bOnGround && -100 > m_GroundHitResult.Component.Get()->GetPhysicsLinearVelocity().Z)//공중에서 떨어지고 있는 오브젝트는 디딤체크안함
 	{
 		PRINTF("Reset It it simul");
 		m_bOnGround = false;
@@ -444,6 +440,18 @@ void UPhysicsMovement::AddImpulse(FVector impulseWant)
 	}
 
 	m_MovingTarget->AddImpulse(impulseWant);
+}
+
+FVector UPhysicsMovement::GetVelocity()
+{
+	if (!m_MovingTarget)
+	{
+		return FVector::ZeroVector;
+	}
+
+	FVector Normal= m_MovingTarget->GetPhysicsLinearVelocity().GetSafeNormal2D();
+
+	return UKismetMathLibrary::InverseTransformDirection(m_MovingTarget->GetComponentTransform(),Normal);
 }
 
 void UPhysicsMovement::CheckJumpInput(float DeltaTime)
@@ -686,6 +694,9 @@ FVector UPhysicsMovement::SlideAlongOnSurface(const FVector& velocity, float del
 			if (!SlideDelta.IsNearlyZero(1e-3f) && (SlideDelta | velocity) > 0.f)
 			{
 				SweepCanMove(SlideDelta, deltaTime, Hit);
+
+				PRINTF("Sww");
+
 				const float SecondHitPercent = Hit.Time * (1.f - FirstHitPercent);
 				PercentTimeApplied += SecondHitPercent;
 			}
@@ -702,7 +713,7 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 
 	FCollisionShape Shape = MakeMovingTargetBox();
 	FVector Ex = Shape.GetExtent();
-	Ex.Z *= 0.6f;
+	Ex.Z *= 0.2f;
 	Ex.X *= 1.1f;
 	Ex.Y *= 1.1f;
 	Shape.SetBox(Ex);
@@ -792,8 +803,18 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 				}
 				bFilledHitResult = true;
 
-				if(m_bShowDebug)
-				PRINTF("Blocked by : %s", *BlockingHit.GetComponent()->GetName());
+				if (m_bShowDebug)
+				{
+					if (BlockingHit.GetActor())
+					{
+						PRINTF("Blocked by : %s", *BlockingHit.GetComponent()->GetOwner()->GetName());
+					}
+					else
+					{
+						PRINTF("Blocked by : %s", *BlockingHit.GetComponent()->GetName());
+					}
+				}
+				
 			}
 		}
 		else

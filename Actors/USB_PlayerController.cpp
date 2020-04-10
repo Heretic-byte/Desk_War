@@ -7,13 +7,12 @@
 #include "DrawDebugHelpers.h"
 #include "Blueprint/AIBlueprintHelperLibrary.h"
 #include "Runtime/Engine/Classes/Components/DecalComponent.h"
-#include "HeadMountedDisplayFunctionLibrary.h"
 #include "Actors/USB_PlayerPawn.h"
 #include "Engine/World.h"
 
 #include "Components/PrimitiveComponent.h"
 #include "Components/PhysicsMovement.h"
-
+#include "Kismet/KismetSystemLibrary.h"
 #include "Components/PhysicsPathFollowingComponent.h"
 
 
@@ -60,6 +59,7 @@ void AUSB_PlayerController::SetupInputComponent()
 
 	InputComponent->BindAction("SetDestination", IE_Pressed, this, &AUSB_PlayerController::OnSetDestinationPressed);
 	InputComponent->BindAction("SetDestination", IE_Released, this, &AUSB_PlayerController::OnSetDestinationReleased);
+	InputComponent->BindAction("ExitGame", IE_Pressed, this, &AUSB_PlayerController::ExitGame);
 }
 
 
@@ -107,4 +107,9 @@ FVector AUSB_PlayerController::GetNavAgentLocation() const
 	return  Cast<UPhysicsMovement>( GetPawn()->GetMovementComponent())->GetMovingTargetComponent()->GetComponentLocation();
 
 	//return GetPawn()->GetActorLocation();
+}
+
+void AUSB_PlayerController::ExitGame()
+{
+	UKismetSystemLibrary::QuitGame(GetWorld(),this,EQuitPreference::Quit,true);
 }

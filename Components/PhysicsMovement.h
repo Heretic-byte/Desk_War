@@ -46,10 +46,6 @@ public:
 	int m_nJumpMaxCount;
 	UPROPERTY(Category = "PhysicsMovement_Jump", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
 	float m_fAirControl;
-public:
-	UPROPERTY(BlueprintAssignable, Category = "PhysicsMovement_Jump")
-	FVoidVoidBP m_OnJumpBP;
-	FVoidVoid m_OnJump;
 
 public:
 	UFUNCTION(BlueprintCallable,Category="PhysicsMovement_Jump")
@@ -65,6 +61,8 @@ public:
 	virtual void AddForce(FVector forceWant);
 	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
 	virtual void AddImpulse(FVector impulseWant);
+	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
+	FVector GetVelocity();
 private:
 	void SetWalkableFloorAngle(float InWalkableFloorAngle);
 	void SetAccelerationByDir(const FVector inputPure);

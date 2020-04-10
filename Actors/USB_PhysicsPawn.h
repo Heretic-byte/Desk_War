@@ -14,7 +14,7 @@
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 
 #include "Components/PinSkMeshComponent.h"
-
+#include "Engine/StaticMesh.h"
 #include "USB_PhysicsPawn.generated.h"
 
 class UPhysicsAsset;

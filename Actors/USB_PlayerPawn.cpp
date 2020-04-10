@@ -522,6 +522,16 @@ void AUSB_PlayerPawn::TickTracePortable()
 	FCollisionQueryParams QueryParams;
 	AddIgnoreActorsToQuery(QueryParams);
 
+	if (!m_CurrentHeadPin)
+	{//²ÈÈù ¸Ó¸®°¡ ÇÉ±â´ÉÀÌ ¾øÀ½
+		return;
+	}
+
+	if (m_CurrentFocusedPort)
+	{
+		m_CurrentFocusedPort->OnFocusEnd(m_CurrentHeadPin);
+	}
+
 	
 	if (GetWorld()->SweepSingleByChannel(HitResult, StartTrace, EndTrace, FQuat::Identity, ECC_GameTraceChannel9, FCollisionShape::MakeSphere(3.f), QueryParams))
 	{
@@ -536,9 +546,8 @@ void AUSB_PlayerPawn::TickTracePortable()
 
 		if (PortableCompo&& !PortableCompo->GetPinConnected())
 		{
-			float YawDiff = FMath::Abs(PortableCompo->GetComponentRotation().Yaw - GetHead()->GetComponentRotation().Yaw);
-			//PRINTF("YawDiff:%f", YawDiff);
 			m_CurrentFocusedPort = PortableCompo;
+			m_CurrentFocusedPort->OnFocus(m_CurrentHeadPin, IsMovingOnGround());
 			return;
 		}
 	}

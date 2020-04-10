@@ -35,10 +35,16 @@ protected:
 	float m_fBlinkDelayFar;
 	UPROPERTY(EditDefaultsOnly, Category = "Blink")
 	float m_fBlinkDelayNear;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,Category = "Blink")
-	float m_fMatBrightness;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Blink")
-	FName m_NameMatParam;
+	FLinearColor m_MatPortFailColor;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Blink")
+	FLinearColor m_MatPortSuccessColor;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Blink")
+	FName m_NameMatScalarParam;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Blink")
+	FName m_NameMatVectorParam;
 	UPROPERTY()
 	UMaterialInterface* m_BlinkMat;
 	UPROPERTY()
@@ -68,12 +74,14 @@ protected:
 	UPROPERTY()
 	UPhysicsSkMeshComponent* m_MeshParentActor;
 protected:
+	FLinearColor m_MatInitColor;
 	FName m_NameParentBonePortPoint;
 	float m_fCurrentBlinkDelay;
 	float m_fCurrentBlinkDelayTimer;
 	bool m_bIsBlinked;
 	bool m_bIsBlinkStart;
 	float m_fBlinkInterpCache;
+	float m_fMatBrightness;
 private:
 	void ConstraintPinPort();
 public:
@@ -96,14 +104,16 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction) override;
 	void StartBlink(float blinkDe);
 	void EndBlink();
-	void SetPortMat(FName paramName, float scalar);
-	void SetPortMatOriginal();
+	void SetPortMatScalar(FName paramName, float scalar);
+	void SetPortMatColor(FName paramName, FLinearColor color);
 	bool CheckConnectTransform(USceneComponent * connector,bool isConnectorGround);
 	void EnablePhysicsCollision();
 	void DisablePhysicsCollision();
 	bool GetBlockMoveOnConnnect();
 	FName GetMovePointWant();
 	UPhysicsSkMeshComponent* GetParentSkMesh();
+	void OnFocus(UPinSkMeshComponent * aimingPin, bool isConnectorGround);
+	void OnFocusEnd(UPinSkMeshComponent * aimingPin);
 
 	FORCEINLINE EPinPortType _inline_GetPortType() const
 	{

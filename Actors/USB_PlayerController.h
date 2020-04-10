@@ -47,4 +47,6 @@ public:
 	void OnSetDestinationReleased();
 
 	virtual FVector GetNavAgentLocation() const override;
+
+	void ExitGame();
 };
