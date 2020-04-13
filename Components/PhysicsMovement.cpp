@@ -245,8 +245,16 @@ void UPhysicsMovement::TickMovement(float delta)
 	FVector ResultVector;
 	if (SweepCanMove(RampVector, delta, Hit))
 	{
+		PRINTF("InSetVelo");
 		SetVelocity(RampVector, Hit);
 		m_OnGroundRampRot = RampVector.GetSafeNormal().Rotation();
+		return;
+	}
+
+	if (CheckTHisSHit)
+	{
+		PRINTF("Return");
+
 		return;
 	}
 
@@ -710,7 +718,7 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 {
 	const float MinMovementDistSq = FMath::Square(4.f*KINDA_SMALL_NUMBER);
 	const FQuat InitialRotationQuat = m_MovingTarget->GetComponentTransform().GetRotation();
-
+	CheckTHisSHit = false;
 	FCollisionShape Shape = MakeMovingTargetBox();
 	FVector Ex = Shape.GetExtent();
 	Ex.Z *= 0.2f;
@@ -748,7 +756,7 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 		AddIgnoreActorsToQuery(Params);
 		FCollisionResponseParams ResponseParam;
 		m_MovingTarget->InitSweepCollisionParams(Params, ResponseParam);
-		bool const bHadBlockingHit = GetWorld()->SweepMultiByProfile(Hits,TraceStart,TraceEnd, InitialRotationQuat,"PhysicsActor",Shape);
+		bool const bHadBlockingHit = GetWorld()->SweepMultiByProfile(Hits,TraceStart,TraceEnd, InitialRotationQuat,"PhysicsActor",Shape,Params);
 
 		if (Hits.Num() > 0)
 		{
@@ -756,6 +764,13 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 			for (int32 HitIdx = 0; HitIdx < Hits.Num(); HitIdx++)
 			{
 				PullBackHit(Hits[HitIdx], TraceStart, TraceEnd, DeltaSize);
+			}
+
+
+			if (Hits.Num() > 1)
+			{
+				CheckTHisSHit = true;
+				PRINTF("Now");
 			}
 		}
 		else
@@ -807,11 +822,11 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 				{
 					if (BlockingHit.GetActor())
 					{
-						PRINTF("Blocked by : %s", *BlockingHit.GetComponent()->GetOwner()->GetName());
+						//PRINTF("Blocked by : %s", *BlockingHit.GetComponent()->GetOwner()->GetName());
 					}
 					else
 					{
-						PRINTF("Blocked by : %s", *BlockingHit.GetComponent()->GetName());
+					//	PRINTF("Blocked by : %s", *BlockingHit.GetComponent()->GetName());
 					}
 				}
 				
@@ -830,7 +845,19 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 		else
 		{
 			check(bFilledHitResult);
+
+
+			//if (CheckTHisSHit)
+			{
+			//	NewLocation = TraceStart + (1.f * (TraceEnd - TraceStart));
+			}
+			//else
+			{
+
 			NewLocation = TraceStart + (BlockingHit.Time * (TraceEnd - TraceStart));
+			}
+
+
 
 			const FVector ToNewLocation = (NewLocation - TraceStart);
 			if (ToNewLocation.SizeSquared() <= MinMovementDistSq)
@@ -848,7 +875,13 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	if (BlockingHit.bBlockingHit)
 	{
 		m_MovingTarget->SetWorldLocationAndRotationNoPhysics(NewLocation, SelectTargetRotation(deltaTime));
-		PRINTF("SweepTeleported");
+		//PRINTF("SweepTeleported");
+
+		if (CheckTHisSHit)
+		{
+			PRINTF("Current %s,Dest:%s", *m_MovingTarget->GetComponentLocation().ToString(),*NewLocation.ToString());
+			DrawDebugLine(GetWorld(),m_MovingTarget->GetComponentLocation(),NewLocation,FColor::Cyan,true,-1.f,1,12.f);
+		}
 
 		if (!IsPendingKill())
 		{

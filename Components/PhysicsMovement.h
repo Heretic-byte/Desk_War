@@ -153,4 +153,6 @@ public:
 	FCollisionShape m_CollShape;
 
 	FCollisionShape MakeMovingTargetBox();
+
+	bool CheckTHisSHit;
 };

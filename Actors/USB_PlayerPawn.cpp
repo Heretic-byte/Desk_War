@@ -92,8 +92,10 @@ void AUSB_PlayerPawn::InitPlayerPawn()
 	m_fHeadChangeCD = 0.5f;
 	m_fHeadChangeCDTimer = 0.f;
 	
-	m_BaseHeadPin->SetGenerateOverlapEvents(false);
-	m_BaseTailPin->SetGenerateOverlapEvents(false);
+	m_BaseHeadPin->SetGenerateOverlapEvents(true);
+	m_BaseHeadPin->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	m_BaseTailPin->SetGenerateOverlapEvents(true);
+	m_BaseTailPin->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 }
 
 void AUSB_PlayerPawn::CreatePhysicMovement()
@@ -393,7 +395,7 @@ void AUSB_PlayerPawn::FailConnection(UPortSkMeshComponent* portConnect,const FHi
 		break;
 	case EFailConnectionReason::PortNotFoundCast:
 		PRINTF("FailConnect - Port Is Different");
-		portConnect->FailConnection(*hitResult);
+		return;
 		m_CurrentHeadPin->FailConnection(*hitResult);
 		break;
 	case EFailConnectionReason::PortNotFoundTimeEnd:
