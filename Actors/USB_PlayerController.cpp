@@ -33,6 +33,12 @@ AUSB_PlayerController::AUSB_PlayerController()
 void AUSB_PlayerController::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (!GetPawn())
+	{
+		PRINTF("PawnNull");
+		return;
+	}
 	
 	m_PathFollowComp->SetMovementComponent( GetPawn()->GetMovementComponent());
 

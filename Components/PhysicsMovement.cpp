@@ -245,16 +245,13 @@ void UPhysicsMovement::TickMovement(float delta)
 	FVector ResultVector;
 	if (SweepCanMove(RampVector, delta, Hit))
 	{
-		PRINTF("InSetVelo");
 		SetVelocity(RampVector, Hit);
 		m_OnGroundRampRot = RampVector.GetSafeNormal().Rotation();
 		return;
 	}
 
-	if (CheckTHisSHit)
+	if (m_bTwoWallHit)
 	{
-		PRINTF("Return");
-
 		return;
 	}
 
@@ -362,9 +359,9 @@ void UPhysicsMovement::TickCastGround()
 	Ex *= 0.3f;
 	BoxShape.SetBox(Ex);
 
-
 	m_bOnGround = GetWorld()->SweepSingleByChannel(m_GroundHitResult, TraceStart, TraceEnd, FQuat(FVector(0.f, 0.f, -1.f), PI * 0.25f), Channel, BoxShape, QueryParam);
 	m_fGroundDist = (TraceStart.Z - m_GroundHitResult.Location.Z);
+
 	if (!m_bOnGround)//간혹 실패할경우 각도차이인지 확인
 	{
 		m_GroundHitResult.Reset(1.f, false);
@@ -374,15 +371,11 @@ void UPhysicsMovement::TickCastGround()
 		m_fGroundDist = (TraceStart.Z - m_GroundHitResult.Location.Z);
 	}
 
-
 	if (m_bOnGround && -100 > m_GroundHitResult.Component.Get()->GetPhysicsLinearVelocity().Z)//공중에서 떨어지고 있는 오브젝트는 디딤체크안함
 	{
-		PRINTF("Reset It it simul");
 		m_bOnGround = false;
 		m_GroundHitResult.Reset(1.f, false);
 	}
-
-	
 
 	if (m_bIsFalling == m_bOnGround)
 	{
@@ -524,13 +517,10 @@ void UPhysicsMovement::ClearJumpInput(float delta)
 	}
 }
 
-
-
 void UPhysicsMovement::ResetJumpState()
 {
 	m_bPressedJump = false;
 	m_nJumpCurrentCount = 0;
-	//
 }
 
 void UPhysicsMovement::ApplyVelocityBraking(float DeltaTime, float Friction, float BrakingDeceleration)
@@ -703,8 +693,6 @@ FVector UPhysicsMovement::SlideAlongOnSurface(const FVector& velocity, float del
 			{
 				SweepCanMove(SlideDelta, deltaTime, Hit);
 
-				PRINTF("Sww");
-
 				const float SecondHitPercent = Hit.Time * (1.f - FirstHitPercent);
 				PercentTimeApplied += SecondHitPercent;
 			}
@@ -718,7 +706,7 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 {
 	const float MinMovementDistSq = FMath::Square(4.f*KINDA_SMALL_NUMBER);
 	const FQuat InitialRotationQuat = m_MovingTarget->GetComponentTransform().GetRotation();
-	CheckTHisSHit = false;
+	m_bTwoWallHit = false;
 	FCollisionShape Shape = MakeMovingTargetBox();
 	FVector Ex = Shape.GetExtent();
 	Ex.Z *= 0.2f;
@@ -752,7 +740,7 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 
 	if (DeltaSizeSq > 0.f)
 	{
-		FComponentQueryParams Params(SCENE_QUERY_STAT(MoveComponent), PawnOwner);
+		FComponentQueryParams Params = FComponentQueryParams::DefaultComponentQueryParams;
 		AddIgnoreActorsToQuery(Params);
 		FCollisionResponseParams ResponseParam;
 		m_MovingTarget->InitSweepCollisionParams(Params, ResponseParam);
@@ -769,8 +757,7 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 
 			if (Hits.Num() > 1)
 			{
-				CheckTHisSHit = true;
-				PRINTF("Now");
+				m_bTwoWallHit = true;
 			}
 		}
 		else
@@ -817,19 +804,6 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 					return true;
 				}
 				bFilledHitResult = true;
-
-				if (m_bShowDebug)
-				{
-					if (BlockingHit.GetActor())
-					{
-						//PRINTF("Blocked by : %s", *BlockingHit.GetComponent()->GetOwner()->GetName());
-					}
-					else
-					{
-					//	PRINTF("Blocked by : %s", *BlockingHit.GetComponent()->GetName());
-					}
-				}
-				
 			}
 		}
 		else
@@ -845,19 +819,7 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 		else
 		{
 			check(bFilledHitResult);
-
-
-			//if (CheckTHisSHit)
-			{
-			//	NewLocation = TraceStart + (1.f * (TraceEnd - TraceStart));
-			}
-			//else
-			{
-
 			NewLocation = TraceStart + (BlockingHit.Time * (TraceEnd - TraceStart));
-			}
-
-
 
 			const FVector ToNewLocation = (NewLocation - TraceStart);
 			if (ToNewLocation.SizeSquared() <= MinMovementDistSq)
@@ -867,21 +829,17 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 			}
 		}
 	}
+
 	OutHit = BlockingHit;
+
 	if (IsSimul)
 	{
 		return true;
 	}
+
 	if (BlockingHit.bBlockingHit)
 	{
 		m_MovingTarget->SetWorldLocationAndRotationNoPhysics(NewLocation, SelectTargetRotation(deltaTime));
-		//PRINTF("SweepTeleported");
-
-		if (CheckTHisSHit)
-		{
-			PRINTF("Current %s,Dest:%s", *m_MovingTarget->GetComponentLocation().ToString(),*NewLocation.ToString());
-			DrawDebugLine(GetWorld(),m_MovingTarget->GetComponentLocation(),NewLocation,FColor::Cyan,true,-1.f,1,12.f);
-		}
 
 		if (!IsPendingKill())
 		{
@@ -979,6 +937,7 @@ void UPhysicsMovement::StopActiveMovement()
 	{
 		return;
 	}
+
 	Velocity = FVector::ZeroVector;
 	m_Acceleration = FVector::ZeroVector;
 	m_MovingTarget->SetPhysicsLinearVelocity(FVector::ZeroVector);

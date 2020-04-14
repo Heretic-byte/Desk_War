@@ -183,6 +183,7 @@ void UPortSkMeshComponent::OnFocusEnd(UPinSkMeshComponent * aimingPin)
 void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)//should call last
 {
 	DisablePhysicsCollision();
+	
 	m_ConnectedPin = connector;
 	ConstraintPinPort();
 	m_OnConnected.Broadcast(m_ConnectedPin);

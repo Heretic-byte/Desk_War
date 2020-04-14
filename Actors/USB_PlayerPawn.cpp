@@ -92,10 +92,10 @@ void AUSB_PlayerPawn::InitPlayerPawn()
 	m_fHeadChangeCD = 0.5f;
 	m_fHeadChangeCDTimer = 0.f;
 	
-	m_BaseHeadPin->SetGenerateOverlapEvents(true);
-	m_BaseHeadPin->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	m_BaseTailPin->SetGenerateOverlapEvents(true);
-	m_BaseTailPin->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	//m_BaseHeadPin->SetGenerateOverlapEvents(true);
+	//m_BaseHeadPin->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	//m_BaseTailPin->SetGenerateOverlapEvents(true);
+	//m_BaseTailPin->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 }
 
 void AUSB_PlayerPawn::CreatePhysicMovement()
