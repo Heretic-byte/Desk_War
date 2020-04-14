@@ -9,6 +9,8 @@
 #include "USB_SpringArm.generated.h"
 
 
+class UMaterialControl;
+
 UCLASS(ClassGroup = Camera, meta = (BlueprintSpawnableComponent), hideCategories = (Mobility))
 class DESK_WAR_API UUSB_SpringArm : public USceneComponent
 {
@@ -16,6 +18,8 @@ class DESK_WAR_API UUSB_SpringArm : public USceneComponent
 	
 private:
 	FVector m_LastTarget;
+	UPROPERTY()
+	UMaterialControl* m_BlockedMatControl;
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera)
 	FRotator m_RotOffset;

@@ -54,7 +54,6 @@ void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, 
 	m_ParentPhysicsConst = physicsJoint;
 	m_MeshParentActor = parentMesh;
 	m_CollSphere = sphereColl;
-	
 
 	m_CollSphere->OnComponentBeginOverlap.AddDynamic(this,&UPortSkMeshComponent::OnPlayerOverlap);
 	m_CollSphere->OnComponentEndOverlap.AddDynamic(this, &UPortSkMeshComponent::OnPlayerExit);

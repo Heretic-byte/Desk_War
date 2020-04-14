@@ -7,6 +7,7 @@
 #include "DrawDebugHelpers.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Components/MaterialControl.h"
 
 const FName UUSB_SpringArm::SocketName(TEXT("SpringEndpoint"));
 
@@ -14,6 +15,7 @@ const FName UUSB_SpringArm::SocketName(TEXT("SpringEndpoint"));
 UUSB_SpringArm::UUSB_SpringArm(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
+	m_BlockedMatControl = nullptr;
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.TickGroup = TG_PostPhysics;
 	m_fWheelZoomSpeed = 10.f;
@@ -222,12 +224,25 @@ FVector UUSB_SpringArm::CollisionCameraFix(FVector &ArmOrigin, FVector &DesiredL
 
 FVector UUSB_SpringArm::BlendLocations(const FVector& DesiredArmLocation, const FVector& TraceHitLocation, bool bHitSomething, float DeltaTime, const FHitResult& hit)
 {
+	if (m_BlockedMatControl)
+	{
+		m_BlockedMatControl->SetInitAlpha();
+		m_BlockedMatControl = nullptr;
+	}
 
 	if (!bHitSomething)
 	{
 		return DesiredArmLocation;
 	}
 	
+	UMaterialControl* MatCon = Cast<UMaterialControl>( hit.GetActor()->GetComponentByClass(UMaterialControl::StaticClass()));
+
+	if (MatCon)
+	{
+		m_BlockedMatControl = MatCon;
+		m_BlockedMatControl->SetAlpha();
+	}
+
 	auto LerpedLocation= UKismetMathLibrary::VInterpTo(m_LastTarget, TraceHitLocation, DeltaTime, CameraLagSpeed);
 	return LerpedLocation;
 }

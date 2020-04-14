@@ -43,8 +43,6 @@ void APortPawn::CreateSphereColl()
 	m_Sphere->SetupAttachment(m_Mesh);
 	m_Sphere->SetSphereRadius(300.f);
 	m_Sphere->SetCollisionProfileName("USBOverlap");
-	
-
 }
 
 void APortPawn::PortConnected(UPinSkMeshComponent* pinConnect)
