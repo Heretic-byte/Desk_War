@@ -15,14 +15,8 @@ class DESK_WAR_API UUSB_SpringArm : public USceneComponent
 	GENERATED_UCLASS_BODY()
 	
 private:
-	bool m_bWasWallBlocked;
 	FVector m_LastTarget;
-	void StartSmoothTime(float deltaTime);
-	void EndSmoothTime();
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera)
-	float m_fWallBlockEndSmoothTime;
-	float m_fWallBlockEndSmoothTimer;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera)
 	FRotator m_RotOffset;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera)

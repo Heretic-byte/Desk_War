@@ -14,9 +14,6 @@ const FName UUSB_SpringArm::SocketName(TEXT("SpringEndpoint"));
 UUSB_SpringArm::UUSB_SpringArm(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
-	m_fWallBlockEndSmoothTime = 2.f;
-	m_fWallBlockEndSmoothTimer = 0.f;
-	m_bWasWallBlocked = false;
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.TickGroup = TG_PostPhysics;
 	m_fWheelZoomSpeed = 10.f;
@@ -52,17 +49,6 @@ void UUSB_SpringArm::BeginPlay()
 	
 }
 
-void UUSB_SpringArm::StartSmoothTime(float deltaTime)
-{
-	m_fWallBlockEndSmoothTimer = m_fWallBlockEndSmoothTime;
-}
-
-void UUSB_SpringArm::EndSmoothTime()
-{
-	PRINTF("SmoothEnd");
-	m_fWallBlockEndSmoothTimer = 0.f;
-}
-
 FRotator UUSB_SpringArm::GetTargetRotation() const
 {
 	FRotator DesiredRot = GetComponentRotation();
@@ -82,8 +68,6 @@ FRotator UUSB_SpringArm::GetTargetRotation() const
 	// If inheriting rotation, check options for which components to inherit
 	if (!bAbsoluteRotation)
 	{
-		
-
 		if (!bInheritPitch)
 		{
 			DesiredRot.Pitch = RelativeRotation.Pitch;
@@ -238,41 +222,13 @@ FVector UUSB_SpringArm::CollisionCameraFix(FVector &ArmOrigin, FVector &DesiredL
 
 FVector UUSB_SpringArm::BlendLocations(const FVector& DesiredArmLocation, const FVector& TraceHitLocation, bool bHitSomething, float DeltaTime, const FHitResult& hit)
 {
-	FVector Loc;//스무스타겟
 
 	if (!bHitSomething)
 	{
-		if (m_bWasWallBlocked)
-		{
-			StartSmoothTime(DeltaTime);
-			PRINTF("SmoothStart");
-			m_bWasWallBlocked = false;
-		}
-
-		if (m_fWallBlockEndSmoothTimer > 0.f)//벽에 안닿아도 스무스가능
-		{
-			m_fWallBlockEndSmoothTimer -= DeltaTime;
-
-			Loc = DesiredArmLocation;
-			if (m_fWallBlockEndSmoothTimer <= 0.f)
-			{
-				EndSmoothTime();
-				return UKismetMathLibrary::VInterpTo(m_LastTarget, Loc, DeltaTime, m_fCamZoomInSpeed);
-			}
-		}
-		else//여기에서 거리차이큰게 문제임
-		{
-			return DesiredArmLocation;
-		}
+		return DesiredArmLocation;
 	}
-	else //벽에 맞을때
-	{
-		m_bWasWallBlocked = true;
-		Loc = TraceHitLocation;
-	}
-
 	
-	auto LerpedLocation= UKismetMathLibrary::VInterpTo(m_LastTarget, Loc, DeltaTime,m_fCamZoomInSpeed);
+	auto LerpedLocation= UKismetMathLibrary::VInterpTo(m_LastTarget, TraceHitLocation, DeltaTime, CameraLagSpeed);
 	return LerpedLocation;
 }
 
