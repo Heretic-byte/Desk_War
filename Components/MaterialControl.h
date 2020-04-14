@@ -20,15 +20,15 @@ public:
 	//UPROPERTY(EditDefaultsOnly, Category = "Color", meta = (ClampMin = "0", UIMin = "0", ClampMax = "1", UIMax = "1"))
 	//float m_fAlphaValueRate;
 	UPROPERTY(EditAnywhere,Category="Color")
-	FName m_NameLinearColor;
+	FName m_NameAlphaParam;
 	// Sets default values for this component's properties
 	UMaterialControl();
 	UPROPERTY()
 	UMeshComponent* m_MeshComp;
 	UPROPERTY()
 	TArray< UMaterialInstanceDynamic*> m_AryMats;
-	//UPROPERTY()
-	TArray<FLinearColor*> m_AryMatInitColors;
+	UPROPERTY()
+	TArray<float> m_AryMatInitAlphas;
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;

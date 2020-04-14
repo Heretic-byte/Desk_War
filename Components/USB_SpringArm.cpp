@@ -15,6 +15,7 @@ const FName UUSB_SpringArm::SocketName(TEXT("SpringEndpoint"));
 UUSB_SpringArm::UUSB_SpringArm(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
+	m_bWasBlocked = false;
 	m_BlockedMatControl = nullptr;
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.TickGroup = TG_PostPhysics;
@@ -224,23 +225,36 @@ FVector UUSB_SpringArm::CollisionCameraFix(FVector &ArmOrigin, FVector &DesiredL
 
 FVector UUSB_SpringArm::BlendLocations(const FVector& DesiredArmLocation, const FVector& TraceHitLocation, bool bHitSomething, float DeltaTime, const FHitResult& hit)
 {
-	if (m_BlockedMatControl)
-	{
-		m_BlockedMatControl->SetInitAlpha();
-		m_BlockedMatControl = nullptr;
-	}
+	
 
 	if (!bHitSomething)
 	{
+		if (m_bWasBlocked && m_BlockedMatControl)
+		{
+			m_BlockedMatControl->SetInitAlpha();
+			m_BlockedMatControl = nullptr;
+		}
+
+		m_bWasBlocked = false;
 		return DesiredArmLocation;
 	}
 	
-	UMaterialControl* MatCon = Cast<UMaterialControl>( hit.GetActor()->GetComponentByClass(UMaterialControl::StaticClass()));
+	m_bWasBlocked = true;
 
+	UMaterialControl* MatCon = Cast<UMaterialControl>( hit.GetActor()->GetComponentByClass(UMaterialControl::StaticClass()));
 	if (MatCon)
 	{
+		if (m_BlockedMatControl)
+		{
+			if (m_BlockedMatControl != MatCon)
+			{
+				m_BlockedMatControl->SetInitAlpha();
+			}
+		}
 		m_BlockedMatControl = MatCon;
 		m_BlockedMatControl->SetAlpha();
+
+		return DesiredArmLocation;
 	}
 
 	auto LerpedLocation= UKismetMathLibrary::VInterpTo(m_LastTarget, TraceHitLocation, DeltaTime, CameraLagSpeed);

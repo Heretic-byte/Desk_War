@@ -17,6 +17,7 @@ class DESK_WAR_API UUSB_SpringArm : public USceneComponent
 	GENERATED_UCLASS_BODY()
 	
 private:
+	bool m_bWasBlocked;
 	FVector m_LastTarget;
 	UPROPERTY()
 	UMaterialControl* m_BlockedMatControl;

@@ -9,7 +9,7 @@ UMaterialControl::UMaterialControl()
 {
 	m_fAlphaValueAbs = 0.f;
 	PrimaryComponentTick.bCanEverTick = false;
-	m_NameLinearColor = "LinearColor";
+	m_NameAlphaParam = "Alpha";
 }
 
 
@@ -27,14 +27,14 @@ void UMaterialControl::BeginPlay()
 
 	auto Mats= m_MeshComp->GetMaterials();
 
-	FLinearColor ColorWant;
+	float AlphaWant;
 	for (auto Mat : Mats)
 	{
 		UMaterialInstanceDynamic* InstanceMat = UMaterialInstanceDynamic::Create(Mat, this);
 		m_AryMats.Add(InstanceMat);
-		if (InstanceMat->GetVectorParameterValue(m_NameLinearColor, ColorWant))
+		if (InstanceMat->GetScalarParameterValue(m_NameAlphaParam, AlphaWant))
 		{
-			m_AryMatInitColors.Add(&ColorWant);
+			m_AryMatInitAlphas.Add(AlphaWant);
 		}
 		else
 		{
@@ -52,12 +52,10 @@ void UMaterialControl::SetAlpha()
 	}
 
 
-	int Length = m_AryMatInitColors.Num();
+	int Length = m_AryMatInitAlphas.Num();
 	for (int i = 0; i < Length; i++)
 	{
-		FLinearColor ColorWant = *m_AryMatInitColors[i];
-		ColorWant.A = m_fAlphaValueAbs;
-		m_AryMats[i]->SetVectorParameterValue(m_NameLinearColor, ColorWant);
+		m_AryMats[i]->SetScalarParameterValue(m_NameAlphaParam, m_fAlphaValueAbs);
 		m_MeshComp->SetMaterial(i, m_AryMats[i]);
 	}
 }
@@ -69,10 +67,10 @@ void UMaterialControl::SetInitAlpha()
 		PRINTF("%s There is No MeshComp 2", *GetOwner()->GetName());
 		return;
 	}
-	int Length = m_AryMatInitColors.Num();
+	int Length = m_AryMatInitAlphas.Num();
 	for (int i = 0; i < Length; i++)
 	{
-		m_AryMats[i]->SetVectorParameterValue(m_NameLinearColor,*m_AryMatInitColors[i]);
+		m_AryMats[i]->SetScalarParameterValue(m_NameAlphaParam,m_AryMatInitAlphas[i]);
 		m_MeshComp->SetMaterial(i, m_AryMats[i]);
 	}
 }
