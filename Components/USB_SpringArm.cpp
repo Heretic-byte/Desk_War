@@ -14,6 +14,9 @@ const FName UUSB_SpringArm::SocketName(TEXT("SpringEndpoint"));
 UUSB_SpringArm::UUSB_SpringArm(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
+	m_fWallBlockEndSmoothTime = 2.f;
+	m_fWallBlockEndSmoothTimer = 0.f;
+	m_bWasWallBlocked = false;
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.TickGroup = TG_PostPhysics;
 	m_fWheelZoomSpeed = 10.f;
@@ -39,7 +42,6 @@ UUSB_SpringArm::UUSB_SpringArm(const FObjectInitializer& ObjectInitializer)
 	CameraRotationLagSpeed = 10.f;
 	CameraLagMaxTimeStep = 1.f / 60.f;
 	CameraLagMaxDistance = 0.f;
-	//m_fMaximumArmLength = 1000.f;
 	UnfixedCameraPosition = FVector::ZeroVector;
 }
 
@@ -47,6 +49,18 @@ void UUSB_SpringArm::BeginPlay()
 {
 	Super::BeginPlay();
 	m_fMaximumArmLength = TargetArmLength;
+	
+}
+
+void UUSB_SpringArm::StartSmoothTime(float deltaTime)
+{
+	m_fWallBlockEndSmoothTimer = m_fWallBlockEndSmoothTime;
+}
+
+void UUSB_SpringArm::EndSmoothTime()
+{
+	PRINTF("SmoothEnd");
+	m_fWallBlockEndSmoothTimer = 0.f;
 }
 
 FRotator UUSB_SpringArm::GetTargetRotation() const
@@ -173,29 +187,14 @@ void UUSB_SpringArm::UpdateDesiredArmLocation(bool bDoTrace, bool bDoLocationLag
 	PreviousArmOrigin = ArmOrigin;
 	PreviousDesiredLoc = DesiredLoc;
 
-	// Now offset camera position back along our rotation
 	DesiredLoc -= DesiredRot.Vector() * TargetArmLength;
-	// Add socket offset in local space
 	DesiredLoc += FRotationMatrix(DesiredRot).TransformVector(SocketOffset);
 
-	// Do a sweep to ensure we are not penetrating the world
 	FVector ResultLoc;
+
 	if (bDoTrace && (TargetArmLength != 0.0f))
 	{
-		bIsCameraFixed = true;
-		FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(SpringArm), false, GetOwner());
-
-		FHitResult Result;
-		GetWorld()->SweepSingleByChannel(Result, ArmOrigin, DesiredLoc, FQuat::Identity, ProbeChannel, FCollisionShape::MakeSphere(ProbeSize), QueryParams);
-
-		UnfixedCameraPosition = DesiredLoc;
-
-		ResultLoc = BlendLocations(DesiredLoc, Result.Location, Result.bBlockingHit, DeltaTime, Result);
-
-		if (ResultLoc == DesiredLoc)
-		{
-			bIsCameraFixed = false;
-		}
+		ResultLoc= CollisionCameraFix(ArmOrigin, DesiredLoc, DeltaTime);
 	}
 	else
 	{
@@ -215,15 +214,65 @@ void UUSB_SpringArm::UpdateDesiredArmLocation(bool bDoTrace, bool bDoLocationLag
 	UpdateChildTransforms();
 }
 
-FVector UUSB_SpringArm::BlendLocations(const FVector& DesiredArmLocation, const FVector& TraceHitLocation, bool bHitSomething, float DeltaTime, const FHitResult& hit)
+FVector UUSB_SpringArm::CollisionCameraFix(FVector &ArmOrigin, FVector &DesiredLoc, float DeltaTime)
 {
-	if (!bHitSomething)
+	FVector ResultLoc;
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(SpringArm), false, GetOwner());
+	FHitResult Result;
+
+	bIsCameraFixed = true;
+
+	GetWorld()->SweepSingleByChannel(Result, ArmOrigin, DesiredLoc, FQuat::Identity, ProbeChannel, FCollisionShape::MakeSphere(ProbeSize), QueryParams);
+
+	UnfixedCameraPosition = DesiredLoc;
+
+	ResultLoc = BlendLocations(DesiredLoc, Result.Location, Result.bBlockingHit, DeltaTime, Result);
+
+	if (ResultLoc == DesiredLoc)
 	{
-		return DesiredArmLocation;
+		bIsCameraFixed = false;
 	}
 
+	return ResultLoc;
+}
 
-	auto LerpedLocation= UKismetMathLibrary::VInterpTo(m_LastTarget, TraceHitLocation, DeltaTime,m_fCamZoomInSpeed);
+FVector UUSB_SpringArm::BlendLocations(const FVector& DesiredArmLocation, const FVector& TraceHitLocation, bool bHitSomething, float DeltaTime, const FHitResult& hit)
+{
+	FVector Loc;//스무스타겟
+
+	if (!bHitSomething)
+	{
+		if (m_bWasWallBlocked)
+		{
+			StartSmoothTime(DeltaTime);
+			PRINTF("SmoothStart");
+			m_bWasWallBlocked = false;
+		}
+
+		if (m_fWallBlockEndSmoothTimer > 0.f)//벽에 안닿아도 스무스가능
+		{
+			m_fWallBlockEndSmoothTimer -= DeltaTime;
+
+			Loc = DesiredArmLocation;
+			if (m_fWallBlockEndSmoothTimer <= 0.f)
+			{
+				EndSmoothTime();
+				return UKismetMathLibrary::VInterpTo(m_LastTarget, Loc, DeltaTime, m_fCamZoomInSpeed);
+			}
+		}
+		else//여기에서 거리차이큰게 문제임
+		{
+			return DesiredArmLocation;
+		}
+	}
+	else //벽에 맞을때
+	{
+		m_bWasWallBlocked = true;
+		Loc = TraceHitLocation;
+	}
+
+	
+	auto LerpedLocation= UKismetMathLibrary::VInterpTo(m_LastTarget, Loc, DeltaTime,m_fCamZoomInSpeed);
 	return LerpedLocation;
 }
 

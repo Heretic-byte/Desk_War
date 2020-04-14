@@ -8,6 +8,7 @@
 #include "PhysicsEngine/PhysicsAsset.h"
 #include "Components/PortSkMeshComponent.h"
 #include "Components/PinSkMeshComponent.h"
+#include "Components/SphereComponent.h"
 #include "PortPawn.generated.h"
 
 UCLASS()
@@ -18,6 +19,9 @@ public:
 	static FName MeshComponentName;
 	static FName MeshPortComponentName;
 protected:
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mesh")
+	USphereComponent* m_Sphere;//for check player dist
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mesh")
 	UPhysicsSkMeshComponent* m_Mesh;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly , Category = "Mesh")
@@ -28,6 +32,7 @@ private:
 	void CreateMesh();
 	void CreatePort();
 	void CreatePhyCon();
+	void CreateSphereColl();
 	virtual void PortConnected(UPinSkMeshComponent* pinConnect);
 	virtual void PortDisConnected(UPinSkMeshComponent* pinConnect);
 protected:

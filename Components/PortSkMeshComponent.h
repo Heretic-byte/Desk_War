@@ -14,7 +14,7 @@
 #include "PortSkMeshComponent.generated.h"
 
 
-
+class USphereComponent;
 //class UPinSkMeshComponent;
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
@@ -32,9 +32,7 @@ public:
 	float m_fFailImpulsePower;
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Blink")
-	float m_fBlinkDelayFar;
-	UPROPERTY(EditDefaultsOnly, Category = "Blink")
-	float m_fBlinkDelayNear;
+	float m_fBlinkDelay;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Blink")
 	FLinearColor m_MatPortFailColor;
@@ -62,8 +60,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interact")
 	float m_fEjectPower;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interact")
-	float m_fConnectableDistSqr;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interact")
 	FName m_NameWantMovePoint;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interact")
 	EPinPortType m_PortType;
@@ -73,6 +69,8 @@ protected:
 	UPhysicsConstraintComponent* m_ParentPhysicsConst;
 	UPROPERTY()
 	UPhysicsSkMeshComponent* m_MeshParentActor;
+	UPROPERTY()
+	USphereComponent* m_CollSphere;
 protected:
 	FLinearColor m_MatInitColor;
 	FName m_NameParentBonePortPoint;
@@ -87,7 +85,11 @@ private:
 public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Connection")
-	virtual void InitPort(UPhysicsConstraintComponent* physicsJoint, UPhysicsSkMeshComponent* parentMesh,EPinPortType portType = EPinPortType::ENoneType,FName namePinBone = NAME_None);
+	virtual void InitPort(UPhysicsConstraintComponent* physicsJoint,
+		UPhysicsSkMeshComponent* parentMesh,
+		USphereComponent* sphereColl,
+		EPinPortType portType = EPinPortType::ENoneType,
+		FName namePinBone = NAME_None);
 	UFUNCTION(BlueprintCallable, Category = "Interact")
 	virtual void Connect(UPinSkMeshComponent* connector);
 	UFUNCTION(BlueprintCallable, Category = "Interact")
@@ -96,6 +98,10 @@ public:
 	bool IsConnected();
 	UFUNCTION(BlueprintCallable, Category = "Interact")
 	EPinPortType GetPortType() const;
+	UFUNCTION(BlueprintCallable, Category = "Interact")
+	void OnPlayerOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult);
+	UFUNCTION(BlueprintCallable, Category = "Interact")
+	void OnPlayerExit(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
 	void FailConnection(const FHitResult & hitResult);
 protected:
@@ -137,4 +143,8 @@ public:
 	{
 		return m_ConnectedPin;
 	}
+
+	//DECLARE_DYNAMIC_MULTICAST_DELEGATE_SixParams( FComponentBeginOverlapSignature, UPrimitiveComponent*, OverlappedComponent, AActor*, OtherActor, UPrimitiveComponent*, OtherComp, int32, OtherBodyIndex, bool, bFromSweep, const FHitResult &, SweepResult);
+	//UPrimitiveComponent*, OverlappedComponent, AActor*, OtherActor, UPrimitiveComponent*, OtherComp, int32, OtherBodyIndex
+	
 };

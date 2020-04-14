@@ -15,8 +15,14 @@ class DESK_WAR_API UUSB_SpringArm : public USceneComponent
 	GENERATED_UCLASS_BODY()
 	
 private:
+	bool m_bWasWallBlocked;
 	FVector m_LastTarget;
+	void StartSmoothTime(float deltaTime);
+	void EndSmoothTime();
 public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera)
+	float m_fWallBlockEndSmoothTime;
+	float m_fWallBlockEndSmoothTimer;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera)
 	FRotator m_RotOffset;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera)
@@ -90,6 +96,7 @@ protected:
 	FQuat RelativeSocketRotation;
 protected:
 	virtual void UpdateDesiredArmLocation(bool bDoTrace, bool bDoLocationLag, bool bDoRotationLag, float DeltaTime);
+	FVector CollisionCameraFix(FVector &ArmOrigin, FVector &DesiredLoc,  float DeltaTime);
 	virtual FVector BlendLocations(const FVector& DesiredArmLocation, const FVector& TraceHitLocation, bool bHitSomething, float DeltaTime, const FHitResult& hit);
 	FVector ClampTargetLocation(const FVector& traceLoc, const FHitResult& hit);
 };

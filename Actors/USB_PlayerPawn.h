@@ -119,6 +119,7 @@ private:
 private:
 	void AddPhysicsBody(UPrimitiveComponent* wantP);
 	void RemovePhysicsBody(UPrimitiveComponent* wantP);
+	void ExitGame();
 protected:
 	void ConnectChargingStart();
 	void SuccessConnection(UPortSkMeshComponent* portConnect);
@@ -159,4 +160,6 @@ public:
 	{
 		return m_UsbMovement->IsMovingOnGround();
 	}
+
+	
 };

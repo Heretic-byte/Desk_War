@@ -13,6 +13,7 @@ APortPawn::APortPawn(const FObjectInitializer& objInit):Super(objInit)
 	CreateMesh();
 	CreatePhyCon();
 	CreatePort();
+	CreateSphereColl();
 }
 
 void APortPawn::CreateMesh()
@@ -36,6 +37,16 @@ void APortPawn::CreatePhyCon()
 	m_PhyConPort->SetDisableCollision(true);
 }
 
+void APortPawn::CreateSphereColl()
+{
+	m_Sphere = CreateDefaultSubobject<USphereComponent>("Sphere00");
+	m_Sphere->SetupAttachment(m_Mesh);
+	m_Sphere->SetSphereRadius(300.f);
+	m_Sphere->SetCollisionProfileName("USBOverlap");
+	
+
+}
+
 void APortPawn::PortConnected(UPinSkMeshComponent* pinConnect)
 {
 
@@ -56,7 +67,7 @@ void APortPawn::CreatePort()
 void APortPawn::BeginPlay()
 {
 	Super::BeginPlay();
-	m_MeshPort->InitPort(m_PhyConPort, m_Mesh);
+	m_MeshPort->InitPort(m_PhyConPort, m_Mesh,m_Sphere);
 	m_MeshPort->m_OnConnected.AddUObject(this,&APortPawn::PortConnected);
 	m_MeshPort->m_OnDisconnected.AddUObject(this, &APortPawn::PortDisConnected);
 }

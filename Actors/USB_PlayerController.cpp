@@ -65,7 +65,7 @@ void AUSB_PlayerController::SetupInputComponent()
 
 	InputComponent->BindAction("SetDestination", IE_Pressed, this, &AUSB_PlayerController::OnSetDestinationPressed);
 	InputComponent->BindAction("SetDestination", IE_Released, this, &AUSB_PlayerController::OnSetDestinationReleased);
-	InputComponent->BindAction("ExitGame", IE_Pressed, this, &AUSB_PlayerController::ExitGame);
+	
 }
 
 
@@ -115,7 +115,3 @@ FVector AUSB_PlayerController::GetNavAgentLocation() const
 	//return GetPawn()->GetActorLocation();
 }
 
-void AUSB_PlayerController::ExitGame()
-{
-	UKismetSystemLibrary::QuitGame(GetWorld(),this,EQuitPreference::Quit,true);
-}

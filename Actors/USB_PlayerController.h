@@ -48,5 +48,4 @@ public:
 
 	virtual FVector GetNavAgentLocation() const override;
 
-	void ExitGame();
 };

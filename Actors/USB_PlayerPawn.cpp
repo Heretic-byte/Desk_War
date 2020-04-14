@@ -92,10 +92,10 @@ void AUSB_PlayerPawn::InitPlayerPawn()
 	m_fHeadChangeCD = 0.5f;
 	m_fHeadChangeCDTimer = 0.f;
 	
-	//m_BaseHeadPin->SetGenerateOverlapEvents(true);
-	//m_BaseHeadPin->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	//m_BaseTailPin->SetGenerateOverlapEvents(true);
-	//m_BaseTailPin->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	m_BaseHeadPin->SetGenerateOverlapEvents(true);
+	m_BaseHeadPin->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	m_BaseTailPin->SetGenerateOverlapEvents(true);
+	m_BaseTailPin->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 }
 
 void AUSB_PlayerPawn::CreatePhysicMovement()
@@ -153,7 +153,7 @@ void AUSB_PlayerPawn::CreateSkFaceMesh()
 
 void AUSB_PlayerPawn::SetHeadTail(UPhysicsSkMeshComponent * headWant, UPhysicsSkMeshComponent * tailWant, bool bRemoveIgnoreOld)
 {
-	m_CurrentHead->OnComponentBeginOverlap.RemoveAll(this);//remove from older
+	
 
 	m_CurrentHead = headWant;
 	m_CurrentTail = tailWant;
@@ -162,8 +162,7 @@ void AUSB_PlayerPawn::SetHeadTail(UPhysicsSkMeshComponent * headWant, UPhysicsSk
 	
 	m_CamRoot->AttachToComponent(m_CurrentHead,FAttachmentTransformRules::KeepRelativeTransform);
 
-	m_CurrentHead->OnComponentBeginOverlap.AddDynamic(this,&AUSB_PlayerPawn::TryConnect);
-
+	
 	m_CurrentHeadPin = Cast<UPinSkMeshComponent>(m_CurrentHead);
 }
 
@@ -190,7 +189,15 @@ void AUSB_PlayerPawn::SetupPlayerInputComponent(UInputComponent * PlayerInputCom
 	PlayerInputComponent->BindAction("Disconnect", EInputEvent::IE_Pressed, this, &AUSB_PlayerPawn::DisconnectShot);
 	PlayerInputComponent->BindAction("ZoomIn", EInputEvent::IE_Pressed, this, &AUSB_PlayerPawn::ZoomIn);
 	PlayerInputComponent->BindAction("ZoomOut", EInputEvent::IE_Pressed, this, &AUSB_PlayerPawn::ZoomOut);
+	//
+	PlayerInputComponent->BindAction("ExitGame", EInputEvent::IE_Released, this, &AUSB_PlayerPawn::ExitGame);
 }
+void AUSB_PlayerPawn::ExitGame()
+{
+	PRINTF("Exot");
+	UKismetSystemLibrary::QuitGame(GetWorld(), m_PlayerCon, EQuitPreference::Quit, true);
+}
+
 
 void AUSB_PlayerPawn::InitTraceIgnoreAry()
 {
@@ -350,7 +357,7 @@ void AUSB_PlayerPawn::TryConnect(UPrimitiveComponent * OverlappedComponent, AAct
 void AUSB_PlayerPawn::ConnectChargingStart()
 {
 	PRINTF("Charging Start");
-	m_CurrentHead->SetGenerateOverlapEvents(true);
+	m_CurrentHead->OnComponentBeginOverlap.AddDynamic(this, &AUSB_PlayerPawn::TryConnect);
 	FVector For = m_CurrentHead->GetForwardVector();
 	m_UsbMovement->RequestConnectChargeMove(For,3.f);
 }
@@ -358,8 +365,8 @@ void AUSB_PlayerPawn::ConnectChargingStart()
 void AUSB_PlayerPawn::SuccessConnection(UPortSkMeshComponent* portConnect)
 {
 	PRINTF("SuccessConnection");
+	m_CurrentHead->OnComponentBeginOverlap.RemoveDynamic(this, &AUSB_PlayerPawn::TryConnect);
 	EnableUSBInput();
-	m_CurrentHead->SetGenerateOverlapEvents(false);
 	m_UsbMovement->StopUSBMove();
 
 	AdjustPinTransform(portConnect);
@@ -403,8 +410,8 @@ void AUSB_PlayerPawn::FailConnection(UPortSkMeshComponent* portConnect,const FHi
 		break;
 	}
 	PRINTF("FailConnection");
+	m_CurrentHead->OnComponentBeginOverlap.RemoveDynamic(this, &AUSB_PlayerPawn::TryConnect);
 	EnableUSBInput();
-	m_CurrentHead->SetGenerateOverlapEvents(false);
 	m_UsbMovement->StopUSBMove();
 }
 

@@ -7,6 +7,8 @@
 #include "GameFramework/PlayerController.h"
 #include "DrawDebugHelpers.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Components/SphereComponent.h"
+#include "Actors/USB_PlayerPawn.h"
 
 
 UPortSkMeshComponent::UPortSkMeshComponent(const FObjectInitializer & objInit)
@@ -14,11 +16,9 @@ UPortSkMeshComponent::UPortSkMeshComponent(const FObjectInitializer & objInit)
 	m_MatInitColor = FColor::White;
 	m_MatPortFailColor = FColor::Red;
 	m_MatPortSuccessColor = FColor::Cyan;
-
-	m_fBlinkDelayFar = 1.0f;
-	m_fBlinkDelayNear = 0.5f;
+	m_fBlinkDelay = 0.5f;
 	m_NameMatScalarParam = "Brightness";
-	m_fMatBrightness = 0.5f;
+	m_fMatBrightness = 0.9f;
 	m_fFailImpulsePower = 10000.f;
 	m_ConnectableRotation.Yaw = 30.f;
 	m_ConnectableRotation.Roll = 5.f;
@@ -31,7 +31,6 @@ UPortSkMeshComponent::UPortSkMeshComponent(const FObjectInitializer & objInit)
 	m_NamePortConnectPushPointSocket = "PushPoint";
 	m_PortType = EPinPortType::ENoneType;
 	m_fEjectPower = 999.f;
-	m_fConnectableDistSqr = 25.f;
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FoundMesh(TEXT("SkeletalMesh'/Game/Meshes/Characters/Port/SK_PortPoint.SK_PortPoint'"));
 
 	if (FoundMesh.Succeeded())
@@ -47,14 +46,18 @@ void UPortSkMeshComponent::BeginPlay()
 	Super::BeginPlay();
 	m_BlinkMat = GetMaterials()[0];
 	m_BlinkMatDynamic = UMaterialInstanceDynamic::Create(m_BlinkMat, this);
-	StartBlink(m_fBlinkDelayNear);
 }
 
-void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, UPhysicsSkMeshComponent* parentMesh, EPinPortType portType, FName namePinBone)
+void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, UPhysicsSkMeshComponent* parentMesh,
+	USphereComponent* sphereColl,EPinPortType portType, FName namePinBone)
 {
 	m_ParentPhysicsConst = physicsJoint;
 	m_MeshParentActor = parentMesh;
+	m_CollSphere = sphereColl;
+	
 
+	m_CollSphere->OnComponentBeginOverlap.AddDynamic(this,&UPortSkMeshComponent::OnPlayerOverlap);
+	m_CollSphere->OnComponentEndOverlap.AddDynamic(this, &UPortSkMeshComponent::OnPlayerExit);
 	if (portType != EPinPortType::ENoneType)
 	{
 		m_PortType = portType;
@@ -65,7 +68,7 @@ void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, 
 		m_NameParentBonePortPoint = namePinBone;
 	}
 
-
+	
 }
 
 void UPortSkMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction)
@@ -118,6 +121,7 @@ void UPortSkMeshComponent::SetPortMatScalar(FName paramName, float scalar)
 void UPortSkMeshComponent::SetPortMatColor(FName paramName, FLinearColor color)
 {
 	m_BlinkMatDynamic->SetVectorParameterValue(paramName, color);
+	SetPortMatScalar(m_NameMatScalarParam, m_fBlinkInterpCache);
 	SetMaterial(0, m_BlinkMatDynamic);
 }
 
@@ -176,8 +180,8 @@ void UPortSkMeshComponent::OnFocus(UPinSkMeshComponent * aimingPin,bool isConnec
 
 void UPortSkMeshComponent::OnFocusEnd(UPinSkMeshComponent * aimingPin)
 {
+	//m_fBlinkInterpCache = m_fMatBrightness;
 	SetPortMatColor(m_NameMatVectorParam, m_MatInitColor);
-	SetPortMatScalar(m_NameMatScalarParam, m_fMatBrightness);
 }
 
 void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)//should call last
@@ -188,9 +192,8 @@ void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)//should call
 	ConstraintPinPort();
 	m_OnConnected.Broadcast(m_ConnectedPin);
 	EnablePhysicsCollision();
-	SetPortMatColor(m_NameMatVectorParam, m_MatInitColor);
-	SetPortMatScalar(m_NameMatScalarParam, m_fMatBrightness);
 	EndBlink();
+	SetPortMatColor(m_NameMatVectorParam, m_MatInitColor);
 }
 
 void UPortSkMeshComponent::ConstraintPinPort()
@@ -233,6 +236,27 @@ void UPortSkMeshComponent::DisablePhysicsCollision()
 EPinPortType UPortSkMeshComponent::GetPortType() const
 {
 	return _inline_GetPortType();
+}
+
+void UPortSkMeshComponent::OnPlayerOverlap(UPrimitiveComponent * OverlappedComponent, AActor * OtherActor, UPrimitiveComponent * OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult)
+{
+	
+	AUSB_PlayerPawn* Player =Cast<AUSB_PlayerPawn> (OtherActor);
+	if (!Player)
+	{
+		return;
+	}
+	StartBlink(m_fBlinkDelay);
+}
+
+void UPortSkMeshComponent::OnPlayerExit(UPrimitiveComponent * OverlappedComponent, AActor * OtherActor, UPrimitiveComponent * OtherComp, int32 OtherBodyIndex)
+{
+	AUSB_PlayerPawn* Player = Cast<AUSB_PlayerPawn>(OtherActor);
+	if (!Player)
+	{
+		return;
+	}
+	EndBlink();
 }
 
 void UPortSkMeshComponent::FailConnection(const FHitResult & hitResult)
