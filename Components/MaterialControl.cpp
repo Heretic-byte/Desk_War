@@ -9,7 +9,7 @@ UMaterialControl::UMaterialControl()
 {
 	m_fAlphaValueAbs = 0.f;
 	PrimaryComponentTick.bCanEverTick = false;
-	m_NameAlphaParam = "Alpha";
+	m_NameAlphaParam = "Opacity";
 }
 
 
