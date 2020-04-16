@@ -710,16 +710,19 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	FCollisionShape Shape = MakeMovingTargetBox();
 	FVector Ex = Shape.GetExtent();
 	Ex.Z *= 0.2f;
-	Ex.X *= 1.1f;
-	Ex.Y *= 1.1f;
+	Ex.X *= 0.7f;
+	Ex.Y *= 0.7f;
 	Shape.SetBox(Ex);
 
 	FVector TraceStart = m_MovingTarget->GetComponentLocation();
-	const FVector TraceEnd = TraceStart + (delta*deltaTime);
+	const FVector TraceEnd = TraceStart + (m_InputNormal * m_fMovingForce*deltaTime * 6.f);
 	float DeltaSizeSq = (TraceEnd - TraceStart).SizeSquared();
 
-	if(m_bShowDebug)
+	if (m_bShowDebug)
+	{
+		DrawVectorFromHead(m_InputNormal * m_fMovingForce, 100.f, FColor::Black);
 	DrawDebugBox(GetWorld(), TraceEnd, Ex, FColor::Red, false, -1.f, 0, 0.2f);
+	}
 
 	if (DeltaSizeSq <= MinMovementDistSq)//너무작으면 스윕 안한다
 	{
