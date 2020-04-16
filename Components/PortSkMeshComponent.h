@@ -113,8 +113,8 @@ public:
 	void SetPortMatScalar(FName paramName, float scalar);
 	void SetPortMatColor(FName paramName, FLinearColor color);
 	bool CheckConnectTransform(USceneComponent * connector,bool isConnectorGround);
-	void EnablePhysicsCollision();
-	void DisablePhysicsCollision();
+	void EnableOverlap();
+	void DisableOverlap();
 	bool GetBlockMoveOnConnnect();
 	FName GetMovePointWant();
 	UPhysicsSkMeshComponent* GetParentSkMesh();

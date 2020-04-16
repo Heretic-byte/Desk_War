@@ -4,6 +4,8 @@
 #include "PortPawn.h"
 #include "ConstructorHelpers.h"
 
+
+
 FName APortPawn::MeshComponentName(TEXT("MeshPawn00"));
 FName APortPawn::MeshPortComponentName(TEXT("MeshPort00"));
 
@@ -22,6 +24,9 @@ void APortPawn::CreateMesh()
 	m_Mesh->SetupAttachment(RootComponent);
 	m_Mesh->SetCollisionProfileName("PhysicsActor");
 	m_Mesh->SetSimulatePhysics(true);
+	m_Mesh->SetUseCCD(true);
+
+	
 }
 
 void APortPawn::CreatePhyCon()
@@ -59,7 +64,8 @@ void APortPawn::CreatePort()
 {
 	m_MeshPort = CreateDefaultSubobject<UPortSkMeshComponent>(MeshPortComponentName);
 	m_MeshPort->SetupAttachment(m_Mesh);
-	
+	m_MeshPort->CastShadow = false;
+
 }
 
 void APortPawn::BeginPlay()
@@ -68,4 +74,6 @@ void APortPawn::BeginPlay()
 	m_MeshPort->InitPort(m_PhyConPort, m_Mesh,m_Sphere);
 	m_MeshPort->m_OnConnected.AddUObject(this,&APortPawn::PortConnected);
 	m_MeshPort->m_OnDisconnected.AddUObject(this, &APortPawn::PortDisConnected);
+
+
 }

@@ -744,7 +744,7 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 		AddIgnoreActorsToQuery(Params);
 		FCollisionResponseParams ResponseParam;
 		m_MovingTarget->InitSweepCollisionParams(Params, ResponseParam);
-		bool const bHadBlockingHit = GetWorld()->SweepMultiByProfile(Hits,TraceStart,TraceEnd, InitialRotationQuat,"PhysicsActor",Shape,Params);
+		bool const bHadBlockingHit = GetWorld()->SweepMultiByProfile(Hits,TraceStart,TraceEnd, InitialRotationQuat,"PhysicsActor",Shape);//Param
 
 		if (Hits.Num() > 0)
 		{

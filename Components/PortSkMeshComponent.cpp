@@ -185,12 +185,14 @@ void UPortSkMeshComponent::OnFocusEnd(UPinSkMeshComponent * aimingPin)
 
 void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)//should call last
 {
-	DisablePhysicsCollision();
+	GetParentSkMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1,ECollisionResponse::ECR_Ignore);
+	DisableOverlap();
 	PRINTF("%s - Port", *GetOwner()->GetName());
 	m_ConnectedPin = connector;
 	ConstraintPinPort();
 	m_OnConnected.Broadcast(m_ConnectedPin);
-	EnablePhysicsCollision();
+	GetParentSkMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Block);
+	//EnableOverlap();
 	EndBlink();
 	SetPortMatColor(m_NameMatVectorParam, m_MatInitColor);
 }
@@ -202,6 +204,7 @@ void UPortSkMeshComponent::ConstraintPinPort()
 
 bool UPortSkMeshComponent::Disconnect()
 {
+	EnableOverlap();
 	m_ConnectedPin->Disconnect();
 	m_OnDisconnected.Broadcast(m_ConnectedPin);
 	m_ParentPhysicsConst->BreakConstraint();
@@ -219,14 +222,16 @@ bool UPortSkMeshComponent::IsConnected()
 }
 
 
-void UPortSkMeshComponent::EnablePhysicsCollision()
+void UPortSkMeshComponent::EnableOverlap()
 {
-	m_MeshParentActor->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Block);
+	SetGenerateOverlapEvents(true);
+	m_CollSphere->SetGenerateOverlapEvents(true);
 }
 
-void UPortSkMeshComponent::DisablePhysicsCollision()
+void UPortSkMeshComponent::DisableOverlap()
 {
-	m_MeshParentActor->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
+	SetGenerateOverlapEvents(false);
+	m_CollSphere->SetGenerateOverlapEvents(false);
 }
 
 EPinPortType UPortSkMeshComponent::GetPortType() const

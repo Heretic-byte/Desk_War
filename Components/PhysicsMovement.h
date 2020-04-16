@@ -52,8 +52,6 @@ protected:
 
 	bool m_WasWalkable;
 
-	FCollisionShape m_CollShape;
-
 protected:
 	UPROPERTY()
 	UPhysicsSkMeshComponent* m_MovingTarget;
@@ -116,6 +114,8 @@ public:
 	void RemoveIgnoreTraceActor(AActor* actorWant);
 
 	UPrimitiveComponent* GetMovingTargetComponent() const;
+
+	FCollisionShape MakeMovingTargetBox();
 
 protected:
 	virtual void PhysSceneStep(FPhysScene* PhysScene, float DeltaTime);
@@ -188,6 +188,6 @@ protected:
 
 	void AddIgnoreActorsToQuery(FCollisionQueryParams& queryParam);
 
-	FCollisionShape MakeMovingTargetBox();
+	
 	
 };
