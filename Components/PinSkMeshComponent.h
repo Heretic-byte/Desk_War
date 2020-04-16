@@ -37,7 +37,9 @@ protected:
 	EPinPortType m_Pintype;
 protected:
 	UPROPERTY()
-	UPortSkMeshComponent* m_PortConnected;
+	UPortSkMeshComponent* m_PortConnected;//my pin connected
+	UPROPERTY()
+	UPortSkMeshComponent* m_MyPort;//my self port
 	UPROPERTY()
 	UObject* m_PortOwner;
 private:
@@ -54,6 +56,7 @@ public:
 	void SetNeckName(FName nameWant);
 	void SetVelocityPivotName(FName nameWant);
 	void FailConnection(const FHitResult & hitResult);
+	void SetMyPort(UPortSkMeshComponent* portMine);
 private:
 	
 	virtual void BeginPlay() override;
@@ -73,5 +76,10 @@ public:
 	FORCEINLINE UPortSkMeshComponent* GetPortConnected()
 	{
 		return m_PortConnected;
+	}
+
+	FORCEINLINE UPortSkMeshComponent* GetMyPort()//adopters port
+	{
+		return m_MyPort;
 	}
 };

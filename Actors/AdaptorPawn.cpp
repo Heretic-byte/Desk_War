@@ -8,3 +8,11 @@ AAdaptorPawn::AAdaptorPawn(const FObjectInitializer& objInit) :Super(objInit
 {
 
 }
+
+
+void AAdaptorPawn::BeginPlay()
+{
+	Super::BeginPlay();
+
+	Cast<UPinSkMeshComponent>(m_Mesh)->SetMyPort(m_MeshPort);
+}

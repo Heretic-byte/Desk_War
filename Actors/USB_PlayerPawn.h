@@ -75,6 +75,10 @@ private:
 	UPinSkMeshComponent* m_BaseHeadPin;
 	UPROPERTY()
 	UPinSkMeshComponent* m_BaseTailPin;
+	UPROPERTY()
+	UPortSkMeshComponent* m_PortTailPrev;
+	UPROPERTY()
+	UPortSkMeshComponent* m_PortHeadPrev;
 private:
 	FDelegateHandle m_ConnectChargingHandle;
 public:
@@ -111,7 +115,9 @@ private://construct
 	void CreateCameraFamily();
 	void CreateSkFaceMesh();
 private:
-	void SetHeadTail(UPhysicsSkMeshComponent* headWant, UPhysicsSkMeshComponent* tailWant,bool bRemoveIgnoreOld=false);
+	void SetHeadTail(UPhysicsSkMeshComponent* headWant, UPhysicsSkMeshComponent* tailWant,
+		UPortSkMeshComponent* headPrevPort, UPortSkMeshComponent* tailPrevPort,
+		bool bRemoveIgnoreOld=false);
 	void MoveForward(float v);
 	void MoveRight(float v);
 	void RotateYaw(float v);

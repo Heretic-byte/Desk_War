@@ -24,6 +24,8 @@
 //분리해야한다
 AUSB_PlayerPawn::AUSB_PlayerPawn(const FObjectInitializer& objInit):Super(objInit)
 {
+	m_PortHeadPrev = nullptr;
+	m_PortTailPrev = nullptr;
 	m_fBlockMoveTimeWhenEjectTimer = 0.f;
 	m_fDefaultFailImpulsePower = 1000.f;
 	InitPlayerPawn();
@@ -51,7 +53,7 @@ void AUSB_PlayerPawn::BeginPlay()
 	AddPhysicsBody(m_PinUSB);
 	AddPhysicsBody(m_Pin5Pin);
 	m_PlayerCon = Cast<APlayerController>(GetController());
-	SetHeadTail(m_CurrentHead, m_CurrentTail);
+	SetHeadTail(m_CurrentHead, m_CurrentTail,nullptr,nullptr);
 	InitTraceIgnoreAry();
 	Cast<UPinSkMeshComponent>(m_CurrentHead)->m_fFailImpulsePower = m_fDefaultFailImpulsePower;
 	Cast<UPinSkMeshComponent>(m_CurrentTail)->m_fFailImpulsePower = m_fDefaultFailImpulsePower;
@@ -151,12 +153,14 @@ void AUSB_PlayerPawn::CreateSkFaceMesh()
 	m_MeshFaceSk->SetRelativeScale3D(FVector(2.4f, 2.4f, 2.4f));
 }
 
-void AUSB_PlayerPawn::SetHeadTail(UPhysicsSkMeshComponent * headWant, UPhysicsSkMeshComponent * tailWant, bool bRemoveIgnoreOld)
+void AUSB_PlayerPawn::SetHeadTail(UPhysicsSkMeshComponent * headWant, UPhysicsSkMeshComponent * tailWant,
+	UPortSkMeshComponent* headPrevPort, UPortSkMeshComponent* tailPrevPort, bool bRemoveIgnoreOld)
 {
-	
-
 	m_CurrentHead = headWant;
 	m_CurrentTail = tailWant;
+
+	m_PortHeadPrev = headPrevPort;
+	m_PortTailPrev = tailPrevPort;
 
 	m_UsbMovement->SetUSBUpdateComponent(m_CurrentHead,m_CurrentTail, bRemoveIgnoreOld);
 	
@@ -318,7 +322,7 @@ void AUSB_PlayerPawn::ConnectShot()
 	{ 
 		PRINTF("AirCharging Start");
 		//m_bBlockChargeClick = true;
-		m_CurrentHead->SetGenerateOverlapEvents(true);
+		//m_CurrentHead->SetGenerateOverlapEvents(true);
 		FVector For = m_CurrentHead->GetForwardVector();
 		//DisableUSBInput();
 		m_UsbMovement->RequestAirConnectChargeMove(m_CurrentFocusedPort->GetComponentRotation(),For, 3.f);
@@ -331,6 +335,13 @@ void AUSB_PlayerPawn::ConnectShot()
 void AUSB_PlayerPawn::TryConnect(UPrimitiveComponent * OverlappedComponent, AActor * OtherActor, UPrimitiveComponent * OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult)
 {
 	PRINTF("TryConnect - Called");
+
+	if (OtherActor ==m_CurrentHead->GetOwner())
+	{
+		PRINTF("IgnoreMyself");
+		return;
+	}
+
 	auto* PortCompo = Cast<UPortSkMeshComponent>(OtherComp);
 
 	if(!PortCompo)
@@ -366,6 +377,7 @@ void AUSB_PlayerPawn::SuccessConnection(UPortSkMeshComponent* portConnect)
 {
 	PRINTF("SuccessConnection");
 	m_CurrentHead->OnComponentBeginOverlap.RemoveDynamic(this, &AUSB_PlayerPawn::TryConnect);
+	//m_CurrentHead->SetGenerateOverlapEvents(false);
 	EnableUSBInput();
 	m_UsbMovement->StopUSBMove();
 
@@ -373,7 +385,7 @@ void AUSB_PlayerPawn::SuccessConnection(UPortSkMeshComponent* portConnect)
 
 	portConnect->Connect(m_CurrentHeadPin);
 
-	SetHeadTail(portConnect->GetParentSkMesh(), m_CurrentTail);
+	SetHeadTail(portConnect->GetParentSkMesh(), m_CurrentTail,portConnect,m_PortTailPrev);
 	AddTraceIgnoreActor(portConnect->GetOwner());
 	AddPhysicsBody(portConnect->GetParentSkMesh());
 }
@@ -432,7 +444,7 @@ void AUSB_PlayerPawn::ChangeHeadTail()
 	m_BaseHeadPin = m_BaseTailPin;
 	m_BaseTailPin = BeforeHead;
 
-	SetHeadTail(m_CurrentTail,m_CurrentHead);
+	SetHeadTail(m_CurrentTail,m_CurrentHead,m_PortTailPrev,m_PortHeadPrev);
 }
 
 void AUSB_PlayerPawn::AddPhysicsBody(UPrimitiveComponent * wantP)
@@ -458,22 +470,21 @@ void AUSB_PlayerPawn::SetPhysicsVelocityAllBody(FVector linearV)
 
 bool AUSB_PlayerPawn::TryDisconnect()
 {
-	auto* Tail = Cast<UPinSkMeshComponent>(GetTail());
 
-	if (!Tail)
-	{
-		Tail = m_BaseTailPin;
-	}
-
-	if (!Tail->GetPortConnected())
+	if (!m_PortTailPrev)//usb를 제외하곤 결국 달려있는것 모두 Port들이다
 	{
 		return false;
 	}
 
-	RemoveTraceIgnoreActor(Tail->GetPortConnected()->GetOwner());
-	RemovePhysicsBody(Tail->GetPortConnected());
-	Tail->Disconnect();
-	SetHeadTail(m_CurrentHead, Tail,true);
+	RemoveTraceIgnoreActor(m_PortTailPrev->GetOwner());
+	RemovePhysicsBody(m_CurrentTail);
+
+	auto* TailPrev = m_PortTailPrev->GetPinConnected();
+	m_PortTailPrev->Disconnect();
+
+
+	//m_CurrentHead->SetGenerateOverlapEvents(true);
+	SetHeadTail(m_CurrentHead, TailPrev,m_PortHeadPrev , TailPrev->GetMyPort(),true);
 	return true;
 }
 

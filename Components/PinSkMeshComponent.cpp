@@ -10,6 +10,7 @@
 
 UPinSkMeshComponent::UPinSkMeshComponent(const FObjectInitializer& objInit) :Super(objInit)
 {
+	m_MyPort = nullptr;
 	m_fFailImpulsePower = 10000.f;
 	m_PortConnected = nullptr;
 	m_PortOwner = nullptr;
@@ -47,6 +48,8 @@ bool UPinSkMeshComponent::Connect(UPortSkMeshComponent * port)
 		return false;
 	}
 
+	PRINTF("%s - Pin",*GetOwner()->GetName());
+
 	m_PortConnected = port;
 	m_PortOwner = m_PortConnected->GetOwner();
 
@@ -58,11 +61,11 @@ bool UPinSkMeshComponent::Connect(UPortSkMeshComponent * port)
 
 bool UPinSkMeshComponent::Disconnect()
 {
-	if (!m_PortConnected->Disconnect())
+	/*if (!m_PortConnected->Disconnect())
 	{
 		return false;
 	}
-
+*/
 	m_PortConnected = nullptr;
 	m_PortOwner = nullptr;
 	return true;
@@ -88,6 +91,11 @@ void UPinSkMeshComponent::FailConnection(const FHitResult & hitResult)
 	AddImpulseAtLocation((GetUpVector()+ GetForwardVector() * -1.f)*m_fFailImpulsePower,hitResult.ImpactPoint);
 
 
+}
+
+void UPinSkMeshComponent::SetMyPort(UPortSkMeshComponent * portMine)
+{
+	m_MyPort = portMine;
 }
 
 

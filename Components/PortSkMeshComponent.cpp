@@ -186,7 +186,7 @@ void UPortSkMeshComponent::OnFocusEnd(UPinSkMeshComponent * aimingPin)
 void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)//should call last
 {
 	DisablePhysicsCollision();
-	
+	PRINTF("%s - Port", *GetOwner()->GetName());
 	m_ConnectedPin = connector;
 	ConstraintPinPort();
 	m_OnConnected.Broadcast(m_ConnectedPin);
@@ -202,10 +202,7 @@ void UPortSkMeshComponent::ConstraintPinPort()
 
 bool UPortSkMeshComponent::Disconnect()
 {
-	if (!m_ConnectedPin)
-	{
-		return false;
-	}
+	m_ConnectedPin->Disconnect();
 	m_OnDisconnected.Broadcast(m_ConnectedPin);
 	m_ParentPhysicsConst->BreakConstraint();
 	m_ConnectedPin = nullptr;
