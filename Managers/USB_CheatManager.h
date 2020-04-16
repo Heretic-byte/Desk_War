@@ -30,6 +30,7 @@ public:
 	void PrintPlayerVelocity();
 	UFUNCTION(exec)
 	void HidePlayerVelocity();
-
+	UFUNCTION(exec)
+	void PrintPlayerMass();
 	bool m_bShowVelo;
 };

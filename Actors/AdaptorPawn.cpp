@@ -4,8 +4,8 @@
 #include "AdaptorPawn.h"
 #include "Datas/USB_Macros.h"
 
-AAdaptorPawn::AAdaptorPawn(const FObjectInitializer& objInit) :Super(objInit
-.SetDefaultSubobjectClass<UPinSkMeshComponent>(APortPawn::MeshComponentName))
+AAdaptorPawn::AAdaptorPawn(const FObjectInitializer& objInit):
+	Super(objInit.SetDefaultSubobjectClass<UPinSkMeshComponent>(APortPawn::MeshComponentName))
 {
 
 }

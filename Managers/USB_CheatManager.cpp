@@ -25,3 +25,12 @@ void UUSB_CheatManager::HidePlayerVelocity()
 	m_Player->GetComponentByClass(UPhysicsMovement::StaticClass());
 }
 
+void UUSB_CheatManager::PrintPlayerMass()
+{
+	m_Player = Cast<AUSB_PlayerPawn>(m_PlayerController->GetPawn());
+
+	float Mass= m_Player->GetTotalMass();
+
+	PRINTF("PrintPlayerMass: %f", Mass);
+}
+

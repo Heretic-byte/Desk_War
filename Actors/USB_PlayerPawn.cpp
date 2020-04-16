@@ -45,19 +45,28 @@ AUSB_PlayerPawn::AUSB_PlayerPawn(const FObjectInitializer& objInit) :Super(objIn
 
 void AUSB_PlayerPawn::BeginPlay()
 {
+	InitUSB();
+
 	m_UsbMovement->InitUSBUpdateComponent(this, m_CurrentHead, m_CurrentTail);
+
 	for (auto* Sphere : m_ArySpineColls)
 	{
 		AddPhysicsBody(Sphere);
 	}
+
 	AddPhysicsBody(m_PinUSB);
 	AddPhysicsBody(m_Pin5Pin);
+
 	m_PlayerCon = Cast<APlayerController>(GetController());
+
 	SetHeadTail(m_CurrentHead, m_CurrentTail, nullptr, nullptr);
+
 	InitTraceIgnoreAry();
+
 	Cast<UPinSkMeshComponent>(m_CurrentHead)->m_fFailImpulsePower = m_fDefaultFailImpulsePower;
 	Cast<UPinSkMeshComponent>(m_CurrentTail)->m_fFailImpulsePower = m_fDefaultFailImpulsePower;
-	Super::BeginPlay();
+
+	APawn::BeginPlay();
 }
 
 USceneComponent * AUSB_PlayerPawn::GetFocusedPortTarget()
@@ -88,24 +97,27 @@ void AUSB_PlayerPawn::InitPlayerPawn()
 
 	m_CurrentHead = m_PinUSB;
 	m_CurrentTail = m_Pin5Pin;
+
 	m_BaseHeadPin = Cast<UPinSkMeshComponent>(m_CurrentHead);
 	m_BaseTailPin = Cast<UPinSkMeshComponent>(m_CurrentTail);
+
 	m_fPortTraceRange = 77.f;
-	m_fHeadChangeCD = 0.5f;
+	m_fHeadChangeCD = 0.2f;
 	m_fHeadChangeCDTimer = 0.f;
 
 	m_BaseHeadPin->SetGenerateOverlapEvents(true);
-	m_BaseHeadPin->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	m_BaseTailPin->SetGenerateOverlapEvents(true);
+
+	m_BaseHeadPin->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	m_BaseTailPin->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+
+	m_BaseHeadPin->SetUseCCD(true);
+	m_BaseTailPin->SetUseCCD(true);
 }
 
 void AUSB_PlayerPawn::CreatePhysicMovement()
 {
 	m_UsbMovement = CreateDefaultSubobject<UUSBMovement>(TEXT("Movement00"));
-
-
-
 	m_UsbMovement->m_fWalkableSlopeAngle = 49.f;
 	m_UsbMovement->m_nJumpMaxCount = 2;
 	m_UsbMovement->m_fAirControl = 0.6f;
