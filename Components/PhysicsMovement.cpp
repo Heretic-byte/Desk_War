@@ -264,7 +264,18 @@ void UPhysicsMovement::TickMovement(float delta)
 
 	if (Hit.bStartPenetrating)
 	{
-		ResultVector = SlideAlongOnSurface(Delta, delta, 1.f, Hit.Normal, Hit, true);
+		FVector Loc = m_MovingTarget->GetComponentLocation();
+		FVector HitPoint = Hit.ImpactPoint;
+		HitPoint.Z = Loc.Z;
+		FVector HitNormal = (HitPoint - Loc).GetSafeNormal();
+
+		float Dot = m_InputNormal | HitNormal;
+
+		PRINTF("Dot: %f", Dot);
+
+		
+
+		ResultVector = Dot >= 0 ? SlideAlongOnSurface(Delta, delta, 1.f, Hit.Normal, Hit, true) : Delta.Size() * m_InputNormal;//delta?
 	}
 	else if (Hit.IsValidBlockingHit())	//일반적인 BlockingHit일 때
 	{
@@ -351,7 +362,7 @@ bool UPhysicsMovement::IsFalling() const
 void UPhysicsMovement::TickCastGround()
 {
 	m_GroundHitResult.Reset(1.f, false);
-	FCollisionShape BoxShape = MakeMovingTargetBox();
+	FCollisionShape BoxShape = m_Shape; //MakeMovingTargetBox();
 	FVector TraceStart = m_MovingTarget->GetComponentLocation();
 
 	FVector TraceEnd = TraceStart;
@@ -720,6 +731,7 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 
 	m_bTwoWallHit = false;
 
+	//m_Shape = MakeMovingTargetBox();
 	FCollisionShape Shape = m_Shape;
 	FVector Ex = Shape.GetExtent();
 
