@@ -92,7 +92,6 @@ bool UUSBMovement::DoJump()
 {
  	if (CanJump())
 	{
-		PRINTF("DidJump");
 		m_nJumpCurrentCount++;
 		PRINTF("JumpCount:%d", m_nJumpCurrentCount);
 

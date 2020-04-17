@@ -862,8 +862,8 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 
 	if (BlockingHit.bBlockingHit)
 	{
-		//m_MovingTarget->SetWorldLocationAndRotationNoPhysics(NewLocation, SelectTargetRotation(deltaTime));
-		m_MovingTarget->SetWorldLocation(NewLocation,false,nullptr,ETeleportType::TeleportPhysics);
+		m_MovingTarget->SetWorldLocationAndRotationNoPhysics(NewLocation, SelectTargetRotation(deltaTime));
+		//m_MovingTarget->SetWorldLocation(NewLocation,false,nullptr,ETeleportType::TeleportPhysics);
 		if (!IsPendingKill())
 		{
 			check(bFilledHitResult);
