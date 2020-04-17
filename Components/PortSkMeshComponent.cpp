@@ -142,6 +142,14 @@ bool UPortSkMeshComponent::CheckConnectTransform(USceneComponent * connector, bo
 	return PitchCheck && RollCheck&&YawCheck;
 }
 
+bool UPortSkMeshComponent::CheckYawOnly(USceneComponent * connector)
+{
+	FRotator PortRot = GetComponentRotation();
+	FRotator PinRot = connector->GetComponentRotation();
+	float YawDiff = FMath::Abs(PortRot.Yaw - PinRot.Yaw);
+	return YawDiff <= m_ConnectableRotation.Yaw;
+}
+
 bool UPortSkMeshComponent::GetBlockMoveOnConnnect()
 {
 	return m_bBlockMoveOnConnected;

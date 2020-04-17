@@ -595,7 +595,7 @@ void AUSB_PlayerPawn::TickTracePortable()
 
 		UPortSkMeshComponent* PortableCompo = Cast<UPortSkMeshComponent>(HitResult.GetComponent());
 
-		if (PortableCompo && !PortableCompo->GetPinConnected())
+		if (PortableCompo && !PortableCompo->GetPinConnected() && PortableCompo->CheckYawOnly(m_CurrentHeadPin))
 		{
 			m_CurrentFocusedPort = PortableCompo;
 			m_CurrentFocusedPort->OnFocus(m_CurrentHeadPin, IsMovingOnGround());

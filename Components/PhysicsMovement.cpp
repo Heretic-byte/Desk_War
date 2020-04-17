@@ -271,10 +271,6 @@ void UPhysicsMovement::TickMovement(float delta)
 
 		float Dot = m_InputNormal | HitNormal;
 
-		PRINTF("Dot: %f", Dot);
-
-		
-
 		ResultVector = Dot >= 0 ? SlideAlongOnSurface(Delta, delta, 1.f, Hit.Normal, Hit, true) : Delta.Size() * m_InputNormal;//delta?
 	}
 	else if (Hit.IsValidBlockingHit())	//일반적인 BlockingHit일 때

@@ -116,6 +116,7 @@ public:
 	void SetPortMatScalar(FName paramName, float scalar);
 	void SetPortMatColor(FName paramName, FLinearColor color);
 	bool CheckConnectTransform(USceneComponent * connector,bool isConnectorGround);
+	bool CheckYawOnly(USceneComponent * connector);
 	void EnableOverlap();
 	void DisableOverlap();
 	bool GetBlockMoveOnConnnect();
