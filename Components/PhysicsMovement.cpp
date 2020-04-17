@@ -5,6 +5,7 @@
 #include "Datas/USB_Macros.h"
 #include "Components/PrimitiveComponent.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "DrawDebugHelpers.h"
 #include "PhysicsPublic.h"
 #include "Engine/World.h"
@@ -710,18 +711,18 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	FCollisionShape Shape = MakeMovingTargetBox();
 	FVector Ex = Shape.GetExtent();
 	Ex.Z *= 0.2f;
-	Ex.X *= 0.7f;
-	Ex.Y *= 0.7f;
+	Ex.X *= 1.1f;
+	Ex.Y *= 1.1f;
 	Shape.SetBox(Ex);
 
 	FVector TraceStart = m_MovingTarget->GetComponentLocation();
-	const FVector TraceEnd = TraceStart + (m_InputNormal * m_fMovingForce*deltaTime * 6.f);
+	const FVector TraceEnd = TraceStart +( delta*deltaTime);
 	float DeltaSizeSq = (TraceEnd - TraceStart).SizeSquared();
 
 	if (m_bShowDebug)
 	{
-		DrawVectorFromHead(m_InputNormal * m_fMovingForce, 100.f, FColor::Black);
-	DrawDebugBox(GetWorld(), TraceEnd, Ex, FColor::Red, false, -1.f, 0, 0.2f);
+		//DrawVectorFromHead(m_InputNormal * m_fMovingForce, 100.f, FColor::Black);
+	//DrawDebugBox(GetWorld(), TraceEnd, Ex, FColor::Red, false, -1.f, 0, 0.2f);
 	}
 
 	if (DeltaSizeSq <= MinMovementDistSq)//너무작으면 스윕 안한다
@@ -747,8 +748,8 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 		AddIgnoreActorsToQuery(Params);
 		FCollisionResponseParams ResponseParam;
 		m_MovingTarget->InitSweepCollisionParams(Params, ResponseParam);
-		bool const bHadBlockingHit = GetWorld()->SweepMultiByProfile(Hits,TraceStart,TraceEnd, InitialRotationQuat,"USBActor",Shape,Params);//Param
-
+		//bool const bHadBlockingHit = GetWorld()->SweepMultiByProfile(Hits,TraceStart,TraceEnd, InitialRotationQuat,"USBActor",Shape,Params);//Param
+		bool const bHadBlockingHit=UKismetSystemLibrary::BoxTraceMultiByProfile(GetWorld(),TraceStart,TraceEnd,Shape.GetBox(), InitialRotationQuat.Rotator(),"USBActor",true,m_AryTraceIgnoreActors,EDrawDebugTrace::ForOneFrame,Hits,true,FLinearColor::Green,FLinearColor::Red,1.f);
 		if (Hits.Num() > 0)
 		{
 			const float DeltaSize = FMath::Sqrt(DeltaSizeSq);

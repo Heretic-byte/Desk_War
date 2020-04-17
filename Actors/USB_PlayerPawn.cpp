@@ -388,7 +388,7 @@ void AUSB_PlayerPawn::ConnectChargingStart()
 	FCollisionQueryParams Param;
 
 	AddIgnoreActorsToQuery(Param);
-
+	//sweepÀÌ´Ï Àß¸øµÊ
 	if (GetWorld()->SweepSingleByProfile(Hit, TraceStart, TraceEnd, m_CurrentHeadPin->GetComponentQuat(), "USBActor", ShapeBox, Param) && Hit.GetActor())
 	{
 		TryConnect(m_CurrentHead, Hit.GetActor(), Hit.GetComponent(), 0, false, Hit);
