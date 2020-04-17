@@ -330,16 +330,7 @@ void AUSB_PlayerPawn::ConnectShot()
 
 
 	DisableUSBInput();
-	if (!m_UsbMovement->IsMovingOnGround())//sky connect
-	{
-		PRINTF("AirCharging Start");
-		//m_bBlockChargeClick = true;
-		//m_CurrentHead->SetGenerateOverlapEvents(true);
-		FVector For = m_CurrentHead->GetForwardVector();
-		//DisableUSBInput();
-		m_UsbMovement->RequestAirConnectChargeMove(m_CurrentFocusedPort->GetComponentRotation(), For, 3.f);
-		return;
-	}
+
 	ConnectChargingStart();
 }
 
@@ -384,16 +375,20 @@ void AUSB_PlayerPawn::ConnectChargingStart()
 	FHitResult Hit;
 	FVector TraceStart = m_CurrentHeadPin->GetComponentLocation();
 	FVector TraceEnd = TraceStart+For * 3.f;
-	FCollisionShape ShapeBox = m_UsbMovement->MakeMovingTargetBox();
+	
 	FCollisionQueryParams Param;
 
 	AddIgnoreActorsToQuery(Param);
 
 	TArray<TEnumAsByte<EObjectTypeQuery> >  ObjectTypes;
 	ObjectTypes.Add(EObjectTypeQuery::ObjectTypeQuery8);
+
+
+
+
 	//sweepÀÌ´Ï Àß¸øµÊ
 	if (UKismetSystemLibrary::BoxTraceSingleForObjects(GetWorld(),
-		TraceStart, TraceEnd, ShapeBox.GetBox(),
+		TraceStart, TraceEnd, m_UsbMovement->m_Shape.GetBox(),
 		m_CurrentHead->GetComponentRotation(), ObjectTypes, true, m_AryTraceIgnoreActors,
 		EDrawDebugTrace::ForOneFrame, Hit, true, FLinearColor::Green, FLinearColor::Red, 1.f) && Hit.GetActor())
 	{
@@ -403,6 +398,13 @@ void AUSB_PlayerPawn::ConnectChargingStart()
 	}
 
 	m_CurrentHead->OnComponentBeginOverlap.AddDynamic(this, &AUSB_PlayerPawn::TryConnect);
+
+	if (!m_UsbMovement->IsMovingOnGround())//sky connect
+	{
+		PRINTF("AirCharging Start");
+		m_UsbMovement->RequestAirConnectChargeMove(m_CurrentFocusedPort->GetComponentRotation(), For, 3.f);
+		return;
+	}
 	m_UsbMovement->RequestConnectChargeMove(For, 3.f);
 }
 

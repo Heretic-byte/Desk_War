@@ -50,6 +50,8 @@ void UPhysicsMovement::BeginPlay()
 
 	TickCastGround();
 	m_bIsFalling = !m_bOnGround;
+
+	
 }
 
 
@@ -196,6 +198,9 @@ void UPhysicsMovement::SetMovingComponent(USceneComponent* NewUpdatedComponent, 
 		AddIgnoreTraceActor(PawnOwner);
 	}
 	SetUpdatedComponent(NewUpdatedComponent);
+
+
+	m_Shape = MakeMovingTargetBox();
 }
 
 FRotator UPhysicsMovement::SelectTargetRotation(float delta)
@@ -710,9 +715,12 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 
 	const FQuat InitialRotationQuat = m_MovingTarget->GetComponentTransform().GetRotation();
 
+	FRotator InitRot = m_MovingTarget->GetComponentRotation();
+
+
 	m_bTwoWallHit = false;
 
-	FCollisionShape Shape = MakeMovingTargetBox();
+	FCollisionShape Shape = m_Shape;
 	FVector Ex = Shape.GetExtent();
 
 	Ex.Z *= 0.2f;
@@ -722,7 +730,7 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	Shape.SetBox(Ex);
 
 	FVector TraceStart = m_MovingTarget->GetComponentLocation();
-	const FVector TraceEnd = TraceStart +( delta*deltaTime);
+	const FVector TraceEnd = TraceStart +(m_InputNormal* delta.Size()*deltaTime);
 	float DeltaSizeSq = (TraceEnd - TraceStart).SizeSquared();
 
 	if (DeltaSizeSq <= MinMovementDistSq)//너무작으면 스윕 안한다
@@ -742,12 +750,14 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	bool IsSimul = false;
 	TArray<FHitResult> Hits;
 	FVector NewLocation = TraceStart;
-
+	TArray<TEnumAsByte<	EObjectTypeQuery> >  ObjectTypes;
+	ObjectTypes.Add(EObjectTypeQuery::ObjectTypeQuery1);
+	ObjectTypes.Add(EObjectTypeQuery::ObjectTypeQuery2);
 	if (DeltaSizeSq > 0.f)//여기서 현재 컴플렉스 콜리전 true 상태이다,
 	{
-		bool const bHadBlockingHit=UKismetSystemLibrary::BoxTraceMultiByProfile(GetWorld(),
+		bool const bHadBlockingHit=UKismetSystemLibrary::BoxTraceMultiForObjects(GetWorld(),
 			TraceStart,TraceEnd,Shape.GetBox(),
-			InitialRotationQuat.Rotator(),m_NameSweepProfileName,true,m_AryTraceIgnoreActors,
+			InitRot, ObjectTypes,true,m_AryTraceIgnoreActors,
 			m_bShowDebug ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,Hits,true,FLinearColor::Green,FLinearColor::Red,1.f);
 
 		if (Hits.Num() > 0)
@@ -844,8 +854,8 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 
 	if (BlockingHit.bBlockingHit)
 	{
-		m_MovingTarget->SetWorldLocationAndRotationNoPhysics(NewLocation, SelectTargetRotation(deltaTime));
-
+		//m_MovingTarget->SetWorldLocationAndRotationNoPhysics(NewLocation, SelectTargetRotation(deltaTime));
+		m_MovingTarget->SetWorldLocation(NewLocation,false,nullptr,ETeleportType::TeleportPhysics);
 		if (!IsPendingKill())
 		{
 			check(bFilledHitResult);
@@ -970,6 +980,16 @@ void UPhysicsMovement::Landing()
 FCollisionShape UPhysicsMovement::MakeMovingTargetBox()
 {
 	FCollisionShape BoxShape = FCollisionShape::MakeBox(m_MovingTarget->GetBodyInstance()->GetBodyBounds().GetExtent());
+
+	if (BoxShape.Box.HalfExtentX < BoxShape.Box.HalfExtentY)
+	{
+		float Swap = BoxShape.Box.HalfExtentX;
+
+		BoxShape.Box.HalfExtentX = BoxShape.Box.HalfExtentY;
+
+		BoxShape.Box.HalfExtentY = Swap;
+	}
+
 	return BoxShape;
 }
 

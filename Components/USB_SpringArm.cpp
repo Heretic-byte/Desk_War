@@ -241,20 +241,23 @@ FVector UUSB_SpringArm::BlendLocations(const FVector& DesiredArmLocation, const 
 	
 	m_bWasBlocked = true;
 
-	UMaterialControl* MatCon = Cast<UMaterialControl>( hit.GetActor()->GetComponentByClass(UMaterialControl::StaticClass()));
-	if (MatCon)
+	if (hit.GetActor())
 	{
-		if (m_BlockedMatControl)
+		UMaterialControl* MatCon = Cast<UMaterialControl>(hit.GetActor()->GetComponentByClass(UMaterialControl::StaticClass()));
+		if (MatCon)
 		{
-			if (m_BlockedMatControl != MatCon)
+			if (m_BlockedMatControl)
 			{
-				m_BlockedMatControl->SetInitAlpha();
+				if (m_BlockedMatControl != MatCon)
+				{
+					m_BlockedMatControl->SetInitAlpha();
+				}
 			}
-		}
-		m_BlockedMatControl = MatCon;
-		m_BlockedMatControl->SetAlpha();
+			m_BlockedMatControl = MatCon;
+			m_BlockedMatControl->SetAlpha();
 
-		return DesiredArmLocation;
+			return DesiredArmLocation;
+		}
 	}
 
 	auto LerpedLocation= UKismetMathLibrary::VInterpTo(m_LastTarget, TraceHitLocation, DeltaTime, CameraLagSpeed);

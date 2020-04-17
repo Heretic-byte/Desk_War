@@ -58,6 +58,7 @@ protected:
 	UPhysicsSkMeshComponent* m_MovingTarget;
 
 public:
+	FCollisionShape m_Shape;
 public:
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement")
 	FName m_NameSweepProfileName;
