@@ -12,6 +12,7 @@
 
 UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 {
+	m_NameSweepProfileName = "PhysicsActor";
 	m_bShowDebug = false;
 	m_fMaxTimeStep = 33.f;
 	m_fGroundFriction = 2.f;
@@ -706,24 +707,23 @@ FVector UPhysicsMovement::SlideAlongOnSurface(const FVector& velocity, float del
 bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult& OutHit)
 {
 	const float MinMovementDistSq = FMath::Square(4.f*KINDA_SMALL_NUMBER);
+
 	const FQuat InitialRotationQuat = m_MovingTarget->GetComponentTransform().GetRotation();
+
 	m_bTwoWallHit = false;
+
 	FCollisionShape Shape = MakeMovingTargetBox();
 	FVector Ex = Shape.GetExtent();
+
 	Ex.Z *= 0.2f;
 	Ex.X *= 1.1f;
 	Ex.Y *= 1.1f;
+
 	Shape.SetBox(Ex);
 
 	FVector TraceStart = m_MovingTarget->GetComponentLocation();
 	const FVector TraceEnd = TraceStart +( delta*deltaTime);
 	float DeltaSizeSq = (TraceEnd - TraceStart).SizeSquared();
-
-	if (m_bShowDebug)
-	{
-		//DrawVectorFromHead(m_InputNormal * m_fMovingForce, 100.f, FColor::Black);
-	//DrawDebugBox(GetWorld(), TraceEnd, Ex, FColor::Red, false, -1.f, 0, 0.2f);
-	}
 
 	if (DeltaSizeSq <= MinMovementDistSq)//너무작으면 스윕 안한다
 	{
@@ -737,27 +737,27 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	FHitResult BlockingHit(NoInit);
 	BlockingHit.bBlockingHit = false;
 	BlockingHit.Time = 1.f;
+
 	bool bFilledHitResult = false;
 	bool IsSimul = false;
 	TArray<FHitResult> Hits;
 	FVector NewLocation = TraceStart;
 
-	if (DeltaSizeSq > 0.f)
+	if (DeltaSizeSq > 0.f)//여기서 현재 컴플렉스 콜리전 true 상태이다,
 	{
-		FComponentQueryParams Params = FComponentQueryParams::DefaultComponentQueryParams;
-		AddIgnoreActorsToQuery(Params);
-		FCollisionResponseParams ResponseParam;
-		m_MovingTarget->InitSweepCollisionParams(Params, ResponseParam);
-		//bool const bHadBlockingHit = GetWorld()->SweepMultiByProfile(Hits,TraceStart,TraceEnd, InitialRotationQuat,"USBActor",Shape,Params);//Param
-		bool const bHadBlockingHit=UKismetSystemLibrary::BoxTraceMultiByProfile(GetWorld(),TraceStart,TraceEnd,Shape.GetBox(), InitialRotationQuat.Rotator(),"USBActor",true,m_AryTraceIgnoreActors,EDrawDebugTrace::ForOneFrame,Hits,true,FLinearColor::Green,FLinearColor::Red,1.f);
+		bool const bHadBlockingHit=UKismetSystemLibrary::BoxTraceMultiByProfile(GetWorld(),
+			TraceStart,TraceEnd,Shape.GetBox(),
+			InitialRotationQuat.Rotator(),m_NameSweepProfileName,true,m_AryTraceIgnoreActors,
+			m_bShowDebug ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,Hits,true,FLinearColor::Green,FLinearColor::Red,1.f);
+
 		if (Hits.Num() > 0)
 		{
 			const float DeltaSize = FMath::Sqrt(DeltaSizeSq);
+
 			for (int32 HitIdx = 0; HitIdx < Hits.Num(); HitIdx++)
 			{
 				PullBackHit(Hits[HitIdx], TraceStart, TraceEnd, DeltaSize);
 			}
-
 
 			if (Hits.Num() > 1)
 			{
@@ -807,6 +807,7 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 				{
 					return true;
 				}
+
 				bFilledHitResult = true;
 			}
 		}

@@ -17,6 +17,7 @@ UPortSkMeshComponent::UPortSkMeshComponent(const FObjectInitializer & objInit)
 	m_MatPortFailColor = FColor::Red;
 	m_MatPortSuccessColor = FColor::Cyan;
 	m_fBlinkDelay = 0.5f;
+	m_NameInitCollProfile = "PhysicsActor";
 	m_NameMatScalarParam = "Brightness";
 	m_fMatBrightness = 0.9f;
 	m_fFailImpulsePower = 10000.f;
@@ -191,7 +192,7 @@ void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)//should call
 	m_ConnectedPin = connector;
 	ConstraintPinPort();
 	m_OnConnected.Broadcast(m_ConnectedPin);
-	GetParentSkMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Block);
+	GetParentSkMesh()->SetCollisionProfileName(m_NameInitCollProfile);
 	//EnableOverlap();
 	EndBlink();
 	SetPortMatColor(m_NameMatVectorParam, m_MatInitColor);
@@ -242,7 +243,7 @@ EPinPortType UPortSkMeshComponent::GetPortType() const
 void UPortSkMeshComponent::OnPlayerOverlap(UPrimitiveComponent * OverlappedComponent, AActor * OtherActor, UPrimitiveComponent * OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult)
 {
 	
-	AUSB_PlayerPawn* Player =Cast<AUSB_PlayerPawn> (OtherActor);
+	APawn* Player =Cast<APawn> (OtherActor);
 	if (!Player)
 	{
 		return;
@@ -252,7 +253,7 @@ void UPortSkMeshComponent::OnPlayerOverlap(UPrimitiveComponent * OverlappedCompo
 
 void UPortSkMeshComponent::OnPlayerExit(UPrimitiveComponent * OverlappedComponent, AActor * OtherActor, UPrimitiveComponent * OtherComp, int32 OtherBodyIndex)
 {
-	AUSB_PlayerPawn* Player = Cast<AUSB_PlayerPawn>(OtherActor);
+	APawn* Player = Cast<APawn>(OtherActor);
 	if (!Player)
 	{
 		return;

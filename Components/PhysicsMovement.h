@@ -17,6 +17,7 @@ public:
 	UPhysicsMovement(const FObjectInitializer& objInit);
 
 protected:
+
 	TArray<AActor*> m_AryTraceIgnoreActors;
 
 	FVector m_InputNormal;
@@ -57,6 +58,9 @@ protected:
 	UPhysicsSkMeshComponent* m_MovingTarget;
 
 public:
+public:
+	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement")
+	FName m_NameSweepProfileName;
 	UPROPERTY(EditDefaultsOnly, Category = "Debug")
 	bool m_bShowDebug;
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement", meta = (ClampMin = "1", UIMin = "1"))

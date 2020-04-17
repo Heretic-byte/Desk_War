@@ -7,6 +7,7 @@ UUSBMovement::UUSBMovement(const FObjectInitializer& objInit):Super(objInit)
 	m_fAutoMoveTimer = -1.f;
 	m_fInitHeadMass = 2.5f;
 	m_PlayerPawn = nullptr;
+	m_NameSweepProfileName = "USBActor";
 }
 
 void UUSBMovement::BeginPlay()

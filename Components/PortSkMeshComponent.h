@@ -30,6 +30,8 @@ public:
 public:
 	UPROPERTY(EditDefaultsOnly, Category = "Body_Bones")
 	float m_fFailImpulsePower;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Physics")
+	FName m_NameInitCollProfile;
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Blink")
 	float m_fBlinkDelay;
@@ -43,6 +45,7 @@ protected:
 	FName m_NameMatScalarParam;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Blink")
 	FName m_NameMatVectorParam;
+	
 	UPROPERTY()
 	UMaterialInterface* m_BlinkMat;
 	UPROPERTY()

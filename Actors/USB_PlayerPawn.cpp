@@ -48,7 +48,6 @@ void AUSB_PlayerPawn::BeginPlay()
 	InitUSB();
 
 	m_UsbMovement->InitUSBUpdateComponent(this, m_CurrentHead, m_CurrentTail);
-
 	for (auto* Sphere : m_ArySpineColls)
 	{
 		AddPhysicsBody(Sphere);
@@ -92,6 +91,7 @@ void AUSB_PlayerPawn::InitPlayerPawn()
 	m_fCollMass = 1.f;
 	m_fMaxAngularVelocity = 150.f;
 	m_fBlockMoveTimeWhenEject = 1.5f;
+
 	AutoPossessPlayer = EAutoReceiveInput::Player0;
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 
@@ -383,16 +383,23 @@ void AUSB_PlayerPawn::ConnectChargingStart()
 	//µüºÙ¾îÀÖÀ»¶§ ½ºÀ¬ ÇÊ¿ä
 	FHitResult Hit;
 	FVector TraceStart = m_CurrentHeadPin->GetComponentLocation();
-	FVector TraceEnd = TraceStart + For * 50.f;
+	FVector TraceEnd = TraceStart+For * 3.f;
 	FCollisionShape ShapeBox = m_UsbMovement->MakeMovingTargetBox();
 	FCollisionQueryParams Param;
 
 	AddIgnoreActorsToQuery(Param);
+
+	TArray<TEnumAsByte<EObjectTypeQuery> >  ObjectTypes;
+	ObjectTypes.Add(EObjectTypeQuery::ObjectTypeQuery8);
 	//sweepÀÌ´Ï Àß¸øµÊ
-	if (GetWorld()->SweepSingleByProfile(Hit, TraceStart, TraceEnd, m_CurrentHeadPin->GetComponentQuat(), "USBActor", ShapeBox, Param) && Hit.GetActor())
+	if (UKismetSystemLibrary::BoxTraceSingleForObjects(GetWorld(),
+		TraceStart, TraceEnd, ShapeBox.GetBox(),
+		m_CurrentHead->GetComponentRotation(), ObjectTypes, true, m_AryTraceIgnoreActors,
+		EDrawDebugTrace::ForOneFrame, Hit, true, FLinearColor::Green, FLinearColor::Red, 1.f) && Hit.GetActor())
 	{
-		TryConnect(m_CurrentHead, Hit.GetActor(), Hit.GetComponent(), 0, false, Hit);
 		PRINTF("Forward Overlap Called");
+		TryConnect(m_CurrentHead, Hit.GetActor(), Hit.GetComponent(), 0, false, Hit);
+		return;
 	}
 
 	m_CurrentHead->OnComponentBeginOverlap.AddDynamic(this, &AUSB_PlayerPawn::TryConnect);
