@@ -761,11 +761,11 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	TArray<TEnumAsByte<	EObjectTypeQuery> >  ObjectTypes;
 	ObjectTypes.Add(EObjectTypeQuery::ObjectTypeQuery1);
 	ObjectTypes.Add(EObjectTypeQuery::ObjectTypeQuery2);
-	if (DeltaSizeSq > 0.f)//여기서 현재 컴플렉스 콜리전 true 상태이다,
+	if (DeltaSizeSq > 0.f)//여기서 현재 컴플렉스 콜리전 false 상태이다,
 	{
 		bool const bHadBlockingHit=UKismetSystemLibrary::BoxTraceMultiForObjects(GetWorld(),
 			TraceStart,TraceEnd,Shape.GetBox(),
-			InitRot, ObjectTypes,true,m_AryTraceIgnoreActors,
+			InitRot, ObjectTypes,false,m_AryTraceIgnoreActors,
 			m_bShowDebug ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,Hits,true,FLinearColor::Green,FLinearColor::Red,1.f);
 
 		if (Hits.Num() > 0)
