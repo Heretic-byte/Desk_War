@@ -807,6 +807,12 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 							BlockingHitIndex = HitIdx;
 							//각도차가 클수록 내적이 작아진다.
 						}
+
+						if (Hits.Num() == 1 && NormalDotDelta < 300 && NormalDotDelta>100)
+						{
+							//코너 끼임 방지임 이게
+							return true;
+						}
 					}
 					else if (BlockingHitIndex == INDEX_NONE)
 					{
