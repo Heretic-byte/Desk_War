@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 using UnrealBuildTool;
 
@@ -18,7 +18,9 @@ public class Desk_War : ModuleRules
             "UMG",
             "PhysX",
             "APEX",
-            "AIModule"
+            "AIModule",
+            "OnlineSubsystem",
+            "﻿OnlineSubsystemSteam﻿"
         });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {

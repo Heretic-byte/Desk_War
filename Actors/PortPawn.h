@@ -33,6 +33,7 @@ private:
 	void CreatePort();
 	void CreatePhyCon();
 	void CreateSphereColl();
+protected:
 	virtual void PortConnected(UPinSkMeshComponent* pinConnect);
 	virtual void PortDisConnected(UPinSkMeshComponent* pinConnect);
 protected:

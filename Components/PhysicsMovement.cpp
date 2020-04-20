@@ -48,7 +48,7 @@ void UPhysicsMovement::BeginPlay()
 
 	SetWalkableFloorAngle(m_fWalkableSlopeAngle);
 
-	TickCastGround();
+	//TickCastGround();
 	m_bIsFalling = !m_bOnGround;
 
 	
@@ -807,8 +807,8 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 							BlockingHitIndex = HitIdx;
 							//각도차가 클수록 내적이 작아진다.
 						}
-
-						if (Hits.Num() == 1 && NormalDotDelta < 300 && NormalDotDelta>100)
+						PRINTF("Name:%s,: %f",*Hits[HitIdx].GetComponent()->GetName(), NormalDotDelta);
+						if ( NormalDotDelta < 300 && NormalDotDelta>100)//Hits.Num() == 1 &&
 						{
 							//코너 끼임 방지임 이게
 							return true;

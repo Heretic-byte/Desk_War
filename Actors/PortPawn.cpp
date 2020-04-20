@@ -65,7 +65,7 @@ void APortPawn::CreatePort()
 	m_MeshPort = CreateDefaultSubobject<UPortSkMeshComponent>(MeshPortComponentName);
 	m_MeshPort->SetupAttachment(m_Mesh);
 	m_MeshPort->CastShadow = false;
-
+	m_MeshPort->SetGenerateOverlapEvents(true);
 }
 
 void APortPawn::BeginPlay()

@@ -12,9 +12,7 @@
 
 #include "PhysicsPathFollowingComponent.generated.h"
 
-//class ARecastNavMesh;
-//class UNavigationSystemV1;
-UCLASS()
+UCLASS(ClassGroup = Movement, meta = (BlueprintSpawnableComponent))
 class DESK_WAR_API UPhysicsPathFollowingComponent : public UPathFollowingComponent
 {
 	GENERATED_BODY()

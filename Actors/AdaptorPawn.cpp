@@ -8,6 +8,11 @@ AAdaptorPawn::AAdaptorPawn(const FObjectInitializer& objInit):
 	Super(objInit.SetDefaultSubobjectClass<UPinSkMeshComponent>(APortPawn::MeshComponentName))
 {
 	m_MeshPort->m_NameInitCollProfile = "USBActor";
+
+	m_Movement = CreateDefaultSubobject<UNavPawnMovement>("Movement00");
+	m_Movement->m_fJumpZVelocity = 1000.f;
+	m_Movement->m_nJumpMaxCount = 1;
+
 }
 
 
@@ -22,4 +27,20 @@ void AAdaptorPawn::BeginPlay()
 	{
 		PRINTF("!! The Mesh Doesnt Have PinPoint Socket");
 	}
+
+	m_Movement->SetMovingComponent(m_Mesh,false);
+}
+
+void AAdaptorPawn::PortConnected(UPinSkMeshComponent * pinConnect)
+{
+	Super::PortConnected(pinConnect);
+
+	m_Movement->StopMovementImmediately();
+
+	PRINTF("Move Stop");
+}
+
+void AAdaptorPawn::PortDisConnected(UPinSkMeshComponent * pinConnect)
+{
+	Super::PortDisConnected(pinConnect);
 }
