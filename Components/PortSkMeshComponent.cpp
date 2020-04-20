@@ -58,6 +58,7 @@ void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, 
 
 	m_CollSphere->OnComponentBeginOverlap.AddDynamic(this,&UPortSkMeshComponent::OnPlayerOverlap);
 	m_CollSphere->OnComponentEndOverlap.AddDynamic(this, &UPortSkMeshComponent::OnPlayerExit);
+
 	if (portType != EPinPortType::ENoneType)
 	{
 		m_PortType = portType;
@@ -67,8 +68,6 @@ void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, 
 	{
 		m_NameParentBonePortPoint = namePinBone;
 	}
-
-	
 }
 
 void UPortSkMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction)
@@ -229,7 +228,6 @@ bool UPortSkMeshComponent::IsConnected()
 {
 	return m_ConnectedPin;
 }
-
 
 void UPortSkMeshComponent::EnableOverlap()
 {

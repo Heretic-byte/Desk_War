@@ -40,7 +40,7 @@ protected:
 	TArray<UPrimitiveComponent*> m_AryPhysicsBody;
 	
 	float m_fTotalMass;
-
+	float m_fMaxSpeedSqr;
 private:
 	bool m_bBlockHeadChange;
 	bool m_bBlockJump;
@@ -141,6 +141,7 @@ protected:
 	virtual void BeginPlay() override;
 	void InitTraceIgnoreAry();
 	void TickTracePortable();
+	bool IsImpulseVelocityLower();
 public:
 	virtual void Tick(float DeltaTime) override;
 	void EnableUSBInput();

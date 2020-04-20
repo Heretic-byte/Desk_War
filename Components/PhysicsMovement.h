@@ -103,7 +103,7 @@ public:
 
 public:
 	virtual bool IsMovingOnGround()  const override;
-
+	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
 	void SetMovingComponent(USceneComponent* NewUpdatedComponent, bool bRemoveIgnoreActorOld);
 
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;

@@ -66,6 +66,8 @@ void AUSB_PlayerPawn::BeginPlay()
 	Cast<UPinSkMeshComponent>(m_CurrentTail)->m_fFailImpulsePower = m_fDefaultFailImpulsePower;
 
 	APawn::BeginPlay();
+
+	m_fMaxSpeedSqr = m_UsbMovement->GetMaxForce() *m_UsbMovement->GetMaxForce();
 }
 
 USceneComponent * AUSB_PlayerPawn::GetFocusedPortTarget()
@@ -231,7 +233,7 @@ void AUSB_PlayerPawn::Tick(float DeltaTime)
 	{
 		m_fBlockMoveTimeWhenEjectTimer -= DeltaTime;
 
-		if (m_fBlockMoveTimeWhenEjectTimer <= 0)
+		if (m_fBlockMoveTimeWhenEjectTimer <= 0 || IsImpulseVelocityLower())
 		{
 			EnableUSBInput();
 			m_fBlockMoveTimeWhenEjectTimer = 0.f;
@@ -604,6 +606,13 @@ void AUSB_PlayerPawn::TickTracePortable()
 	}
 
 	m_CurrentFocusedPort = nullptr;
+}
+
+bool AUSB_PlayerPawn::IsImpulseVelocityLower()//임펄스중 속력이 인풋보다 작아지면 움직일수 있게됨
+{
+	float CurrentSize= m_CurrentHead->GetPhysicsLinearVelocity().SizeSquared();
+
+	return CurrentSize < m_fMaxSpeedSqr;
 }
 
 

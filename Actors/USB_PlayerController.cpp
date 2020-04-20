@@ -22,7 +22,7 @@ AUSB_PlayerController::AUSB_PlayerController()
 {
 	PlayerCameraManagerClass = AUSB_CameraManager::StaticClass();
 	CheatClass = UUSB_CheatManager::StaticClass();
-	m_bUseNavMove = false;
+	m_bUseNavMove = true;
 	//
 	DefaultMouseCursor = EMouseCursor::Crosshairs;
 	m_PathFollowComp = CreateDefaultSubobject<UPhysicsPathFollowingComponent>("PathFollowComp00");
