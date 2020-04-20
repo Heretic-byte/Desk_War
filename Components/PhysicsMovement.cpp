@@ -12,7 +12,6 @@
 
 UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 {
-	m_NameSweepProfileName = "PhysicsActor";
 	m_bShowDebug = false;
 	m_fMaxTimeStep = 33.f;
 	m_fGroundFriction = 2.f;
@@ -50,8 +49,6 @@ void UPhysicsMovement::BeginPlay()
 
 	TickCastGround();
 	m_bIsFalling = !m_bOnGround;
-
-	
 }
 
 
@@ -126,6 +123,7 @@ float UPhysicsMovement::GetMinAnalogSpeed() const
 	return m_fMinAnalogSpeed;
 }
 
+
 float UPhysicsMovement::GetMaxSpeed() const
 {
 	return m_fMaxSpeed;
@@ -199,7 +197,6 @@ void UPhysicsMovement::SetMovingComponent(USceneComponent* NewUpdatedComponent, 
 	}
 	SetUpdatedComponent(NewUpdatedComponent);
 
-
 	m_Shape = MakeMovingTargetBox();
 }
 
@@ -264,14 +261,7 @@ void UPhysicsMovement::TickMovement(float delta)
 
 	if (Hit.bStartPenetrating)
 	{
-		FVector Loc = m_MovingTarget->GetComponentLocation();
-		FVector HitPoint = Hit.ImpactPoint;
-		HitPoint.Z = Loc.Z;
-		FVector HitNormal = (HitPoint - Loc).GetSafeNormal();
-
-		float Dot = m_InputNormal | HitNormal;
-
-		ResultVector = Dot >= 0 ? SlideAlongOnSurface(Delta, delta, 1.f, Hit.Normal, Hit, true) : Delta.Size() * m_InputNormal;//delta?
+		ResultVector = SlideAlongOnSurface(Delta, delta, 1.f, Hit.Normal, Hit, true);
 	}
 	else if (Hit.IsValidBlockingHit())	//일반적인 BlockingHit일 때
 	{
@@ -358,7 +348,7 @@ bool UPhysicsMovement::IsFalling() const
 void UPhysicsMovement::TickCastGround()
 {
 	m_GroundHitResult.Reset(1.f, false);
-	FCollisionShape BoxShape = m_Shape; //MakeMovingTargetBox();
+	FCollisionShape BoxShape = m_Shape;
 	FVector TraceStart = m_MovingTarget->GetComponentLocation();
 
 	FVector TraceEnd = TraceStart;
@@ -373,9 +363,9 @@ void UPhysicsMovement::TickCastGround()
 	Ex *= 0.3f;
 	BoxShape.SetBox(Ex);
 
+
 	m_bOnGround = GetWorld()->SweepSingleByChannel(m_GroundHitResult, TraceStart, TraceEnd, FQuat(FVector(0.f, 0.f, -1.f), PI * 0.25f), Channel, BoxShape, QueryParam);
 	m_fGroundDist = (TraceStart.Z - m_GroundHitResult.Location.Z);
-
 	if (!m_bOnGround)//간혹 실패할경우 각도차이인지 확인
 	{
 		m_GroundHitResult.Reset(1.f, false);
@@ -385,11 +375,15 @@ void UPhysicsMovement::TickCastGround()
 		m_fGroundDist = (TraceStart.Z - m_GroundHitResult.Location.Z);
 	}
 
-	if (m_bOnGround && -100 > m_GroundHitResult.Component.Get()->GetPhysicsLinearVelocity().Z)//공중에서 떨어지고 있는 오브젝트는 디딤체크안함
+
+	if (m_bOnGround  && -100 > m_GroundHitResult.Component.Get()->GetPhysicsLinearVelocity().Z)//공중에서 떨어지고 있는 오브젝트는 디딤체크안함
 	{
+		PRINTF("Reset It it simul");
 		m_bOnGround = false;
 		m_GroundHitResult.Reset(1.f, false);
 	}
+
+
 
 	if (m_bIsFalling == m_bOnGround)
 	{
@@ -400,6 +394,18 @@ void UPhysicsMovement::TickCastGround()
 			Landing();
 		}
 	}
+}
+
+FVector UPhysicsMovement::GetVelocity()
+{
+	if (!m_MovingTarget)
+	{
+		return FVector::ZeroVector;
+	}
+
+	FVector Normal = m_MovingTarget->GetPhysicsLinearVelocity().GetSafeNormal2D();
+
+	return UKismetMathLibrary::InverseTransformDirection(m_MovingTarget->GetComponentTransform(), Normal);
 }
 
 
@@ -455,18 +461,6 @@ void UPhysicsMovement::AddImpulse(FVector impulseWant)
 	}
 
 	m_MovingTarget->AddImpulse(impulseWant);
-}
-
-FVector UPhysicsMovement::GetVelocity()
-{
-	if (!m_MovingTarget)
-	{
-		return FVector::ZeroVector;
-	}
-
-	FVector Normal= m_MovingTarget->GetPhysicsLinearVelocity().GetSafeNormal2D();
-
-	return UKismetMathLibrary::InverseTransformDirection(m_MovingTarget->GetComponentTransform(),Normal);
 }
 
 void UPhysicsMovement::CheckJumpInput(float DeltaTime)
@@ -525,11 +519,13 @@ void UPhysicsMovement::ClearJumpInput(float delta)
 			ResetJumpState();
 		}
 	}
-	else if (Walkable&&!IsFalling() && m_MovingTarget->GetPhysicsLinearVelocity().Z <10.f)
+	else if (Walkable && !IsFalling() && m_MovingTarget->GetPhysicsLinearVelocity().Z < 10.f)
 	{
 		ResetJumpState();
 	}
 }
+
+
 
 void UPhysicsMovement::ResetJumpState()
 {
@@ -706,7 +702,6 @@ FVector UPhysicsMovement::SlideAlongOnSurface(const FVector& velocity, float del
 			if (!SlideDelta.IsNearlyZero(1e-3f) && (SlideDelta | velocity) > 0.f)
 			{
 				SweepCanMove(SlideDelta, deltaTime, Hit);
-
 				const float SecondHitPercent = Hit.Time * (1.f - FirstHitPercent);
 				PercentTimeApplied += SecondHitPercent;
 			}
@@ -719,16 +714,11 @@ FVector UPhysicsMovement::SlideAlongOnSurface(const FVector& velocity, float del
 bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult& OutHit)
 {
 	const float MinMovementDistSq = FMath::Square(4.f*KINDA_SMALL_NUMBER);
-
 	const FQuat InitialRotationQuat = m_MovingTarget->GetComponentTransform().GetRotation();
+	FRotator Rot = m_MovingTarget->GetComponentRotation();
 
-	FRotator InitRot = m_MovingTarget->GetComponentRotation();
+	FCollisionShape Shape = MakeMovingTargetBox();
 
-
-	m_bTwoWallHit = false;
-
-	//m_Shape = MakeMovingTargetBox();
-	FCollisionShape Shape = m_Shape;
 	FVector Ex = Shape.GetExtent();
 
 	Ex.Z *= 0.2f;
@@ -738,8 +728,11 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	Shape.SetBox(Ex);
 
 	FVector TraceStart = m_MovingTarget->GetComponentLocation();
-	const FVector TraceEnd = TraceStart +(m_InputNormal* delta.Size()*deltaTime);
+	const FVector TraceEnd = TraceStart + (delta*deltaTime);
 	float DeltaSizeSq = (TraceEnd - TraceStart).SizeSquared();
+
+	if (m_bShowDebug)
+		DrawDebugBox(GetWorld(), TraceEnd, Ex, FColor::Red, false, -1.f, 0, 0.2f);
 
 	if (DeltaSizeSq <= MinMovementDistSq)//너무작으면 스윕 안한다
 	{
@@ -753,40 +746,42 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	FHitResult BlockingHit(NoInit);
 	BlockingHit.bBlockingHit = false;
 	BlockingHit.Time = 1.f;
-
 	bool bFilledHitResult = false;
 	bool IsSimul = false;
 	TArray<FHitResult> Hits;
 	FVector NewLocation = TraceStart;
-	TArray<TEnumAsByte<	EObjectTypeQuery> >  ObjectTypes;
-	ObjectTypes.Add(EObjectTypeQuery::ObjectTypeQuery1);
-	ObjectTypes.Add(EObjectTypeQuery::ObjectTypeQuery2);
-	if (DeltaSizeSq > 0.f)//여기서 현재 컴플렉스 콜리전 false 상태이다,
-	{
-		bool const bHadBlockingHit=UKismetSystemLibrary::BoxTraceMultiForObjects(GetWorld(),
-			TraceStart,TraceEnd,Shape.GetBox(),
-			InitRot, ObjectTypes,false,m_AryTraceIgnoreActors,
-			m_bShowDebug ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,Hits,true,FLinearColor::Green,FLinearColor::Red,1.f);
 
+	if (DeltaSizeSq > 0.f)
+	{
+		FComponentQueryParams Params = FComponentQueryParams::DefaultComponentQueryParams;
+		Params.AddIgnoredActor(GetOwner());
+		//AddIgnoreActorsToQuery(Params);
+		//FCollisionResponseParams ResponseParam;
+		//m_MovingTarget->InitSweepCollisionParams(Params, ResponseParam);
+		bool const bHadBlockingHit = GetWorld()->SweepMultiByProfile(Hits, TraceStart, TraceEnd, InitialRotationQuat, "PhysicsActor", Shape,Params);
+
+		//
+		
 		if (Hits.Num() > 0)
 		{
 			const float DeltaSize = FMath::Sqrt(DeltaSizeSq);
-
 			for (int32 HitIdx = 0; HitIdx < Hits.Num(); HitIdx++)
 			{
 				PullBackHit(Hits[HitIdx], TraceStart, TraceEnd, DeltaSize);
 			}
 
-			if (Hits.Num() > 1)
+			PRINTF("HitNum:%d", Hits.Num());
+
+			for (auto T : Hits)
 			{
-				m_bTwoWallHit = true;
+				PRINTF("Actor: %s", *T.Actor.Get()->GetName());
 			}
 		}
 		else
 		{
 			return true;
 		}
-
+		bool ASD=false;
 		if (bHadBlockingHit)
 		{
 			int32 BlockingHitIndex = INDEX_NONE;
@@ -795,18 +790,30 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 			{
 				const FHitResult& TestHit = Hits[HitIdx];
 
-				if (TestHit.bBlockingHit)
-				{
+				if (TestHit.bBlockingHit)//플레이어 몸이 같이 맞으면 스킵이 되어주었다,
+				{//어떻게 플레이어가 픽될때 갈수있얼끌까
 
 					if (TestHit.Time == 0.f)
 					{
 						const float NormalDotDelta = (TestHit.ImpactNormal | delta);
+						PRINTF("%s NormalDot : %f", *TestHit.GetActor()->GetName(),NormalDotDelta);//작은걸 고름
+						//이걸로 벽을 분간하자
+
+			
 						if (NormalDotDelta < BlockingHitNormalDotDelta)
 						{
 							BlockingHitNormalDotDelta = NormalDotDelta;
 							BlockingHitIndex = HitIdx;
-							//각도차가 클수록 내적이 작아진다.
 						}
+
+
+						if (Hits.Num() == 1 &&  NormalDotDelta<300 && NormalDotDelta>100)
+						{
+							ASD = true;
+							PRINTF("ASD");
+							return true;
+						}
+
 					}
 					else if (BlockingHitIndex == INDEX_NONE)
 					{
@@ -825,8 +832,10 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 				{
 					return true;
 				}
-
 				bFilledHitResult = true;
+
+				if (m_bShowDebug)
+					PRINTF("Blocked by : %s", *BlockingHit.GetComponent()->GetName());
 			}
 		}
 		else
@@ -842,8 +851,13 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 		else
 		{
 			check(bFilledHitResult);
+			if(!ASD)
 			NewLocation = TraceStart + (BlockingHit.Time * (TraceEnd - TraceStart));
-
+			else
+			{
+				NewLocation = TraceStart;
+				PRINTF("LocSet TO Origin");
+			}
 			const FVector ToNewLocation = (NewLocation - TraceStart);
 			if (ToNewLocation.SizeSquared() <= MinMovementDistSq)
 			{
@@ -852,18 +866,16 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 			}
 		}
 	}
-
 	OutHit = BlockingHit;
-
 	if (IsSimul)
 	{
 		return true;
 	}
-
 	if (BlockingHit.bBlockingHit)
 	{
 		m_MovingTarget->SetWorldLocationAndRotationNoPhysics(NewLocation, SelectTargetRotation(deltaTime));
-		//m_MovingTarget->SetWorldLocation(NewLocation,false,nullptr,ETeleportType::TeleportPhysics);
+		PRINTF("SweepTeleported");
+
 		if (!IsPendingKill())
 		{
 			check(bFilledHitResult);
@@ -960,7 +972,6 @@ void UPhysicsMovement::StopActiveMovement()
 	{
 		return;
 	}
-
 	Velocity = FVector::ZeroVector;
 	m_Acceleration = FVector::ZeroVector;
 	m_MovingTarget->SetPhysicsLinearVelocity(FVector::ZeroVector);
@@ -989,14 +1000,17 @@ FCollisionShape UPhysicsMovement::MakeMovingTargetBox()
 {
 	FCollisionShape BoxShape = FCollisionShape::MakeBox(m_MovingTarget->GetBodyInstance()->GetBodyBounds().GetExtent());
 
-	if (BoxShape.Box.HalfExtentX < BoxShape.Box.HalfExtentY)
-	{
-		float Swap = BoxShape.Box.HalfExtentX;
+	//if (BoxShape.Box.HalfExtentX < BoxShape.Box.HalfExtentY)
+	//{
+	//	float Swap = BoxShape.Box.HalfExtentX;
 
-		BoxShape.Box.HalfExtentX = BoxShape.Box.HalfExtentY;
+	//	BoxShape.Box.HalfExtentX = BoxShape.Box.HalfExtentY;
+	//	if (BoxShape.GetBox().Y)
+	//	{
 
-		BoxShape.Box.HalfExtentY = Swap;
-	}
+	//		BoxShape.Box.HalfExtentY = Swap;
+	//	}
+	//}
 
 	return BoxShape;
 }

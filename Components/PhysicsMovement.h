@@ -97,10 +97,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
 	virtual void AddImpulse(FVector impulseWant);
 	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
-	FVector GetVelocity();
-	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
 	float GetMinAnalogSpeed() const;
-
+	UFUNCTION(BlueprintCallable, Category = "PhysicsMovement")
+	FVector GetVelocity();
 public:
 	virtual bool IsMovingOnGround()  const override;
 
