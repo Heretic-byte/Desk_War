@@ -115,7 +115,21 @@ bool UUSBMovement::DoJump()
 		CurrentV.Z = FMath::Max(ZVelo, CurrentV.Z);
 		for (auto Phy : m_PlayerPawn->GetPhysicsAry())
 		{
-			Phy->SetPhysicsLinearVelocity(CurrentV);
+
+			if (Phy == m_PlayerPawn->GetHead())
+			{
+
+				float Weight = ((m_PlayerPawn->GetTail()->GetMass() / m_PlayerPawn->GetHead()->GetMass()) / 10.f + 1.f);
+				PRINTF("W: %f", Weight);
+
+				Phy->SetPhysicsLinearVelocity(CurrentV*Weight);
+				
+
+			}
+			else
+			{
+				Phy->SetPhysicsLinearVelocity(CurrentV);
+			}
 		}
 
 		return true;

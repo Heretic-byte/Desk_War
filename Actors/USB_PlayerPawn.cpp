@@ -612,7 +612,7 @@ bool AUSB_PlayerPawn::IsImpulseVelocityLower()//ÀÓÆÞ½ºÁß ¼Ó·ÂÀÌ ÀÎÇ²º¸´Ù ÀÛ¾ÆÁö¸
 {
 	float CurrentSize= m_CurrentHead->GetPhysicsLinearVelocity().SizeSquared();
 
-	return CurrentSize < m_fMaxSpeedSqr;
+	return CurrentSize < m_fMaxSpeedSqr * m_UsbMovement->m_fAirControl;
 }
 
 
