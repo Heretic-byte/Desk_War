@@ -117,8 +117,6 @@ void UPhysicsMovement::CalcVelocity(float DeltaTime, float Friction)
 		Velocity += m_Acceleration * DeltaTime;
 		Velocity = Velocity.GetClampedToMaxSize(NewMaxInputSpeed);
 	}
-
-
 }
 
 float UPhysicsMovement::GetMinAnalogSpeed() const
@@ -130,7 +128,6 @@ float UPhysicsMovement::GetMaxSpeed() const
 {
 	return m_fMaxSpeed;
 }
-
 
 void UPhysicsMovement::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
@@ -198,7 +195,6 @@ void UPhysicsMovement::SetMovingComponent(USceneComponent* NewUpdatedComponent, 
 		AddIgnoreTraceActor(PawnOwner);
 	}
 	SetUpdatedComponent(NewUpdatedComponent);
-
 
 	m_Shape = MakeMovingTargetBox();
 }
@@ -727,18 +723,20 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 
 	m_bTwoWallHit = false;
 
-	//m_Shape = MakeMovingTargetBox();
 	FCollisionShape Shape = m_Shape;
 	FVector Ex = Shape.GetExtent();
 
-	Ex.Z *= 0.2f;
-	Ex.X *= 1.1f;
-	Ex.Y *= 1.1f;
+	float ExHeight = Ex.Z;
+	Ex.Z *= 1.2f;
+	Ex.X *= 1.2f;
+	Ex.Y *= 1.2f;
 
 	Shape.SetBox(Ex);
 
 	FVector TraceStart = m_MovingTarget->GetComponentLocation();
-	const FVector TraceEnd = TraceStart +(m_InputNormal* delta.Size()*deltaTime);
+	TraceStart.Z += ExHeight * 0.3f;
+	FVector TraceEnd = TraceStart +(m_InputNormal* delta.Size()*deltaTime);
+
 	float DeltaSizeSq = (TraceEnd - TraceStart).SizeSquared();
 
 	if (DeltaSizeSq <= MinMovementDistSq)//너무작으면 스윕 안한다
@@ -763,11 +761,12 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	ObjectTypes.Add(EObjectTypeQuery::ObjectTypeQuery2);
 	if (DeltaSizeSq > 0.f)//여기서 현재 컴플렉스 콜리전 false 상태이다,
 	{
+		//m_AryTraceIgnoreActors.Add(m_GroundHitResult.GetActor());
 		bool const bHadBlockingHit=UKismetSystemLibrary::BoxTraceMultiForObjects(GetWorld(),
 			TraceStart,TraceEnd,Shape.GetBox(),
 			InitRot, ObjectTypes,false,m_AryTraceIgnoreActors,
 			m_bShowDebug ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,Hits,true,FLinearColor::Green,FLinearColor::Red,1.f);
-
+		//m_AryTraceIgnoreActors.Remove(m_GroundHitResult.GetActor());
 		if (Hits.Num() > 0)
 		{
 			const float DeltaSize = FMath::Sqrt(DeltaSizeSq);
@@ -807,7 +806,6 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 							BlockingHitIndex = HitIdx;
 							//각도차가 클수록 내적이 작아진다.
 						}
-						PRINTF("Name:%s,: %f",*Hits[HitIdx].GetComponent()->GetName(), NormalDotDelta);
 						if ( NormalDotDelta < 300 && NormalDotDelta>100)//Hits.Num() == 1 &&
 						{
 							//코너 끼임 방지임 이게
