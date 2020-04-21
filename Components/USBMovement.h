@@ -15,6 +15,7 @@ UCLASS()
 class DESK_WAR_API UUSBMovement : public UPhysicsMovement
 {
 	GENERATED_BODY()
+
 public:
 	UPROPERTY(BlueprintAssignable, Category = "PhysicsMovement_Jump")
 	FVoidVoidBP m_OnJumpBP;

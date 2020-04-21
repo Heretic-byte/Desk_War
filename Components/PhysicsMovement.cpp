@@ -20,7 +20,7 @@ UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 	m_fMaxBrakingDeceleration = 400.f;
 	m_fMinAnalogSpeed = 10.f;
 	m_MovingTarget = nullptr;
-	m_fJumpZVelocity = 540.f;
+	m_fJumpHeight = 140.f;
 	m_fMovingForce = 600.f;
 	m_bOnGround = false;
 	m_bPressedJump = false;
@@ -481,10 +481,10 @@ bool UPhysicsMovement::DoJump()
 {
 	if (CanJump())
 	{
+		
 		FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
-		CurrentV.Z = FMath::Max(m_fJumpZVelocity, CurrentV.Z);
-
-		m_MovingTarget->SetPhysicsLinearVelocity(CurrentV);
+		float ZVelo = FMath::Sqrt(-2.f * GetGravityZ()* m_fJumpHeight);
+		CurrentV.Z = FMath::Max(ZVelo, CurrentV.Z);
 
 		m_nJumpCurrentCount++;
 		PRINTF("JumpCount:%d", m_nJumpCurrentCount);

@@ -1,8 +1,13 @@
 #include "USBMovement.h"
 #include "Actors/USB_PlayerPawn.h"
+#include "Components/PrimitiveComponent.h"
+#include "Components/SphereComponent.h"
+
+
 
 UUSBMovement::UUSBMovement(const FObjectInitializer& objInit):Super(objInit)
 {
+	m_fJumpHeight = 20.f;
 	m_fAutoMoveTimeWant = -1.f;
 	m_fAutoMoveTimer = -1.f;
 	m_fInitHeadMass = 2.5f;
@@ -104,15 +109,14 @@ bool UUSBMovement::DoJump()
 			m_OnJumpSeveralBP.Broadcast(m_nJumpCurrentCount);
 		}
 
-		FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
-		CurrentV.Z = FMath::Max(m_fJumpZVelocity, CurrentV.Z);
-		float CurrentHeadMass = m_MovingTarget->GetBodyInstance()->GetBodyMass();
-		float CurrentTailMass = m_MovingTargetTail->GetBodyInstance()->GetBodyMass();
-		float HeadMassRate = CurrentHeadMass / m_fInitHeadMass;
-		float TailMassRate = CurrentTailMass / m_fInitHeadMass;
 
-		m_MovingTarget->SetPhysicsLinearVelocity(CurrentV*TailMassRate);
-		m_MovingTargetTail->SetPhysicsLinearVelocity(CurrentV *HeadMassRate);
+		FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
+		float ZVelo= FMath::Sqrt(-2.f *GetGravityZ() * m_fJumpHeight);
+		CurrentV.Z = FMath::Max(ZVelo, CurrentV.Z);
+		for (auto Phy : m_PlayerPawn->GetPhysicsAry())
+		{
+			Phy->SetPhysicsLinearVelocity(CurrentV);
+		}
 
 		return true;
 	}

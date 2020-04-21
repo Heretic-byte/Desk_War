@@ -169,5 +169,10 @@ public:
 		return m_UsbMovement->IsMovingOnGround();
 	}
 
+	FORCEINLINE const TArray<UPrimitiveComponent*>& GetPhysicsAry()
+	{
+		return m_AryPhysicsBody;
+	}
+
 	
 };

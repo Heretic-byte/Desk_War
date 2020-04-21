@@ -10,7 +10,6 @@ AAdaptorPawn::AAdaptorPawn(const FObjectInitializer& objInit):
 	m_MeshPort->m_NameInitCollProfile = "USBActor";
 
 	m_Movement = CreateDefaultSubobject<UNavPawnMovement>("Movement00");
-	m_Movement->m_fJumpZVelocity = 1000.f;
 	m_Movement->m_nJumpMaxCount = 1;
 
 }
