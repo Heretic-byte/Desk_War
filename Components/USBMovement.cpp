@@ -71,7 +71,6 @@ void UUSBMovement::RequestConnectChargeMove(const FVector & normalHorizon, float
 	m_fAutoMoveInput = normalHorizon;
 	m_fAutoMoveTimeWant = timeWant;
 	m_fAutoMoveTimer = 0;
-	m_bNotUseSweep = true;
 }
 
 void UUSBMovement::RequestAirConnectChargeMove(FRotator portRot, const FVector & normalHorizon, float timeWant)
@@ -82,7 +81,6 @@ void UUSBMovement::RequestAirConnectChargeMove(FRotator portRot, const FVector &
 
 void UUSBMovement::StopUSBMove()
 {
-	m_bNotUseSweep = false;
 	m_fAutoMoveTimeWant = 0.f;
 	m_fAutoMoveTimer = 0.f;
 	m_fAutoMoveInput = FVector::ZeroVector;

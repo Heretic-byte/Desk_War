@@ -6,12 +6,6 @@ UPhysicsSkMeshComponent::UPhysicsSkMeshComponent(const FObjectInitializer& objIn
 	:Super(objInit)
 {
 
-	OnComponentHit.AddDynamic(this, &UPhysicsSkMeshComponent::OnBlockHit);
 
 }
 
-void UPhysicsSkMeshComponent::OnBlockHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
-{
-
-
-}

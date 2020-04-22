@@ -194,8 +194,4 @@ protected:
 	void AddIgnoreActorsToQuery(FCollisionQueryParams& queryParam);
 
 	
-
-	//
-
-	bool m_bNotUseSweep = false;
 };

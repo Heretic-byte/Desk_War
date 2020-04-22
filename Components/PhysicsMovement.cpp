@@ -75,10 +75,6 @@ void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
 	}
 	CalcVelocity(DeltaTime, m_fGroundFriction);
 
-	if (m_Acceleration.SizeSquared2D() < 1)//maybe square better?
-	{
-		return;
-	}
 	TickMovement(DeltaTime);
 
 	UpdateComponentVelocity();
@@ -246,6 +242,7 @@ void UPhysicsMovement::TickMovement(float delta)
 	FHitResult Hit(1.f);
 	FVector RampVector = ComputeGroundMovementDelta(Delta, m_GroundHitResult);
 	FVector ResultVector;
+
 	if (SweepCanMove(RampVector, delta, Hit))
 	{
 		SetVelocity(RampVector, Hit);
@@ -726,6 +723,7 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	FCollisionShape Shape = m_Shape;
 	FVector Ex = Shape.GetExtent();
 
+	float ExFront = Ex.X;
 	float ExHeight = Ex.Z;
 	Ex.Z *= 1.2f;
 	Ex.X *= 1.2f;
@@ -759,15 +757,12 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	TArray<TEnumAsByte<	EObjectTypeQuery> >  ObjectTypes;
 	ObjectTypes.Add(EObjectTypeQuery::ObjectTypeQuery1);
 	ObjectTypes.Add(EObjectTypeQuery::ObjectTypeQuery2);
-	ObjectTypes.Add(EObjectTypeQuery::ObjectTypeQuery4);
 	if (DeltaSizeSq > 0.f)//여기서 현재 컴플렉스 콜리전 false 상태이다,
 	{
-		//m_AryTraceIgnoreActors.Add(m_GroundHitResult.GetActor());
 		bool const bHadBlockingHit=UKismetSystemLibrary::BoxTraceMultiForObjects(GetWorld(),
 			TraceStart,TraceEnd,Shape.GetBox(),
 			InitRot, ObjectTypes,false,m_AryTraceIgnoreActors,
 			m_bShowDebug ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,Hits,true,FLinearColor::Green,FLinearColor::Red,1.f);
-		//m_AryTraceIgnoreActors.Remove(m_GroundHitResult.GetActor());
 		if (Hits.Num() > 0)
 		{
 			const float DeltaSize = FMath::Sqrt(DeltaSizeSq);
@@ -828,14 +823,7 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 
 				if (IsSimul)
 				{
-					float Size= BlockingHit.GetComponent()->GetPhysicsLinearVelocity().Size();
-
-					if (Size > 100)
-					{
-						return true;
-					}
-
-					//return false;
+					return true;
 				}
 
 				bFilledHitResult = true;
