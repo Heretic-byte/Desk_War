@@ -732,7 +732,7 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	Ex.Y *= 1.2f;
 
 	Shape.SetBox(Ex);
-
+	//m_bNotUseSweep
 	FVector TraceStart = m_MovingTarget->GetComponentLocation();
 	TraceStart.Z += ExHeight * 0.3f;
 	FVector TraceEnd = TraceStart +(m_InputNormal* delta.Size()*deltaTime);
@@ -759,6 +759,7 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	TArray<TEnumAsByte<	EObjectTypeQuery> >  ObjectTypes;
 	ObjectTypes.Add(EObjectTypeQuery::ObjectTypeQuery1);
 	ObjectTypes.Add(EObjectTypeQuery::ObjectTypeQuery2);
+	ObjectTypes.Add(EObjectTypeQuery::ObjectTypeQuery4);
 	if (DeltaSizeSq > 0.f)//여기서 현재 컴플렉스 콜리전 false 상태이다,
 	{
 		//m_AryTraceIgnoreActors.Add(m_GroundHitResult.GetActor());
@@ -827,7 +828,14 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 
 				if (IsSimul)
 				{
-					return true;
+					float Size= BlockingHit.GetComponent()->GetPhysicsLinearVelocity().Size();
+
+					if (Size > 100)
+					{
+						return true;
+					}
+
+					//return false;
 				}
 
 				bFilledHitResult = true;
@@ -867,10 +875,8 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	if (BlockingHit.bBlockingHit)
 	{
 		m_MovingTarget->SetWorldLocationAndRotationNoPhysics(NewLocation, SelectTargetRotation(deltaTime));
-		//m_MovingTarget->SetWorldLocation(NewLocation,false,nullptr,ETeleportType::TeleportPhysics);
 		if (!IsPendingKill())
 		{
-			check(bFilledHitResult);
 			m_MovingTarget->DispatchBlockingHit(*PawnOwner, BlockingHit);
 		}
 	}

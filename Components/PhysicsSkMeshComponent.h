@@ -14,4 +14,7 @@ UCLASS()
 class DESK_WAR_API UPhysicsSkMeshComponent : public USkeletalMeshComponent
 {
 	GENERATED_UCLASS_BODY()
+public:
+	UFUNCTION()
+	void OnBlockHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 };

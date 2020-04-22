@@ -71,6 +71,7 @@ void UUSBMovement::RequestConnectChargeMove(const FVector & normalHorizon, float
 	m_fAutoMoveInput = normalHorizon;
 	m_fAutoMoveTimeWant = timeWant;
 	m_fAutoMoveTimer = 0;
+	m_bNotUseSweep = true;
 }
 
 void UUSBMovement::RequestAirConnectChargeMove(FRotator portRot, const FVector & normalHorizon, float timeWant)
@@ -81,6 +82,7 @@ void UUSBMovement::RequestAirConnectChargeMove(FRotator portRot, const FVector &
 
 void UUSBMovement::StopUSBMove()
 {
+	m_bNotUseSweep = false;
 	m_fAutoMoveTimeWant = 0.f;
 	m_fAutoMoveTimer = 0.f;
 	m_fAutoMoveInput = FVector::ZeroVector;
@@ -109,22 +111,17 @@ bool UUSBMovement::DoJump()
 			m_OnJumpSeveralBP.Broadcast(m_nJumpCurrentCount);
 		}
 
-
 		FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
 		float ZVelo= FMath::Sqrt(-2.f *GetGravityZ() * m_fJumpHeight);
 		CurrentV.Z = FMath::Max(ZVelo, CurrentV.Z);
+
 		for (auto Phy : m_PlayerPawn->GetPhysicsAry())
 		{
-
 			if (Phy == m_PlayerPawn->GetHead())
 			{
-
 				float Weight = ((m_PlayerPawn->GetTail()->GetMass() / m_PlayerPawn->GetHead()->GetMass()) / 10.f + 1.f);
-				PRINTF("W: %f", Weight);
 
 				Phy->SetPhysicsLinearVelocity(CurrentV*Weight);
-				
-
 			}
 			else
 			{

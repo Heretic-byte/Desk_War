@@ -46,4 +46,5 @@ public:
 	void ClearAirRotation();
 protected:
 	virtual bool DoJump() override;
+
 };
