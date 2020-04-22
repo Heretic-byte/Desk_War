@@ -159,7 +159,7 @@ void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent
 
 	if (!m_MovingTarget->IsSimulatingPhysics())
 	{
-		m_MovingTarget->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+		m_MovingTarget->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 		m_MovingTarget->SetSimulatePhysics(true);
 	}
 

@@ -10,7 +10,7 @@
 /**
  * 
  */
-UCLASS()
+UCLASS(ClassGroup = (Custom), hidecategories = Object, config = Engine, editinlinenew, meta = (BlueprintSpawnableComponent), BlueprintType, Blueprintable)
 class DESK_WAR_API UPhysicsSkMeshComponent : public USkeletalMeshComponent
 {
 	GENERATED_UCLASS_BODY()

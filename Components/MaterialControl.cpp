@@ -38,7 +38,7 @@ void UMaterialControl::BeginPlay()
 		}
 		else
 		{
-			PRINTF("Fail Mat GetParameter,Check the Param Name!");
+			PRINTF("%s Fail Mat GetParameter,Check the Param Name! -1 MatControlComp",*GetOwner()->GetName());
 		}
 	}
 }

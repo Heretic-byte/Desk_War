@@ -40,6 +40,7 @@ UPortSkMeshComponent::UPortSkMeshComponent(const FObjectInitializer & objInit)
 	}
 
 	SetCollisionProfileName("Port");
+	SetGenerateOverlapEvents(true);
 }
 
 void UPortSkMeshComponent::BeginPlay()
