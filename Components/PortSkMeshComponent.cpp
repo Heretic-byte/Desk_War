@@ -13,25 +13,23 @@
 
 UPortSkMeshComponent::UPortSkMeshComponent(const FObjectInitializer & objInit)
 {
+	m_bCantMoveOnConnected = false;
+	m_NameInitCollProfile = "PhysicsActor";
 	m_MatInitColor = FColor::White;
 	m_MatPortFailColor = FColor::Red;
 	m_MatPortSuccessColor = FColor::Cyan;
 	m_fBlinkDelay = 0.5f;
-	m_NameInitCollProfile = "PhysicsActor";
 	m_NameMatScalarParam = "Brightness";
+	m_NameMatVectorParam = "Color";
 	m_fMatBrightness = 0.9f;
 	m_fFailImpulsePower = 10000.f;
 	m_ConnectableRotation.Yaw = 30.f;
 	m_ConnectableRotation.Roll = 5.f;
 	m_ConnectableRotation.Pitch = 5.f;
-	m_bBlockMoveOnConnected = false;
-	m_NameWantMovePoint = "PortPoint";
 	m_NameParentBonePortPoint = "PortPoint";
-	m_NamePortConnectSocket = "PortPoint";
-	m_NamePortConnectStartSocket = "ConnectStart";
-	m_NamePortConnectPushPointSocket = "PushPoint";
 	m_PortType = EPinPortType::ENoneType;
-	m_fEjectPower = 999.f;
+	m_fEjectPowerSelf = 3000.f;
+	m_fEjectPowerToPin = 3000.f;
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FoundMesh(TEXT("SkeletalMesh'/Game/Meshes/Characters/Port/SK_PortPoint.SK_PortPoint'"));
 
 	if (FoundMesh.Succeeded())
@@ -51,7 +49,7 @@ void UPortSkMeshComponent::BeginPlay()
 }
 
 void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, UPhysicsSkMeshComponent* parentMesh,
-	USphereComponent* sphereColl,EPinPortType portType, FName namePinBone)
+	USphereComponent* sphereColl,EPinPortType portType)
 {
 	m_ParentPhysicsConst = physicsJoint;
 	m_MeshParentActor = parentMesh;
@@ -63,11 +61,6 @@ void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, 
 	if (portType != EPinPortType::ENoneType)
 	{
 		m_PortType = portType;
-	}
-
-	if (namePinBone != NAME_None)
-	{
-		m_NameParentBonePortPoint = namePinBone;
 	}
 }
 
@@ -150,15 +143,7 @@ bool UPortSkMeshComponent::CheckYawOnly(USceneComponent * connector)
 	return YawDiff <= m_ConnectableRotation.Yaw;
 }
 
-bool UPortSkMeshComponent::GetBlockMoveOnConnnect()
-{
-	return m_bBlockMoveOnConnected;
-}
 
-FName UPortSkMeshComponent::GetMovePointWant()
-{
-	return m_NameWantMovePoint;
-}
 
 UPhysicsSkMeshComponent * UPortSkMeshComponent::GetParentSkMesh()
 {
@@ -199,9 +184,9 @@ void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)//should call
 	PRINTF("%s - Port", *GetOwner()->GetName());
 	m_ConnectedPin = connector;
 	ConstraintPinPort();
+	m_OnConnectedBP.Broadcast(m_ConnectedPin);
 	m_OnConnected.Broadcast(m_ConnectedPin);
 	GetParentSkMesh()->SetCollisionProfileName(m_NameInitCollProfile);
-	//EnableOverlap();
 	EndBlink();
 	SetPortMatColor(m_NameMatVectorParam, m_MatInitColor);
 }
@@ -215,11 +200,13 @@ bool UPortSkMeshComponent::Disconnect()
 {
 	EnableOverlap();
 	m_ConnectedPin->Disconnect();
+	m_OnDisconnectedBP.Broadcast(m_ConnectedPin);
 	m_OnDisconnected.Broadcast(m_ConnectedPin);
 	m_ParentPhysicsConst->BreakConstraint();
 	m_ConnectedPin = nullptr;
 
-	m_MeshParentActor->AddImpulse(GetForwardVector()*m_fEjectPower);
+	if(m_MeshParentActor->IsSimulatingPhysics())
+		m_MeshParentActor->AddImpulse(GetForwardVector()*m_fEjectPowerSelf);
 
 	//blink의 시작과끝은 범위 들어오는것으로 처리해줘야함
 	return true;
@@ -270,6 +257,7 @@ void UPortSkMeshComponent::OnPlayerExit(UPrimitiveComponent * OverlappedComponen
 
 void UPortSkMeshComponent::FailConnection(const FHitResult & hitResult)
 {
+	if(m_MeshParentActor->IsSimulatingPhysics())
 	m_MeshParentActor->AddImpulseAtLocation((GetUpVector() + GetForwardVector())*m_fFailImpulsePower, hitResult.ImpactPoint);
 }
 

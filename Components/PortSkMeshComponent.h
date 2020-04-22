@@ -23,15 +23,24 @@ class DESK_WAR_API UPortSkMeshComponent : public UPhysicsSkMeshComponent
 	GENERATED_BODY()
 public:
 	DECLARE_MULTICAST_DELEGATE_OneParam(FPinConnection, UPinSkMeshComponent*);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPinConnectionBP, UPinSkMeshComponent*,pinSk);
 	UPortSkMeshComponent(const FObjectInitializer& objInit);
 public:
+	UPROPERTY(BlueprintAssignable,Category="Interact")
+	FPinConnectionBP m_OnConnectedBP;
 	FPinConnection m_OnConnected;
+	UPROPERTY(BlueprintAssignable, Category = "Interact")
+	FPinConnectionBP m_OnDisconnectedBP;
 	FPinConnection m_OnDisconnected;
 public:
 	UPROPERTY(EditDefaultsOnly, Category = "Body_Bones")
 	float m_fFailImpulsePower;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interact")
+	float m_fEjectPowerToPin;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Physics")
 	FName m_NameInitCollProfile;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interact")
+	bool m_bCantMoveOnConnected;
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Blink")
 	float m_fBlinkDelay;
@@ -52,18 +61,9 @@ protected:
 	UMaterialInstanceDynamic* m_BlinkMatDynamic;
 	UPROPERTY(EditDefaultsOnly, Category = "Connection")
 	FRotator m_ConnectableRotation;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Body")
-	FName m_NamePortConnectSocket;//ConnectPoint?
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Body")
-	FName m_NamePortConnectStartSocket;//삽입을 하기전 첫번째 목적지
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Body")
-	FName m_NamePortConnectPushPointSocket;//들이박아서 끼워지는 오프셋
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interact")
-	bool m_bBlockMoveOnConnected;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interact")
-	float m_fEjectPower;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interact")
-	FName m_NameWantMovePoint;
+	float m_fEjectPowerSelf;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interact")
 	EPinPortType m_PortType;
 	UPROPERTY(VisibleAnywhere)
@@ -91,8 +91,7 @@ public:
 	virtual void InitPort(UPhysicsConstraintComponent* physicsJoint,
 		UPhysicsSkMeshComponent* parentMesh,
 		USphereComponent* sphereColl,
-		EPinPortType portType = EPinPortType::ENoneType,
-		FName namePinBone = NAME_None);
+		EPinPortType portType = EPinPortType::ENoneType);
 	UFUNCTION(BlueprintCallable, Category = "Interact")
 	virtual void Connect(UPinSkMeshComponent* connector);
 	UFUNCTION(BlueprintCallable, Category = "Interact")
@@ -119,8 +118,6 @@ public:
 	bool CheckYawOnly(USceneComponent * connector);
 	void EnableOverlap();
 	void DisableOverlap();
-	bool GetBlockMoveOnConnnect();
-	FName GetMovePointWant();
 	UPhysicsSkMeshComponent* GetParentSkMesh();
 	void OnFocus(UPinSkMeshComponent * aimingPin, bool isConnectorGround);
 	void OnFocusEnd(UPinSkMeshComponent * aimingPin);
@@ -130,25 +127,8 @@ public:
 		return m_PortType;
 	}
 
-	FORCEINLINE FVector _inline_GetConnectPoint() const
-	{
-		return GetSocketLocation(m_NamePortConnectSocket);
-	}
-	FORCEINLINE FVector _inline_GetConnectReadyPoint() const
-	{
-		return GetSocketLocation(m_NamePortConnectStartSocket);
-	}
-	FORCEINLINE FVector _inline_GetPushPoint() const
-	{
-		return GetSocketLocation(m_NamePortConnectPushPointSocket);
-	}
-
-	FORCEINLINE UPinSkMeshComponent* GetPinConnected() const
+	FORCEINLINE UPinSkMeshComponent* GetPinConnected()
 	{
 		return m_ConnectedPin;
 	}
-
-	//DECLARE_DYNAMIC_MULTICAST_DELEGATE_SixParams( FComponentBeginOverlapSignature, UPrimitiveComponent*, OverlappedComponent, AActor*, OtherActor, UPrimitiveComponent*, OtherComp, int32, OtherBodyIndex, bool, bFromSweep, const FHitResult &, SweepResult);
-	//UPrimitiveComponent*, OverlappedComponent, AActor*, OtherActor, UPrimitiveComponent*, OtherComp, int32, OtherBodyIndex
-	
 };

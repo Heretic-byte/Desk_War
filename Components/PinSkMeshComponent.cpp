@@ -88,7 +88,7 @@ void UPinSkMeshComponent::SetVelocityPivotName(FName nameWant)
 
 void UPinSkMeshComponent::FailConnection(const FHitResult & hitResult)
 {
-	AddImpulseAtLocation((GetUpVector()+ GetForwardVector() * -1.f)*m_fFailImpulsePower,hitResult.ImpactPoint);
+	AddImpulseAtLocation(((GetUpVector()*0.2f)+ GetForwardVector() * -1.f)*m_fFailImpulsePower,hitResult.ImpactPoint);
 
 
 }

@@ -39,6 +39,11 @@ void UPuzzleDoor::PuzzleChanged()// call evty key changed
 {
 	int Count = 0;
 
+	if (m_AryKeyActor.Num())
+	{
+		return;
+	}
+
 	for (int i = 0; i < m_AryKeyActor.Num(); i++)
 	{
 		if (m_AryKeyActor[i]->IsKeyUnlocked())

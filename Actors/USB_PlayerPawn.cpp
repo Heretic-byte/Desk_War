@@ -15,7 +15,7 @@
 #include "Actors/PortPawn.h"
 #include "GameFramework/PlayerController.h"
 #include "UObjects/EjectionCamShake.h"
-
+#include "Components/Battery.h"
 
 
 //누구이든간 스켈메쉬를 머리꼬리로 바꿔버리니까
@@ -85,9 +85,23 @@ void AUSB_PlayerPawn::ZoomOut()
 	m_MainSpringArm->ZoomOut();
 }
 
+UBattery * AUSB_PlayerPawn::GetBattery()
+{
+	for (auto Phy : m_AryPhysicsBody)
+	{
+		auto* Batt =Cast<UBattery>( Phy->GetOwner()->GetComponentByClass(UBattery::StaticClass()));
+
+		if (Batt)
+		{
+			return Batt;
+		}
+	}
+
+	return nullptr;
+}
+
 void AUSB_PlayerPawn::InitPlayerPawn()
 {
-	m_fEjectionPower = 4200.f;
 	m_fSpineAngularDamping = 1.f;
 	m_fSpineLinearDamping = 0.01f;
 	m_fCollMass = 1.f;
@@ -229,7 +243,7 @@ void AUSB_PlayerPawn::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	m_fHeadChangeCDTimer += DeltaTime;
 
-	if (m_fBlockMoveTimeWhenEjectTimer > 0)//0
+	if (m_fBlockMoveTimeWhenEjectTimer > 0 && m_fBlockMoveTimeWhenEjectTimer !=-1.f)//0
 	{
 		m_fBlockMoveTimeWhenEjectTimer -= DeltaTime;
 
@@ -272,6 +286,24 @@ void AUSB_PlayerPawn::DisableUSBInput(float dur)
 	m_fBlockMoveTimeWhenEjectTimer = dur;
 
 	PRINTF("DisableInput");
+}
+
+void AUSB_PlayerPawn::EnableUSBMove()
+{
+	m_bBlockChargeClick = false;
+	//m_bBlockInputMove = false;
+	m_bBlockJump = false;
+	m_fBlockMoveTimeWhenEjectTimer = 0.f;
+	PRINTF("EnableMoveINput");
+}
+
+void AUSB_PlayerPawn::DisableUSBMove(float dur)
+{
+	m_bBlockChargeClick = true;
+	//m_bBlockInputMove = true;
+	m_bBlockJump = true;
+	m_fBlockMoveTimeWhenEjectTimer = dur;
+	PRINTF("DisableMoveINput");
 }
 
 void AUSB_PlayerPawn::MoveForward(float v)
@@ -371,6 +403,9 @@ void AUSB_PlayerPawn::ConnectChargingStart()
 {
 
 	PRINTF("Charging Start");
+
+	m_UsbMovement->m_bUseSweep = false;
+
 	FVector For = m_CurrentHead->GetForwardVector();
 
 	//딱붙어있을때 스윕 필요
@@ -407,7 +442,7 @@ void AUSB_PlayerPawn::ConnectChargingStart()
 		m_UsbMovement->RequestAirConnectChargeMove(m_CurrentFocusedPort->GetComponentRotation(), For, 3.f);
 		return;
 	}
-	m_UsbMovement->RequestConnectChargeMove(For, 3.f);
+	m_UsbMovement->RequestConnectChargeMove(For, 1.7f);
 }
 
 void AUSB_PlayerPawn::SuccessConnection(UPortSkMeshComponent* portConnect)
@@ -417,14 +452,29 @@ void AUSB_PlayerPawn::SuccessConnection(UPortSkMeshComponent* portConnect)
 	m_CurrentHead->SetGenerateOverlapEvents(false);
 	EnableUSBInput();
 	m_UsbMovement->StopUSBMove();
+	m_UsbMovement->m_bUseSweep = true;
 
 	AdjustPinTransform(portConnect);
 
 	portConnect->Connect(m_CurrentHeadPin);
 
-	SetHeadTail(portConnect->GetParentSkMesh(), m_CurrentTail, portConnect, m_PortTailPrev);
-	AddTraceIgnoreActor(portConnect->GetOwner());
-	AddPhysicsBody(portConnect->GetParentSkMesh());
+	if (!portConnect->m_bCantMoveOnConnected)
+	{
+		SetHeadTail(portConnect->GetParentSkMesh(), m_CurrentTail, portConnect, m_PortTailPrev);
+		AddTraceIgnoreActor(portConnect->GetOwner());
+		AddPhysicsBody(portConnect->GetParentSkMesh());
+	}
+	else
+	{
+		//cantMove;
+
+		m_PortHeadPrev = portConnect;
+
+
+		DisableUSBMove();
+	}
+
+	
 }
 
 void AUSB_PlayerPawn::AdjustPinTransform(UPortSkMeshComponent * portConnect)
@@ -461,6 +511,7 @@ void AUSB_PlayerPawn::FailConnection(UPortSkMeshComponent* portConnect, const FH
 	PRINTF("FailConnection");
 	m_CurrentHead->OnComponentBeginOverlap.RemoveDynamic(this, &AUSB_PlayerPawn::TryConnect);
 	EnableUSBInput();
+	m_UsbMovement->m_bUseSweep = true;
 	m_UsbMovement->StopUSBMove();
 }
 
@@ -512,8 +563,13 @@ bool AUSB_PlayerPawn::TryDisconnect()
 		return false;
 	}
 
-	RemoveTraceIgnoreActor(m_PortTailPrev->GetOwner());
-	RemovePhysicsBody(m_CurrentTail);
+	float EjectPowerFromPort = m_PortTailPrev->m_fEjectPowerToPin;
+
+	if (RemoveTraceIgnoreActor(m_PortTailPrev->GetOwner()))
+	{
+		RemovePhysicsBody(m_CurrentTail);//여기가 안나와준다면,해당 포트는 움직일수 없던 포트
+	}
+	
 
 	auto* TailPrev = m_PortTailPrev->GetPinConnected();
 	TailPrev->SetGenerateOverlapEvents(true);
@@ -521,6 +577,13 @@ bool AUSB_PlayerPawn::TryDisconnect()
 	m_PortTailPrev->Disconnect();
 
 	SetHeadTail(m_CurrentHead, TailPrev, m_PortHeadPrev, TailPrev->GetMyPort(), true);
+
+	EnableUSBMove();
+
+	DisableUSBInput(m_fBlockMoveTimeWhenEject);
+	FVector ImpulseDir = GetTail()->GetForwardVector()*-1.f * EjectPowerFromPort;
+	m_UsbMovement->AddImpulse(ImpulseDir);
+	m_PlayerCon->PlayerCameraManager->PlayCameraShake(UEjectionCamShake::StaticClass(), 1.0f);
 	return true;
 }
 
@@ -550,10 +613,7 @@ void AUSB_PlayerPawn::DisconnectShot()
 {
 	if (TryDisconnect())
 	{
-		DisableUSBInput(m_fBlockMoveTimeWhenEject);
-		FVector ImpulseDir = GetTail()->GetForwardVector()*-1.f * m_fEjectionPower;
-		m_UsbMovement->AddImpulse(ImpulseDir);
-		m_PlayerCon->PlayerCameraManager->PlayCameraShake(UEjectionCamShake::StaticClass(), 1.0f);
+		PRINTF("Disconnect Success");
 	}
 }
 

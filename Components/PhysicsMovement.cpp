@@ -12,6 +12,7 @@
 
 UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 {
+	m_bUseSweep = true;
 	m_NameSweepProfileName = "PhysicsActor";
 	m_bShowDebug = false;
 	m_fMaxTimeStep = 33.f;
@@ -711,6 +712,12 @@ FVector UPhysicsMovement::SlideAlongOnSurface(const FVector& velocity, float del
 
 bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult& OutHit)
 {
+
+	if (!m_bUseSweep)
+	{
+		return true;
+	}
+
 	const float MinMovementDistSq = FMath::Square(4.f*KINDA_SMALL_NUMBER);
 
 	const FQuat InitialRotationQuat = m_MovingTarget->GetComponentTransform().GetRotation();

@@ -14,7 +14,7 @@
 class UPhysicsSkMeshComponent;
 class APlayerController;
 class UPortSkMeshComponent;
-
+class UBattery;
 
 
 UCLASS(BlueprintType, Blueprintable)
@@ -28,8 +28,6 @@ protected:
 	float m_fDefaultFailImpulsePower;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
 	float m_fPortTraceRange;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
-	float m_fEjectionPower;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
 	float m_fBlockMoveTimeWhenEject;
 	float m_fBlockMoveTimeWhenEjectTimer;
@@ -110,6 +108,8 @@ public:
 	void ZoomIn();
 	UFUNCTION(BlueprintCallable, Category = "USB_Action")
 	void ZoomOut();
+	UFUNCTION(BlueprintCallable, Category = "USB_Action")
+	UBattery* GetBattery();
 private://construct
 	void InitPlayerPawn();
 	void CreatePhysicMovement();
@@ -146,6 +146,10 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	void EnableUSBInput();
 	void DisableUSBInput(float dur=0.f);
+	UFUNCTION(BlueprintCallable,Category="Input")
+	void EnableUSBMove();
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	void DisableUSBMove(float dur = -1.f);
 public:
 	FORCEINLINE float GetTotalMass()
 	{
