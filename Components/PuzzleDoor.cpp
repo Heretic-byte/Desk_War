@@ -3,6 +3,8 @@
 
 #include "PuzzleDoor.h"
 #include "Components/PuzzleKey.h"
+#include "GameFramework/Actor.h"
+
 
 // Sets default values for this component's properties
 UPuzzleDoor::UPuzzleDoor()
@@ -22,13 +24,17 @@ void UPuzzleDoor::BeginPlay()
 	{
 		PRINTF("%s - Set Key Actor for Puzzle Door !!!!", *GetName());
 	}
-	for (auto PuzzleKey : m_AryKeyActor)
+	for (auto PuzzleKeyActor : m_AryKeyActor)
 	{
-		if (!PuzzleKey)
+		auto* PuzzleKeyComp=  Cast<UPuzzleKey>(PuzzleKeyActor->GetComponentByClass(UPuzzleKey::StaticClass()));
+		if (!PuzzleKeyComp)
 		{
-			PRINTF("%s - Some Key Ary NULL !!!!", *GetName());
+			PRINTF("%s - There is no KeyComponent In Actor:%s !", *PuzzleKeyActor->GetName());
 			return;
 		}
+
+		m_AryKeyComponent.Add(PuzzleKeyComp);
+		PuzzleKeyComp->InitPuzzleKey(this);
 	}
 
 }
@@ -39,24 +45,33 @@ void UPuzzleDoor::PuzzleChanged()// call evty key changed
 {
 	int Count = 0;
 
-	if (m_AryKeyActor.Num())
+	if (!m_AryKeyComponent.Num())
 	{
 		return;
 	}
 
-	for (int i = 0; i < m_AryKeyActor.Num(); i++)
+	for (int i = 0; i < m_AryKeyComponent.Num(); i++)
 	{
-		if (m_AryKeyActor[i]->IsKeyUnlocked())
+		if (m_AryKeyComponent[i]->IsKeyUnlocked())
 		{
 			m_OnPuzzleUnlockCheckedBP.Broadcast(i);
 			m_OnPuzzleUnlockChecked.Broadcast(i);
 			Count++;
 		}
+		else
+		{
+			m_OnPuzzleLockCheckedBP.Broadcast(i);
+			m_OnPuzzleLockChecked.Broadcast(i);
+		}
 	}
 
-	if ((m_nDoorUnlockCount > 0 && m_nDoorUnlockCount < m_AryKeyActor.Num()) || m_AryKeyActor.Num() == Count)
+	if ((m_nDoorUnlockCount > 0 && m_nDoorUnlockCount < m_AryKeyComponent.Num()) || m_AryKeyComponent.Num() == Count)
 	{
 		UnlockDoor();
+	}
+	else
+	{
+		LockDoor();
 	}
 }
 

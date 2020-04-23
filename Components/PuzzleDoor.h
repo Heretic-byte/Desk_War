@@ -21,7 +21,8 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Puzzle")
 	int m_nDoorUnlockCount;//다열지 않아도 될때
 	UPROPERTY(EditAnywhere, Category = "Puzzle")
-	TArray<UPuzzleKey*> m_AryKeyActor;
+	TArray<AActor*> m_AryKeyActor;
+	TArray<UPuzzleKey*> m_AryKeyComponent;
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -30,6 +31,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Puzzle")
 	FVoidIntBP m_OnPuzzleUnlockCheckedBP;
 	FVoidInt m_OnPuzzleUnlockChecked;
+	UPROPERTY(BlueprintAssignable, Category = "Puzzle")
+	FVoidIntBP m_OnPuzzleLockCheckedBP;
+	FVoidInt m_OnPuzzleLockChecked;
 	UPROPERTY(BlueprintAssignable, Category = "Puzzle")
 	FVoidVoidBP m_OnDoorUnlockedBP;
 	FVoidVoid m_OnDoorUnlocked;

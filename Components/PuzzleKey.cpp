@@ -7,52 +7,53 @@
 
 UPuzzleKey::UPuzzleKey()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = false;
 
 	m_LinkedDoor = nullptr;
 }
 
 
-// Called when the game starts
-void UPuzzleKey::BeginPlay()
+void UPuzzleKey::InitPuzzleKey(UPuzzleDoor * door)
 {
-	Super::BeginPlay();
+	m_LinkedDoor = door;
 
 	m_bPuzzleUnlocked = false;
+
 	if (!m_LinkedDoor)
 	{
 		PRINTF("%s Doesnt Have Linked Door ! 1", *GetName());
 	}
 }
 
-
-
-
-
 void UPuzzleKey::UnlockPuzzle()
 {
+	m_bPuzzleUnlocked = true;
 	if (!m_LinkedDoor)
 	{
 		PRINTF("%s Doesnt Have Linked Door ! 2", *GetName());
+		return;
 	}
-
-	m_bPuzzleUnlocked = true;
-
 	m_LinkedDoor->PuzzleChanged();
 }
 
 void UPuzzleKey::LockPuzzle()
 {
 	m_bPuzzleUnlocked = false;
-
+	if (!m_LinkedDoor)
+	{
+		PRINTF("%s Doesnt Have Linked Door ! 3", *GetName());
+		return;
+	}
 	m_LinkedDoor->PuzzleChanged();
-
 }
 
 bool UPuzzleKey::IsKeyUnlocked()
 {
 	return m_bPuzzleUnlocked;
+}
+
+UPuzzleDoor * UPuzzleKey::GetLinkedDoor()
+{
+	return m_LinkedDoor;
 }
 

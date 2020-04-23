@@ -76,7 +76,8 @@ void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
 	}
 	CalcVelocity(DeltaTime, m_fGroundFriction);
 
-	TickMovement(DeltaTime);
+	if(!m_Acceleration.IsNearlyZero())//이거있으면 팅겨나가는데,땅을 기준으로 하면 공중에서 못움직이잔아
+		TickMovement(DeltaTime);
 
 	UpdateComponentVelocity();
 }
@@ -100,7 +101,6 @@ void UPhysicsMovement::CalcVelocity(float DeltaTime, float Friction)
 
 		if (bVelocityOverMax && Velocity.SizeSquared() < FMath::Square(MaxSpeed) && FVector::DotProduct(m_Acceleration, OldVelocity) > 0.0f)
 		{
-
 			Velocity = OldVelocity.GetSafeNormal() * MaxSpeed;
 		}
 	}
@@ -739,7 +739,7 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 	Shape.SetBox(Ex);
 	//m_bNotUseSweep
 	FVector TraceStart = m_MovingTarget->GetComponentLocation();
-	TraceStart.Z += ExHeight * 0.3f;
+	TraceStart.Z += ExHeight * 0.4f;
 	FVector TraceEnd = TraceStart +(m_InputNormal* delta.Size()*deltaTime);
 
 	float DeltaSizeSq = (TraceEnd - TraceStart).SizeSquared();
@@ -1005,5 +1005,4 @@ FCollisionShape UPhysicsMovement::MakeMovingTargetBox()
 
 	return BoxShape;
 }
-
 

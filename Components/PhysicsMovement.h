@@ -195,4 +195,8 @@ protected:
 
 public:
 	bool m_bUseSweep;
+
+	//
+
+
 };

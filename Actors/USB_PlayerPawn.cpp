@@ -87,14 +87,10 @@ void AUSB_PlayerPawn::ZoomOut()
 
 UBattery * AUSB_PlayerPawn::GetBattery()
 {
-	for (auto Phy : m_AryPhysicsBody)
+	for (auto Bat : m_AryBatteries)
 	{
-		auto* Batt =Cast<UBattery>( Phy->GetOwner()->GetComponentByClass(UBattery::StaticClass()));
-
-		if (Batt)
-		{
-			return Batt;
-		}
+		if(Bat)
+			return Bat;
 	}
 
 	return nullptr;
@@ -304,6 +300,16 @@ void AUSB_PlayerPawn::DisableUSBMove(float dur)
 	m_bBlockJump = true;
 	m_fBlockMoveTimeWhenEjectTimer = dur;
 	PRINTF("DisableMoveINput");
+}
+
+void AUSB_PlayerPawn::AddBattery(UBattery * batt)
+{
+	m_AryBatteries.Add(batt);
+}
+
+void AUSB_PlayerPawn::RemoveBattery(UBattery * batt)
+{
+	m_AryBatteries.Remove(batt);
 }
 
 void AUSB_PlayerPawn::MoveForward(float v)

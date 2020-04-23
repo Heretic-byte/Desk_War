@@ -1,26 +1,22 @@
-
-
-
 #include "Battery.h"
+#include "Managers/USB_GameManager.h"
+#include "GameFramework/WorldSettings.h"
+#include "Kismet/GameplayStatics.h"
+#include "Actors/USB_PlayerPawn.h"
 
 // Sets default values for this component's properties
 UBattery::UBattery()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = false;
-
-	// ...
 }
 
-
-// Called when the game starts
 void UBattery::BeginPlay()
 {
 	Super::BeginPlay();
 
 	// ...
 	m_fCurrentBattery = m_fMaxBattery;
+	m_Player = Cast<AUSB_PlayerPawn>(UGameplayStatics::GetPlayerController(this, 0)->GetPawn());
 }
 
 float UBattery::GetBattery(float use)
@@ -34,12 +30,23 @@ float UBattery::GetBattery(float use)
 
 	float Ratio = GetBatteryCurrentPercentOne();//percent return
 	m_OnBatteryGave.Broadcast(Ratio);
+
 	return Ratio;
 }
 
 float UBattery::GetBatteryCurrentPercentOne()
 {
 	return m_fCurrentBattery / m_fMaxBattery;
+}
+
+void UBattery::AddBatteryToPlayer()
+{
+	m_Player->AddBattery(this);
+}
+
+void UBattery::RemoveBatteryToPlayer()
+{
+	m_Player->RemoveBattery(this);
 }
 
 

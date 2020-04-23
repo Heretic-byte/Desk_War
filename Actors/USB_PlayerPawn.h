@@ -61,6 +61,8 @@ protected://component
 	APlayerController* m_PlayerCon;
 private:
 	UPROPERTY()
+	TArray<UBattery*> m_AryBatteries;
+	UPROPERTY()
 	TArray<AActor*> m_AryTraceIgnoreActors;
 	UPROPERTY()
 	UPhysicsSkMeshComponent* m_CurrentHead;
@@ -150,6 +152,8 @@ public:
 	void EnableUSBMove();
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	void DisableUSBMove(float dur = -1.f);
+	void AddBattery(UBattery* batt);
+	void RemoveBattery(UBattery* batt);
 public:
 	FORCEINLINE float GetTotalMass()
 	{
