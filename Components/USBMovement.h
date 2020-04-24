@@ -18,6 +18,8 @@ class DESK_WAR_API UUSBMovement : public UPhysicsMovement
 
 public:
 	UPROPERTY(BlueprintAssignable, Category = "PhysicsMovement_Jump")
+	FOnLandingBP m_OnTailLandingBP;
+	UPROPERTY(BlueprintAssignable, Category = "PhysicsMovement_Jump")
 	FVoidVoidBP m_OnJumpBP;
 	UPROPERTY(BlueprintAssignable, Category = "PhysicsMovement_Jump")
 	FVoidIntBP m_OnJumpSeveralBP;
@@ -32,8 +34,12 @@ protected:
 	float m_fAutoMoveTimer;
 	FVector m_fAutoMoveInput;
 	float m_fInitHeadMass;
+	FHitResult m_TailGroundHitResult;
+	FCollisionShape m_TailShape;
+	float m_fTailGroundDist;
+	bool m_bTailOnGround;
+	bool m_bTailIsFalling;
 public:
-	virtual void PhysSceneStep(FPhysScene* PhysScene, float DeltaTime) override;
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	void InitUSBUpdateComponent(AUSB_PlayerPawn* playerPawn,UPhysicsSkMeshComponent* head, UPhysicsSkMeshComponent* tail);
 	void SetUSBUpdateComponent(UPhysicsSkMeshComponent * head, UPhysicsSkMeshComponent * tail, bool bRemoveTraceOld);
@@ -47,4 +53,7 @@ public:
 protected:
 	virtual bool DoJump() override;
 
+	virtual void TickCastGround() override;
+
+	void TailLanding();
 };

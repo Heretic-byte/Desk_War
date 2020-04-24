@@ -37,10 +37,7 @@ void UUSBMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActorCom
 	}
 }
 
-void UUSBMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
-{
-	Super::PhysSceneStep(PhysScene, DeltaTime);
-}
+
 
 void UUSBMovement::InitUSBUpdateComponent(AUSB_PlayerPawn* playerPawn, UPhysicsSkMeshComponent * head, UPhysicsSkMeshComponent * tail)
 {
@@ -52,6 +49,7 @@ void UUSBMovement::SetUSBUpdateComponent(UPhysicsSkMeshComponent * head, UPhysic
 {
 	SetMovingComponent(head,bRemoveTraceOld);
 	m_MovingTargetTail = tail;
+	m_TailShape = MakeMovingTargetBox(m_MovingTargetTail);
 }
 
 void UUSBMovement::AddForce(FVector forceWant)
@@ -131,3 +129,61 @@ bool UUSBMovement::DoJump()
 	}
 	return false;
 }
+
+void UUSBMovement::TickCastGround()
+{
+	Super::TickCastGround();
+
+	m_TailGroundHitResult.Reset(1.f, false);
+	FCollisionShape BoxShape = m_TailShape; //MakeMovingTargetBox();
+	FVector TraceStart = m_MovingTargetTail->GetComponentLocation();
+
+	FVector TraceEnd = TraceStart;
+	TraceEnd.Z -= (BoxShape.GetExtent().Z)*2.f;
+
+	FCollisionQueryParams QueryParam;
+	AddIgnoreActorsToQuery(QueryParam);
+
+	ECollisionChannel Channel = m_MovingTargetTail->GetCollisionObjectType();
+
+	FVector Ex = BoxShape.GetExtent();
+	Ex *= 0.3f;
+	BoxShape.SetBox(Ex);
+
+	m_bTailOnGround = GetWorld()->SweepSingleByChannel(m_TailGroundHitResult, TraceStart, TraceEnd, FQuat(FVector(0.f, 0.f, -1.f), PI * 0.25f), Channel, BoxShape, QueryParam);
+	m_fTailGroundDist = (TraceStart.Z - m_TailGroundHitResult.Location.Z);
+
+	if (!m_bTailOnGround)//간혹 실패할경우 각도차이인지 확인
+	{
+		m_TailGroundHitResult.Reset(1.f, false);
+
+		m_bTailOnGround = GetWorld()->SweepSingleByChannel(m_TailGroundHitResult, TraceStart, TraceEnd, FQuat::Identity, Channel, BoxShape, QueryParam);
+
+		m_fTailGroundDist = (TraceStart.Z - m_TailGroundHitResult.Location.Z);
+	}
+
+	if (m_bTailOnGround && -100 > m_TailGroundHitResult.Component.Get()->GetPhysicsLinearVelocity().Z)//공중에서 떨어지고 있는 오브젝트는 디딤체크안함
+	{
+		m_bTailOnGround = false;
+		m_TailGroundHitResult.Reset(1.f, false);
+	}
+
+	if (m_bTailIsFalling == m_bTailOnGround)
+	{
+		m_bTailIsFalling = !m_bTailOnGround;
+
+		if (!m_bTailIsFalling)
+		{
+			TailLanding();
+		}
+	}
+}
+
+void UUSBMovement::TailLanding()
+{
+	PRINTF("TailLanding");
+
+	m_OnTailLandingBP.Broadcast(m_TailGroundHitResult.ImpactPoint);
+
+}
+

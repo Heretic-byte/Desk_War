@@ -37,7 +37,6 @@ public:
 	float m_fFailImpulsePower;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interact")
 	float m_fEjectPowerToPin;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Physics")
 	FName m_NameInitCollProfile;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interact")
 	bool m_bCantMoveOnConnected;

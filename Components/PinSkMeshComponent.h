@@ -18,8 +18,8 @@ class DESK_WAR_API UPinSkMeshComponent : public UPhysicsSkMeshComponent
 {
 	GENERATED_BODY()
 public:
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnConnectPortOwner, UObject*, portOwner);
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnConnectPort, UPortSkMeshComponent*, port);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnConnectPortOwnerBP, UObject*, portOwner);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnConnectPortBP, UPortSkMeshComponent*, port);
 
 public:
 	UPinSkMeshComponent(const FObjectInitializer& objInit);
@@ -45,8 +45,10 @@ protected:
 private:
 	bool m_AryTypeMatch[(int)EPinPortType::ELength];
 public:
-	FOnConnectPortOwner m_OnConnectedPortOwner;
-	FOnConnectPort m_OnConnectedPort;
+	UPROPERTY(BlueprintAssignable, Category = "Interact")
+	FOnConnectPortOwnerBP m_OnConnectedPortOwnerBP;
+	UPROPERTY(BlueprintAssignable, Category = "Interact")
+	FOnConnectPortBP m_OnConnectedPortBP;
 public:
 	void SetPinType(EPinPortType pinType);
 	FVector GetNeckLoc() const;

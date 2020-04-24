@@ -193,7 +193,7 @@ void UPhysicsMovement::SetMovingComponent(USceneComponent* NewUpdatedComponent, 
 	}
 	SetUpdatedComponent(NewUpdatedComponent);
 
-	m_Shape = MakeMovingTargetBox();
+	m_Shape = MakeMovingTargetBox(m_MovingTarget);
 }
 
 FRotator UPhysicsMovement::SelectTargetRotation(float delta)
@@ -984,15 +984,18 @@ void UPhysicsMovement::RemoveIgnoreTraceActor(AActor * actorWant)
 void UPhysicsMovement::Landing()
 {
 	PRINTF("Landing");
+
+	m_OnLandingBP.Broadcast(m_GroundHitResult.ImpactPoint);
+
 	if (IsWalkable(m_GroundHitResult))
 	{
 		ResetJumpState();
 	}
 }
 
-FCollisionShape UPhysicsMovement::MakeMovingTargetBox()
+FCollisionShape UPhysicsMovement::MakeMovingTargetBox(const UPrimitiveComponent* wantPrim)
 {
-	FCollisionShape BoxShape = FCollisionShape::MakeBox(m_MovingTarget->GetBodyInstance()->GetBodyBounds().GetExtent());
+	FCollisionShape BoxShape = FCollisionShape::MakeBox(wantPrim->GetBodyInstance()->GetBodyBounds().GetExtent());
 
 	if (BoxShape.Box.HalfExtentX < BoxShape.Box.HalfExtentY)
 	{

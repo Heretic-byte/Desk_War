@@ -454,6 +454,8 @@ void AUSB_PlayerPawn::ConnectChargingStart()
 void AUSB_PlayerPawn::SuccessConnection(UPortSkMeshComponent* portConnect)
 {
 	PRINTF("SuccessConnection");
+	m_OnConnectedBP.Broadcast(m_CurrentHead->GetSocketLocation("PinPoint"));
+
 	m_CurrentHead->OnComponentBeginOverlap.RemoveDynamic(this, &AUSB_PlayerPawn::TryConnect);
 	m_CurrentHead->SetGenerateOverlapEvents(false);
 	EnableUSBInput();
@@ -479,7 +481,7 @@ void AUSB_PlayerPawn::SuccessConnection(UPortSkMeshComponent* portConnect)
 
 		DisableUSBMove();
 	}
-
+	
 	
 }
 
@@ -576,19 +578,21 @@ bool AUSB_PlayerPawn::TryDisconnect()
 		RemovePhysicsBody(m_CurrentTail);//여기가 안나와준다면,해당 포트는 움직일수 없던 포트
 	}
 	
-
 	auto* TailPrev = m_PortTailPrev->GetPinConnected();
+
+	m_OnDisconnectedBP.Broadcast(TailPrev->GetSocketLocation("PinPoint"));
+
 	TailPrev->SetGenerateOverlapEvents(true);
 
 	m_PortTailPrev->Disconnect();
-
 	SetHeadTail(m_CurrentHead, TailPrev, m_PortHeadPrev, TailPrev->GetMyPort(), true);
 
 	EnableUSBMove();
 
-	DisableUSBInput(m_fBlockMoveTimeWhenEject);
-	FVector ImpulseDir = GetTail()->GetForwardVector()*-1.f * EjectPowerFromPort;
+	DisableUSBInput(m_fBlockMoveTimeWhenEject);//이부분을 바꿔서 임펄스에 비례해 오래 못건드리게
+	FVector ImpulseDir = GetTail()->GetForwardVector()*-1.f * EjectPowerFromPort *GetTotalMass();
 	m_UsbMovement->AddImpulse(ImpulseDir);
+	
 	m_PlayerCon->PlayerCameraManager->PlayCameraShake(UEjectionCamShake::StaticClass(), 1.0f);
 	return true;
 }

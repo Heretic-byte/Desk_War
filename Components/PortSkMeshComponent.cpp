@@ -62,6 +62,8 @@ void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, 
 	{
 		m_PortType = portType;
 	}
+
+	m_NameInitCollProfile = m_MeshParentActor->GetCollisionProfileName();
 }
 
 void UPortSkMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction)

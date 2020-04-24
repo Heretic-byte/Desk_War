@@ -22,7 +22,13 @@ class DESK_WAR_API AUSB_PlayerPawn : public AUSB_PhysicsPawn
 {
 	GENERATED_BODY()
 public:
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnConnectVectorBP, const FVector&, pinLoc);
 	AUSB_PlayerPawn(const FObjectInitializer& objInit);
+public:
+	UPROPERTY(BlueprintAssignable, Category = "Interact")
+	FOnConnectVectorBP m_OnConnectedBP;
+	UPROPERTY(BlueprintAssignable, Category = "Interact")
+	FOnConnectVectorBP m_OnDisconnectedBP;
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
 	float m_fDefaultFailImpulsePower;

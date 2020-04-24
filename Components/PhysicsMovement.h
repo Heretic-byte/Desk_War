@@ -14,6 +14,7 @@ class DESK_WAR_API UPhysicsMovement : public UPawnMovementComponent
 {
 	GENERATED_BODY()
 public:
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnLandingBP, const FVector&, pinLoc);
 	UPhysicsMovement(const FObjectInitializer& objInit);
 
 protected:
@@ -60,6 +61,8 @@ protected:
 public:
 	FCollisionShape m_Shape;
 public:
+	UPROPERTY(BlueprintAssignable, Category = "Interact")
+	FOnLandingBP m_OnLandingBP;
 	UPROPERTY(EditDefaultsOnly, Category = "PhysicsMovement")
 	FName m_NameSweepProfileName;
 	UPROPERTY(EditDefaultsOnly, Category = "Debug")
@@ -120,7 +123,7 @@ public:
 
 	UPrimitiveComponent* GetMovingTargetComponent() const;
 
-	FCollisionShape MakeMovingTargetBox();
+	FCollisionShape MakeMovingTargetBox(const UPrimitiveComponent* wantPrim);
 
 protected:
 	virtual void PhysSceneStep(FPhysScene* PhysScene, float DeltaTime);
@@ -157,7 +160,7 @@ protected:
 
 	void Landing();
 	
-	void TickCastGround();
+	virtual void TickCastGround();
 
 	void TickRotate(const FRotator rotateWant,float delta);
 
