@@ -9,6 +9,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Components/SphereComponent.h"
 #include "Actors/USB_PlayerPawn.h"
+#include "FuncLib/USBFunctionLib.h"
 
 
 UPortSkMeshComponent::UPortSkMeshComponent(const FObjectInitializer & objInit)
@@ -22,14 +23,14 @@ UPortSkMeshComponent::UPortSkMeshComponent(const FObjectInitializer & objInit)
 	m_NameMatScalarParam = "Brightness";
 	m_NameMatVectorParam = "Color";
 	m_fMatBrightness = 0.9f;
-	m_fFailImpulsePower = 10000.f;
-	m_ConnectableRotation.Yaw = 30.f;
+	m_fFailImpulsePower = 2000.f;
+	m_ConnectableRotation.Yaw = 15.f;
 	m_ConnectableRotation.Roll = 5.f;
 	m_ConnectableRotation.Pitch = 5.f;
 	m_NameParentBonePortPoint = "PortPoint";
 	m_PortType = EPinPortType::ENoneType;
-	m_fEjectPowerSelf = 3000.f;
-	m_fEjectPowerToPin = 3000.f;
+	m_fEjectPowerSelf = 1000.f;
+	m_fEjectPowerToPin = 400;
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FoundMesh(TEXT("SkeletalMesh'/Game/Meshes/Characters/Port/SK_PortPoint.SK_PortPoint'"));
 
 	if (FoundMesh.Succeeded())
@@ -44,8 +45,8 @@ UPortSkMeshComponent::UPortSkMeshComponent(const FObjectInitializer & objInit)
 void UPortSkMeshComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	m_BlinkMat = GetMaterials()[0];
-	m_BlinkMatDynamic = UMaterialInstanceDynamic::Create(m_BlinkMat, this);
+	
+	m_BlinkMatDynamic = UUSBFunctionLib::CreateSetDynamicMaterial(this, 0);
 }
 
 void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, UPhysicsSkMeshComponent* parentMesh,
@@ -110,14 +111,12 @@ void UPortSkMeshComponent::EndBlink()
 void UPortSkMeshComponent::SetPortMatScalar(FName paramName, float scalar)
 {
 	m_BlinkMatDynamic->SetScalarParameterValue(paramName, scalar);
-	SetMaterial(0, m_BlinkMatDynamic);
 }
 
 void UPortSkMeshComponent::SetPortMatColor(FName paramName, FLinearColor color)
 {
 	m_BlinkMatDynamic->SetVectorParameterValue(paramName, color);
 	SetPortMatScalar(m_NameMatScalarParam, m_fBlinkInterpCache);
-	SetMaterial(0, m_BlinkMatDynamic);
 }
 
 bool UPortSkMeshComponent::CheckConnectTransform(USceneComponent * connector, bool isConnectorGround)

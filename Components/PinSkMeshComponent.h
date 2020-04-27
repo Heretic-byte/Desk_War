@@ -18,7 +18,7 @@ class DESK_WAR_API UPinSkMeshComponent : public UPhysicsSkMeshComponent
 {
 	GENERATED_BODY()
 public:
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnConnectPortOwnerBP, UObject*, portOwner);
+	
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnConnectPortBP, UPortSkMeshComponent*, port);
 
 public:
@@ -27,8 +27,6 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Body_Bones")
 	float m_fFailImpulsePower;
 protected:
-	UPROPERTY(EditDefaultsOnly, Category = "Body_Bones")
-	FName m_NameNeckBone;
 	UPROPERTY(EditDefaultsOnly, Category = "Body_Bones")
 	FName m_NamePinBone;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Body_Bones")
@@ -40,22 +38,17 @@ protected:
 	UPortSkMeshComponent* m_PortConnected;//my pin connected
 	UPROPERTY()
 	UPortSkMeshComponent* m_MyPort;//my self port
-	UPROPERTY()
-	UObject* m_PortOwner;
 private:
 	bool m_AryTypeMatch[(int)EPinPortType::ELength];
 public:
-	UPROPERTY(BlueprintAssignable, Category = "Interact")
-	FOnConnectPortOwnerBP m_OnConnectedPortOwnerBP;
+	
 	UPROPERTY(BlueprintAssignable, Category = "Interact")
 	FOnConnectPortBP m_OnConnectedPortBP;
 public:
 	void SetPinType(EPinPortType pinType);
-	FVector GetNeckLoc() const;
 	virtual bool Connect(UPortSkMeshComponent* port);
 	virtual bool Disconnect();
 	virtual bool CheckTypeMatch(EPinPortType portsType);
-	void SetNeckName(FName nameWant);
 	void SetVelocityPivotName(FName nameWant);
 	void FailConnection(const FHitResult & hitResult);
 	void SetMyPort(UPortSkMeshComponent* portMine);
@@ -67,10 +60,7 @@ public:
 	{
 		return m_NamePinBone;
 	}
-	FORCEINLINE FName GetBoneNeck()
-	{
-		return m_NameNeckBone;
-	}
+	
 	FORCEINLINE FName GetBoneVelo()
 	{
 		return m_NameVelocityPivotBone;
@@ -84,4 +74,6 @@ public:
 	{
 		return m_MyPort;
 	}
+
+
 };

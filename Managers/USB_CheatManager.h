@@ -22,7 +22,7 @@ protected:
 	UPROPERTY()
 	AUSB_PlayerPawn* m_Player;
 	UPROPERTY()
-	UUSB_GameManager* m_Manager;
+	UUSB_GameManager* m_GameManager;
 protected:
 	virtual void InitCheatManager() override;
 public:
@@ -33,4 +33,9 @@ public:
 	UFUNCTION(exec)
 	void PrintPlayerMass();
 	bool m_bShowVelo;
+	UFUNCTION(exec)
+	void LoadLevel(FName newLevelName);
+	
+	UFUNCTION(exec)
+	void UnloadLevel(FName wantLevel);
 };

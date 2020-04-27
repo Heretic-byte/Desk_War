@@ -19,7 +19,24 @@ void UBattery::BeginPlay()
 	m_Player = Cast<AUSB_PlayerPawn>(UGameplayStatics::GetPlayerController(this, 0)->GetPawn());
 }
 
-float UBattery::GetBattery(float use)
+void UBattery::ChargeBattery(float received)
+{
+	if (m_fCurrentBattery >= m_fMaxBattery)
+	{
+		return;
+	}
+
+	m_fCurrentBattery += received;
+
+	if (m_fCurrentBattery >= m_fMaxBattery)
+	{
+		m_fCurrentBattery = m_fMaxBattery;
+	}
+
+	m_OnBatteryRemain.Broadcast(GetBatteryCurrentPercentOne());
+}
+
+float UBattery::UseBattery(float use)
 {
 	m_fCurrentBattery -= use;
 
@@ -29,7 +46,7 @@ float UBattery::GetBattery(float use)
 	}
 
 	float Ratio = GetBatteryCurrentPercentOne();//percent return
-	m_OnBatteryGave.Broadcast(Ratio);
+	m_OnBatteryRemain.Broadcast(Ratio);
 
 	return Ratio;
 }

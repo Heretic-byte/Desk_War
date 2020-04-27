@@ -8,7 +8,7 @@ void UUSB_CheatManager::InitCheatManager()
 {
 	Super::InitCheatManager();
 	PRINTF("Cheat Manager Init !");
-	m_Manager = GetWorld()->GetGameInstance<UUSB_GameManager>();
+	m_GameManager = GetWorld()->GetGameInstance<UUSB_GameManager>();
 	m_PlayerController = Cast<AUSB_PlayerController>(GetWorld()->GetFirstPlayerController());
 	m_Player = Cast<AUSB_PlayerPawn>( m_PlayerController->GetPawn());
 }
@@ -32,5 +32,15 @@ void UUSB_CheatManager::PrintPlayerMass()
 	float Mass= m_Player->GetTotalMass();
 
 	PRINTF("PrintPlayerMass: %f", Mass);
+}
+
+void UUSB_CheatManager::LoadLevel(FName newLevelName)
+{
+	m_GameManager->LoadLevel(newLevelName);
+}
+
+void UUSB_CheatManager::UnloadLevel(FName wantLevel)
+{
+	m_GameManager->UnloadLevel(wantLevel);
 }
 

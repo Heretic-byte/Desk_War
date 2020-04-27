@@ -13,8 +13,6 @@ UPinSkMeshComponent::UPinSkMeshComponent(const FObjectInitializer& objInit) :Sup
 	m_MyPort = nullptr;
 	m_fFailImpulsePower = 10000.f;
 	m_PortConnected = nullptr;
-	m_PortOwner = nullptr;
-	m_NameNeckBone = FName(TEXT("NeckPoint"));
 	m_NamePinBone = FName(TEXT("PinPoint"));
 	m_NameVelocityPivotBone = FName(TEXT("PinPoint"));
 	m_Pintype = EPinPortType::ENoneType;
@@ -36,10 +34,6 @@ void UPinSkMeshComponent::SetPinType(EPinPortType pinType)
 	m_AryTypeMatch[(int)m_Pintype] = true;
 }
 
-FVector UPinSkMeshComponent::GetNeckLoc() const
-{
-	return GetSocketLocation(m_NameNeckBone);
-}
 
 bool UPinSkMeshComponent::Connect(UPortSkMeshComponent * port)
 {
@@ -51,9 +45,8 @@ bool UPinSkMeshComponent::Connect(UPortSkMeshComponent * port)
 	PRINTF("%s - Pin",*GetOwner()->GetName());
 
 	m_PortConnected = port;
-	m_PortOwner = m_PortConnected->GetOwner();
 
-	m_OnConnectedPortOwnerBP.Broadcast(m_PortOwner);
+	
 	m_OnConnectedPortBP.Broadcast(m_PortConnected);
 	
 	return true;
@@ -61,24 +54,14 @@ bool UPinSkMeshComponent::Connect(UPortSkMeshComponent * port)
 
 bool UPinSkMeshComponent::Disconnect()
 {
-	/*if (!m_PortConnected->Disconnect())
-	{
-		return false;
-	}
-*/
+
 	m_PortConnected = nullptr;
-	m_PortOwner = nullptr;
 	return true;
 }
 
 bool UPinSkMeshComponent::CheckTypeMatch(EPinPortType portsType)
 {
 	return m_AryTypeMatch[(int)portsType];
-}
-
-void UPinSkMeshComponent::SetNeckName(FName nameWant)
-{
-	m_NameNeckBone = FName(nameWant);
 }
 
 void UPinSkMeshComponent::SetVelocityPivotName(FName nameWant)

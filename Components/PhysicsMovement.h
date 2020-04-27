@@ -199,7 +199,8 @@ protected:
 public:
 	bool m_bUseSweep;
 
-	//
-
+protected:
+	TArray<FHitResult> m_ArySweepHits;
+	TArray<TEnumAsByte<	EObjectTypeQuery>>  m_AryObjectTypes;
 
 };

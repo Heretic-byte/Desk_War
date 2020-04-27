@@ -658,7 +658,9 @@ void AUSB_PlayerPawn::TickTracePortable()
 		m_CurrentFocusedPort->OnFocusEnd(m_CurrentHeadPin);
 	}
 
-	if (GetWorld()->SweepSingleByChannel(HitResult, StartTrace, EndTrace, FQuat::Identity, ECC_GameTraceChannel9, FCollisionShape::MakeSphere(3.f), QueryParams))
+	DrawDebugSphere(GetWorld(), StartTrace, 10.f,6,FColor::White,false,-1.f,1,12.f);
+	DrawDebugSphere(GetWorld(), EndTrace, 10.f, 6, FColor::White, false, -1.f, 1, 12.f);
+	if (GetWorld()->SweepSingleByChannel(HitResult, StartTrace, EndTrace, FQuat::Identity, ECC_GameTraceChannel9, FCollisionShape::MakeSphere(10.f), QueryParams))
 	{
 		if (!HitResult.GetActor())
 		{
@@ -667,7 +669,7 @@ void AUSB_PlayerPawn::TickTracePortable()
 
 		UPortSkMeshComponent* PortableCompo = Cast<UPortSkMeshComponent>(HitResult.GetComponent());
 
-		if (PortableCompo && !PortableCompo->GetPinConnected() && PortableCompo->CheckYawOnly(m_CurrentHeadPin))
+		if (PortableCompo && !PortableCompo->GetPinConnected())// PortableCompo->CheckYawOnly(m_CurrentHeadPin)
 		{
 			m_CurrentFocusedPort = PortableCompo;
 			m_CurrentFocusedPort->OnFocus(m_CurrentHeadPin, IsMovingOnGround());

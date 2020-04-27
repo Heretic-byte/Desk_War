@@ -16,7 +16,7 @@
 
 class USphereComponent;
 //class UPinSkMeshComponent;
-
+//m_OnConnectedPortOwnerBP.Broadcast(m_PortOwner);
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class DESK_WAR_API UPortSkMeshComponent : public UPhysicsSkMeshComponent
 {
@@ -54,8 +54,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Blink")
 	FName m_NameMatVectorParam;
 	
-	UPROPERTY()
-	UMaterialInterface* m_BlinkMat;
 	UPROPERTY()
 	UMaterialInstanceDynamic* m_BlinkMatDynamic;
 	UPROPERTY(EditDefaultsOnly, Category = "Connection")

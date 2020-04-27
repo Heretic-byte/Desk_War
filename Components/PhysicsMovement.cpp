@@ -32,6 +32,11 @@ UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 	GetNavAgentPropertiesRef().bCanJump = true;
 	GetNavAgentPropertiesRef().bCanWalk = true;
 	m_bIsFalling = false;
+	m_ArySweepHits.Reset();
+	m_AryObjectTypes.Reset();
+	m_AryObjectTypes.Add(EObjectTypeQuery::ObjectTypeQuery1);
+	m_AryObjectTypes.Add(EObjectTypeQuery::ObjectTypeQuery2);
+	m_AryObjectTypes.Add(EObjectTypeQuery::ObjectTypeQuery3);
 }
 
 void UPhysicsMovement::BeginPlay()
@@ -192,7 +197,6 @@ void UPhysicsMovement::SetMovingComponent(USceneComponent* NewUpdatedComponent, 
 		AddIgnoreTraceActor(PawnOwner);
 	}
 	SetUpdatedComponent(NewUpdatedComponent);
-
 	m_Shape = MakeMovingTargetBox(m_MovingTarget);
 }
 
@@ -726,7 +730,7 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 
 
 	m_bTwoWallHit = false;
-
+	m_Shape = MakeMovingTargetBox(m_MovingTarget);
 	FCollisionShape Shape = m_Shape;
 	FVector Ex = Shape.GetExtent();
 
@@ -759,27 +763,25 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 
 	bool bFilledHitResult = false;
 	bool IsSimul = false;
-	TArray<FHitResult> Hits;
+	m_ArySweepHits.Reset();
 	FVector NewLocation = TraceStart;
-	TArray<TEnumAsByte<	EObjectTypeQuery> >  ObjectTypes;
-	ObjectTypes.Add(EObjectTypeQuery::ObjectTypeQuery1);
-	ObjectTypes.Add(EObjectTypeQuery::ObjectTypeQuery2);
+
 	if (DeltaSizeSq > 0.f)//여기서 현재 컴플렉스 콜리전 false 상태이다,
 	{
 		bool const bHadBlockingHit=UKismetSystemLibrary::BoxTraceMultiForObjects(GetWorld(),
 			TraceStart,TraceEnd,Shape.GetBox(),
-			InitRot, ObjectTypes,false,m_AryTraceIgnoreActors,
-			m_bShowDebug ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,Hits,true,FLinearColor::Green,FLinearColor::Red,1.f);
-		if (Hits.Num() > 0)
+			InitRot, m_AryObjectTypes,false,m_AryTraceIgnoreActors,
+			m_bShowDebug ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, m_ArySweepHits,true,FLinearColor::Green,FLinearColor::Red,1.f);
+		if (m_ArySweepHits.Num() > 0)
 		{
 			const float DeltaSize = FMath::Sqrt(DeltaSizeSq);
 
-			for (int32 HitIdx = 0; HitIdx < Hits.Num(); HitIdx++)
+			for (int32 HitIdx = 0; HitIdx < m_ArySweepHits.Num(); HitIdx++)
 			{
-				PullBackHit(Hits[HitIdx], TraceStart, TraceEnd, DeltaSize);
+				PullBackHit(m_ArySweepHits[HitIdx], TraceStart, TraceEnd, DeltaSize);
 			}
 
-			if (Hits.Num() > 1)
+			if (m_ArySweepHits.Num() > 1)
 			{
 				m_bTwoWallHit = true;
 			}
@@ -793,9 +795,9 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 		{
 			int32 BlockingHitIndex = INDEX_NONE;
 			float BlockingHitNormalDotDelta = BIG_NUMBER;
-			for (int32 HitIdx = 0; HitIdx < Hits.Num(); HitIdx++)
+			for (int32 HitIdx = 0; HitIdx < m_ArySweepHits.Num(); HitIdx++)
 			{
-				const FHitResult& TestHit = Hits[HitIdx];
+				const FHitResult& TestHit = m_ArySweepHits[HitIdx];
 
 				if (TestHit.bBlockingHit)
 				{
@@ -825,7 +827,7 @@ bool UPhysicsMovement::SweepCanMove(FVector  delta, float deltaTime, FHitResult&
 
 			if (BlockingHitIndex >= 0)
 			{
-				BlockingHit = Hits[BlockingHitIndex];
+				BlockingHit = m_ArySweepHits[BlockingHitIndex];
 				IsSimul = BlockingHit.GetComponent()->IsSimulatingPhysics();
 
 				if (IsSimul)

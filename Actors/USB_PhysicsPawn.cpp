@@ -93,8 +93,8 @@ void AUSB_PhysicsPawn::InitUSB()
 
 int AUSB_PhysicsPawn::SetTailLocation()
 {
-	FVector SocketUSB = m_PinUSB->GetNeckLoc();
-	FVector Socket4Pin = m_Pin5Pin->GetNeckLoc();
+	FVector SocketUSB = m_PinUSB->GetSocketLocation("NeckPoint");
+	FVector Socket4Pin = m_Pin5Pin->GetSocketLocation("NeckPoint");
 
 	float Dividend = (FVector::Distance(SocketUSB, Socket4Pin) / GetActorScale3D().X);
 	float Divisor = (m_fSpineRadius * 2.f);
@@ -111,7 +111,7 @@ int AUSB_PhysicsPawn::SetTailLocation()
 void AUSB_PhysicsPawn::SpawnSpineColls()
 {
 	FVector ActorLoc = GetActorLocation();
-	float Offset = FVector::Distance(m_PinUSB->GetNeckLoc(), ActorLoc) / GetActorScale3D().X;
+	float Offset = FVector::Distance(m_PinUSB->GetSocketLocation("NeckPoint"), ActorLoc) / GetActorScale3D().X;
 	Offset +=  m_fSpineRadius;
 	Offset *= -1;
 
@@ -144,7 +144,7 @@ void AUSB_PhysicsPawn::SpawnSpineColls()
 void AUSB_PhysicsPawn::InitSplineComponent()
 {
 	m_SpineSpline->ClearSplinePoints();
-	m_SpineSpline->AddSplinePoint(m_PinUSB->GetNeckLoc(), ESplineCoordinateSpace::Type::World, false);
+	m_SpineSpline->AddSplinePoint(m_PinUSB->GetSocketLocation("NeckPoint"), ESplineCoordinateSpace::Type::World, false);
 	
 	for (auto* SpineColl : m_ArySpineColls)
 	{
@@ -152,12 +152,12 @@ void AUSB_PhysicsPawn::InitSplineComponent()
 		m_SpineSpline->AddSplinePoint(CollLoc, ESplineCoordinateSpace::Type::World, false);
 
 	}
-	m_SpineSpline->AddSplinePoint(m_Pin5Pin->GetNeckLoc(), ESplineCoordinateSpace::Type::World, true);
+	m_SpineSpline->AddSplinePoint(m_Pin5Pin->GetSocketLocation("NeckPoint"), ESplineCoordinateSpace::Type::World, true);
 }
 
 void AUSB_PhysicsPawn::UpdateSplinePoint()
 {
-	m_SpineSpline->SetWorldLocationAtSplinePoint(0, m_PinUSB->GetNeckLoc());
+	m_SpineSpline->SetWorldLocationAtSplinePoint(0, m_PinUSB->GetSocketLocation("NeckPoint"));
 
 	int SphereIter = m_SpineSpline->GetNumberOfSplinePoints() - 1;
 
@@ -167,7 +167,7 @@ void AUSB_PhysicsPawn::UpdateSplinePoint()
 		m_SpineSpline->SetWorldLocationAtSplinePoint(i, SphereCurrent->GetComponentLocation());
 	}
 
-	m_SpineSpline->SetWorldLocationAtSplinePoint(SphereIter, m_Pin5Pin->GetNeckLoc());
+	m_SpineSpline->SetWorldLocationAtSplinePoint(SphereIter, m_Pin5Pin->GetSocketLocation("NeckPoint"));
 }
 
 void AUSB_PhysicsPawn::InitSplineMesh()
@@ -203,7 +203,7 @@ void AUSB_PhysicsPawn::UpdateSplineMesh()
 	FVector NextTangent;
 	FVector CurrentUpVector;
 
-	FVector Soc = m_PinUSB->GetNeckLoc();
+	FVector Soc = m_PinUSB->GetSocketLocation("NeckPoint");
 
 	m_SpineSpline->GetLocationAndTangentAtSplinePoint(0, CurrentLoc, CurrentTangent, ESplineCoordinateSpace::Type::Local);
 
@@ -234,7 +234,7 @@ void AUSB_PhysicsPawn::InitPhysicsConstraints()
 	m_Pin5Pin->SetPhysicsMaxAngularVelocityInDegrees(m_fMaxAngularVelocity);
 
 	UPhysicsConstraintComponent* UsbPhyCon = AddPhysicsConstraint(m_PinUSB);
-	UsbPhyCon->SetWorldLocation(m_PinUSB->GetNeckLoc(), false, nullptr, ETeleportType::ResetPhysics);
+	UsbPhyCon->SetWorldLocation(m_PinUSB->GetSocketLocation("NeckPoint"), false, nullptr, ETeleportType::ResetPhysics);
 	UsbPhyCon->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Locked, 0);
 	UsbPhyCon->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Locked, 0);
 	UsbPhyCon->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Locked, 0);
@@ -263,7 +263,7 @@ void AUSB_PhysicsPawn::InitPhysicsConstraints()
 	}
 
 	UPhysicsConstraintComponent* Pin4PhyCon = AddPhysicsConstraint(m_ArySpineColls[m_ArySpineColls.Num() - 1]);
-	Pin4PhyCon->SetWorldLocation(m_Pin5Pin->GetNeckLoc(), false, nullptr, ETeleportType::ResetPhysics);
+	Pin4PhyCon->SetWorldLocation(m_Pin5Pin->GetSocketLocation("NeckPoint"), false, nullptr, ETeleportType::ResetPhysics);
 	Pin4PhyCon->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Locked, 0);
 	Pin4PhyCon->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Locked, 0);
 	Pin4PhyCon->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Locked, 0);

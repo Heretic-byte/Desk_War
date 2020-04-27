@@ -27,13 +27,15 @@ protected:
 	float m_fCurrentBattery;
 	
 	UPROPERTY(BlueprintAssignable, Category = "Battery")
-	FVoidFloatBP m_OnBatteryGave;
+	FVoidFloatBP m_OnBatteryRemain;
 
 	UPROPERTY(VisibleAnywhere)
 	AUSB_PlayerPawn* m_Player;
 public:
 	UFUNCTION(BlueprintCallable, Category = "Battery")
-	float GetBattery(float use);
+	void ChargeBattery(float received);
+	UFUNCTION(BlueprintCallable, Category = "Battery")
+	float UseBattery(float use);
 	UFUNCTION(BlueprintCallable, Category = "Battery")
 	float GetBatteryCurrentPercentOne();
 	UFUNCTION(BlueprintCallable, Category = "Battery")
