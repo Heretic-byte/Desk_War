@@ -20,7 +20,8 @@ public class Desk_War : ModuleRules
             "APEX",
             "AIModule",
             "OnlineSubsystem",
-            "﻿OnlineSubsystemSteam﻿"
+            "﻿OnlineSubsystemSteam﻿",
+            "VirtualCamera"
         });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {

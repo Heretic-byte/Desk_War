@@ -12,6 +12,7 @@
 
 UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 {
+	m_fMinLandHeight = 100.f;
 	m_bUseSweep = true;
 	m_NameSweepProfileName = "PhysicsActor";
 	m_bShowDebug = false;
@@ -56,7 +57,7 @@ void UPhysicsMovement::BeginPlay()
 
 	//TickCastGround();
 	m_bIsFalling = !m_bOnGround;
-
+	//
 	
 }
 
@@ -65,11 +66,11 @@ void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	CheckJumpInput(DeltaTime);
+	CollectHeight();
 	TickCastGround();
 	SetAccel(DeltaTime);
 	m_fAnalogInputModifier = ComputeAnalogInputModifier();
 	TickRotate(SelectTargetRotation(DeltaTime), DeltaTime);//¾ê´Ù
-
 	ClearJumpInput(DeltaTime);
 }
 
@@ -347,6 +348,15 @@ void UPhysicsMovement::AddIgnoreActorsToQuery(FCollisionQueryParams & queryParam
 	queryParam.AddIgnoredActors(m_AryTraceIgnoreActors);
 }
 
+void UPhysicsMovement::CollectHeight()
+{
+	if (IsFalling())
+	{
+		m_fFallStartZ = FMath::Max<float>(m_fFallStartZ, m_MovingTarget->GetComponentLocation().Z);
+	}
+}
+
+
 bool UPhysicsMovement::IsFalling() const
 {
 	return !IsMovingOnGround();
@@ -397,6 +407,11 @@ void UPhysicsMovement::TickCastGround()
 		{
 			Landing();
 		}
+		else
+		{
+			m_fFallStartZ = m_MovingTarget->GetComponentLocation().Z;
+		}
+		
 	}
 }
 
@@ -985,14 +1000,19 @@ void UPhysicsMovement::RemoveIgnoreTraceActor(AActor * actorWant)
 
 void UPhysicsMovement::Landing()
 {
-	PRINTF("Landing");
-
-	m_OnLandingBP.Broadcast(m_GroundHitResult.ImpactPoint);
+	if ((m_fFallStartZ - m_MovingTarget->GetComponentLocation().Z) >=m_fMinLandHeight)
+	{
+		PRINTF("Landing:max was :%f", m_fFallStartZ - m_MovingTarget->GetComponentLocation().Z);
+		m_OnLandingBP.Broadcast(m_GroundHitResult.ImpactPoint);
+	}
+	
 
 	if (IsWalkable(m_GroundHitResult))
 	{
 		ResetJumpState();
 	}
+
+
 }
 
 FCollisionShape UPhysicsMovement::MakeMovingTargetBox(const UPrimitiveComponent* wantPrim)

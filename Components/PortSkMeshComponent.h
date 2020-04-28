@@ -91,6 +91,7 @@ public:
 		EPinPortType portType = EPinPortType::ENoneType);
 	UFUNCTION(BlueprintCallable, Category = "Interact")
 	virtual void Connect(UPinSkMeshComponent* connector);
+	void DisableColl();
 	UFUNCTION(BlueprintCallable, Category = "Interact")
 	virtual bool Disconnect();
 	UFUNCTION(BlueprintCallable, Category = "Interact")

@@ -37,10 +37,10 @@ void UPinSkMeshComponent::SetPinType(EPinPortType pinType)
 
 bool UPinSkMeshComponent::Connect(UPortSkMeshComponent * port)
 {
-	if (!CheckTypeMatch(port->GetPortType()))
-	{
-		return false;
-	}
+	//if (!CheckTypeMatch(port->GetPortType()))
+	//{
+	//	return false;
+	//}
 
 	PRINTF("%s - Pin",*GetOwner()->GetName());
 

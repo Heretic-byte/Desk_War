@@ -41,7 +41,7 @@ void ABatteryConsumer::Tick(float DeltaTime)
 
 	if (!CheckNeedBattery())
 	{
-		m_OnEmpty.Broadcast();
+		m_OnFull.Broadcast();
 	}
 }
 

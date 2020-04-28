@@ -180,16 +180,21 @@ void UPortSkMeshComponent::OnFocusEnd(UPinSkMeshComponent * aimingPin)
 
 void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)//should call last
 {
-	GetParentSkMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1,ECollisionResponse::ECR_Ignore);
-	DisableOverlap();
+	//DisableColl();
 	PRINTF("%s - Port", *GetOwner()->GetName());
 	m_ConnectedPin = connector;
 	ConstraintPinPort();
+	DisableOverlap();
 	m_OnConnectedBP.Broadcast(m_ConnectedPin);
 	m_OnConnected.Broadcast(m_ConnectedPin);
 	GetParentSkMesh()->SetCollisionProfileName(m_NameInitCollProfile);
 	EndBlink();
 	SetPortMatColor(m_NameMatVectorParam, m_MatInitColor);
+}
+
+void UPortSkMeshComponent::DisableColl()
+{
+	GetParentSkMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
 }
 
 void UPortSkMeshComponent::ConstraintPinPort()

@@ -22,6 +22,7 @@ void APortPawn::CreateMesh()
 {
 	m_Mesh = CreateDefaultSubobject<UPhysicsSkMeshComponent>(MeshComponentName);
 	m_Mesh->SetupAttachment(RootComponent);
+	//RootComponent = m_Mesh;
 	m_Mesh->SetCollisionProfileName("PhysicsActor");
 	m_Mesh->SetSimulatePhysics(true);
 	m_Mesh->SetUseCCD(true);

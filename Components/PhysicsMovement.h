@@ -87,6 +87,8 @@ public:
 	float m_fMinAnalogSpeed;
 	UPROPERTY(Category = "PhysicsMovement", EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", UIMin = "0"))
 	float m_fGroundFriction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
+	float m_fMinLandHeight;
 
 public:
 	UFUNCTION(BlueprintCallable,Category="PhysicsMovement_Jump")
@@ -202,5 +204,6 @@ public:
 protected:
 	TArray<FHitResult> m_ArySweepHits;
 	TArray<TEnumAsByte<	EObjectTypeQuery>>  m_AryObjectTypes;
-
+	float m_fFallStartZ;
+	virtual void CollectHeight();
 };

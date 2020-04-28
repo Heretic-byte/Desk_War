@@ -39,6 +39,7 @@ protected:
 	float m_fTailGroundDist;
 	bool m_bTailOnGround;
 	bool m_bTailIsFalling;
+	float m_fTailFallStartZ;
 public:
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	void InitUSBUpdateComponent(AUSB_PlayerPawn* playerPawn,UPhysicsSkMeshComponent* head, UPhysicsSkMeshComponent* tail);
@@ -50,10 +51,13 @@ public:
 	void RequestAirConnectChargeMove(FRotator portRot,const FVector& normalHorizon, float timeWant);
 	void StopUSBMove();
 	void ClearAirRotation();
+
 protected:
 	virtual bool DoJump() override;
 
 	virtual void TickCastGround() override;
 
 	void TailLanding();
+	
+	virtual void CollectHeight() override;
 };

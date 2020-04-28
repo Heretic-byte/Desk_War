@@ -176,14 +176,30 @@ void UUSBMovement::TickCastGround()
 		{
 			TailLanding();
 		}
+		else
+		{
+			m_fTailFallStartZ = m_MovingTargetTail->GetComponentLocation().Z;
+		}
 	}
 }
 
 void UUSBMovement::TailLanding()
 {
-	PRINTF("TailLanding");
+	if ((m_fTailFallStartZ - m_MovingTargetTail->GetComponentLocation().Z) >= m_fMinLandHeight)
+	{
+		PRINTF("TailLanding:max was :%f", m_fTailFallStartZ - m_MovingTargetTail->GetComponentLocation().Z);
+		m_OnTailLandingBP.Broadcast(m_TailGroundHitResult.ImpactPoint);
+	}
 
-	m_OnTailLandingBP.Broadcast(m_TailGroundHitResult.ImpactPoint);
+	m_fTailFallStartZ = 0.f;
+}
 
+void UUSBMovement::CollectHeight()
+{
+	if (IsFalling())
+	{
+		m_fFallStartZ = FMath::Max<float>(m_fFallStartZ, m_MovingTarget->GetComponentLocation().Z);
+		m_fTailFallStartZ = FMath::Max<float>(m_fTailFallStartZ, m_MovingTargetTail->GetComponentLocation().Z);
+	}
 }
 

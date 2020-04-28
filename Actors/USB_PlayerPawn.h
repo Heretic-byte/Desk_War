@@ -118,6 +118,8 @@ public:
 	void ZoomOut();
 	UFUNCTION(BlueprintCallable, Category = "USB_Action")
 	UBattery* GetBattery();
+	UFUNCTION(BlueprintCallable, Category = "USB_Action")
+	void Kill();
 private://construct
 	void InitPlayerPawn();
 	void CreatePhysicMovement();

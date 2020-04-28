@@ -96,6 +96,10 @@ UBattery * AUSB_PlayerPawn::GetBattery()
 	return nullptr;
 }
 
+void AUSB_PlayerPawn::Kill()
+{
+}
+
 void AUSB_PlayerPawn::InitPlayerPawn()
 {
 	m_fSpineAngularDamping = 1.f;
@@ -396,7 +400,7 @@ void AUSB_PlayerPawn::TryConnect(UPrimitiveComponent * OverlappedComponent, AAct
 		return;
 	}
 
-	if (!m_CurrentHeadPin->Connect(PortCompo))
+	if (!m_CurrentHeadPin->CheckTypeMatch(PortCompo->GetPortType()))
 	{
 		FailConnection(PortCompo, &SweepResult, EFailConnectionReason::PinTypeNotMatch);
 		return;
@@ -453,44 +457,89 @@ void AUSB_PlayerPawn::ConnectChargingStart()
 
 void AUSB_PlayerPawn::SuccessConnection(UPortSkMeshComponent* portConnect)
 {
-	PRINTF("SuccessConnection");
-	m_OnConnectedBP.Broadcast(m_CurrentHead->GetSocketLocation("PinPoint"));
-
 	m_CurrentHead->OnComponentBeginOverlap.RemoveDynamic(this, &AUSB_PlayerPawn::TryConnect);
-	m_CurrentHead->SetGenerateOverlapEvents(false);
-	EnableUSBInput();
+	//PRINTF("SuccessConnection");
+	//m_OnConnectedBP.Broadcast(m_CurrentHead->GetSocketLocation("PinPoint"));
+
+	//m_CurrentHead->SetGenerateOverlapEvents(false);
+	//EnableUSBInput();
 	m_UsbMovement->StopUSBMove();
 	m_UsbMovement->m_bUseSweep = true;
 
+	portConnect->DisableColl();
 	AdjustPinTransform(portConnect);
+	//m_CurrentHeadPin->Connect(portConnect);
+	//portConnect->Connect(m_CurrentHeadPin);
 
-	portConnect->Connect(m_CurrentHeadPin);
+	//if (!portConnect->m_bCantMoveOnConnected)
+	//{
+	//	SetHeadTail(portConnect->GetParentSkMesh(), m_CurrentTail, portConnect, m_PortTailPrev);
+	//	AddTraceIgnoreActor(portConnect->GetOwner());
+	//	AddPhysicsBody(portConnect->GetParentSkMesh());
+	//}
+	//else
+	//{
+	//	//cantMove;
+	//	m_PortHeadPrev = portConnect;
 
-	if (!portConnect->m_bCantMoveOnConnected)
-	{
-		SetHeadTail(portConnect->GetParentSkMesh(), m_CurrentTail, portConnect, m_PortTailPrev);
-		AddTraceIgnoreActor(portConnect->GetOwner());
-		AddPhysicsBody(portConnect->GetParentSkMesh());
-	}
-	else
-	{
-		//cantMove;
-
-		m_PortHeadPrev = portConnect;
-
-
-		DisableUSBMove();
-	}
-	
-	
+	//	DisableUSBMove();
+	//}
 }
 
 void AUSB_PlayerPawn::AdjustPinTransform(UPortSkMeshComponent * portConnect)
 {
-	FVector PortPoint = portConnect->GetComponentLocation();
-	FVector ConnectPoint = PortPoint + (m_CurrentHeadPin->GetComponentLocation() - m_CurrentHeadPin->GetSocketLocation("PinPoint"));
-	FRotator PortRot = portConnect->GetParentSkMesh()->GetComponentRotation();
-	m_CurrentHeadPin->SetWorldLocationAndRotationNoPhysics(ConnectPoint, PortRot);
+
+	
+
+
+	auto* RotateAction = UCActionFactory::MakeRotateComponentToFollowAction(m_CurrentHeadPin, portConnect, 0.3f);
+
+
+
+	auto* MoveAction = UCActionFactory::MakeMoveComponentToFollow(m_CurrentHeadPin, portConnect, 0.3f, "PinPoint");
+	MoveAction->m_OnComplete.AddLambda(
+		[=]()
+	{
+
+		PRINTF("SuccessConnection");
+		m_OnConnectedBP.Broadcast(m_CurrentHead->GetSocketLocation("PinPoint"));
+
+		m_CurrentHead->SetGenerateOverlapEvents(false);
+		EnableUSBInput();
+		PRINTF("LambdaCalled");
+
+		//
+		FVector PortPoint = portConnect->GetParentSkMesh()->GetComponentLocation();
+		portConnect->GetParentSkMesh()->SetWorldLocationAndRotationNoPhysics(PortPoint,m_CurrentHeadPin->GetComponentRotation());
+
+		m_CurrentHeadPin->Connect(portConnect);
+		portConnect->Connect(m_CurrentHeadPin);
+		//after constraint
+		PortPoint = portConnect->GetComponentLocation();
+		FVector ConnectPoint = PortPoint + (m_CurrentHeadPin->GetComponentLocation() - m_CurrentHeadPin->GetSocketLocation("PinPoint"));
+		FRotator PortRot = portConnect->GetParentSkMesh()->GetComponentRotation();
+		m_CurrentHeadPin->SetWorldLocationAndRotationNoPhysics(ConnectPoint, PortRot);
+		//
+		if (!portConnect->m_bCantMoveOnConnected)
+		{
+			SetHeadTail(portConnect->GetParentSkMesh(), m_CurrentTail, portConnect, m_PortTailPrev);
+			AddTraceIgnoreActor(portConnect->GetOwner());
+			AddPhysicsBody(portConnect->GetParentSkMesh());
+		}
+		else
+		{
+			//cantMove;
+			m_PortHeadPrev = portConnect;
+
+			DisableUSBMove();
+		}
+		
+	}
+	);
+	m_ActionManager->RunAction(RotateAction);
+	m_ActionManager->RunAction(MoveAction);
+
+	//
 }
 
 void AUSB_PlayerPawn::FailConnection(UPortSkMeshComponent* portConnect, const FHitResult * hitResult, EFailConnectionReason reason)
@@ -658,8 +707,7 @@ void AUSB_PlayerPawn::TickTracePortable()
 		m_CurrentFocusedPort->OnFocusEnd(m_CurrentHeadPin);
 	}
 
-	DrawDebugSphere(GetWorld(), StartTrace, 10.f,6,FColor::White,false,-1.f,1,12.f);
-	DrawDebugSphere(GetWorld(), EndTrace, 10.f, 6, FColor::White, false, -1.f, 1, 12.f);
+
 	if (GetWorld()->SweepSingleByChannel(HitResult, StartTrace, EndTrace, FQuat::Identity, ECC_GameTraceChannel9, FCollisionShape::MakeSphere(10.f), QueryParams))
 	{
 		if (!HitResult.GetActor())
