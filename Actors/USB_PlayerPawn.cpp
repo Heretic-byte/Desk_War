@@ -488,43 +488,53 @@ void AUSB_PlayerPawn::SuccessConnection(UPortSkMeshComponent* portConnect)
 
 void AUSB_PlayerPawn::AdjustPinTransform(UPortSkMeshComponent * portConnect)
 {
-
-	
-
+	auto* Seq = UCActionFactory::MakeSequenceAction();
 
 	auto* RotateAction = UCActionFactory::MakeRotateComponentToFollowAction(m_CurrentHeadPin, portConnect, 0.3f);
-
-
-
+	Seq->AddAction(RotateAction);
 	auto* MoveAction = UCActionFactory::MakeMoveComponentToFollow(m_CurrentHeadPin, portConnect, 0.3f, "PinPoint");
+	Seq->AddAction(MoveAction);
+	//값이 바뀌니까
+
+
 	MoveAction->m_OnComplete.AddLambda(
 		[=]()
 	{
-
 		PRINTF("SuccessConnection");
 		m_OnConnectedBP.Broadcast(m_CurrentHead->GetSocketLocation("PinPoint"));
-
 		m_CurrentHead->SetGenerateOverlapEvents(false);
 		EnableUSBInput();
-		PRINTF("LambdaCalled");
-
 		//
-		FVector PortPoint = portConnect->GetParentSkMesh()->GetComponentLocation();
-		portConnect->GetParentSkMesh()->SetWorldLocationAndRotationNoPhysics(PortPoint,m_CurrentHeadPin->GetComponentRotation());
-
-		m_CurrentHeadPin->Connect(portConnect);
-		portConnect->Connect(m_CurrentHeadPin);
+		PRINTF("1-PinRot:%s", *m_CurrentHead->GetComponentRotation().ToString());
+		PRINTF("Before PinPoint: %s", *m_CurrentHead->GetSocketLocation("PinPoint").ToString());
+		PRINTF("Before PortPoint: %s", *portConnect->GetComponentLocation().ToString());
+	
+		PRINTF("2-PortRot:%s", *portConnect->GetComponentRotation().ToString());
+		//
 		//after constraint
-		PortPoint = portConnect->GetComponentLocation();
+		PRINTF("After PinPoint: %s", *m_CurrentHead->GetSocketLocation("PinPoint").ToString());
+		PRINTF("After PortPoint: %s", *portConnect->GetComponentLocation().ToString());
+		//
+		PRINTF("3-PinRot:%s", *m_CurrentHead->GetComponentRotation().ToString());
+		PRINTF("4-PortRot:%s", *portConnect->GetComponentRotation().ToString());
+		FVector PortPoint = portConnect->GetComponentLocation();
 		FVector ConnectPoint = PortPoint + (m_CurrentHeadPin->GetComponentLocation() - m_CurrentHeadPin->GetSocketLocation("PinPoint"));
 		FRotator PortRot = portConnect->GetParentSkMesh()->GetComponentRotation();
-		m_CurrentHeadPin->SetWorldLocationAndRotationNoPhysics(ConnectPoint, PortRot);
+		//m_CurrentHeadPin->SetWorldLocationAndRotationNoPhysics(ConnectPoint, PortRot);
+		m_CurrentHeadPin->SetWorldRotation(PortRot, false, nullptr, ETeleportType::TeleportPhysics);
+		PRINTF("5-PinRot:%s", *m_CurrentHead->GetComponentRotation().ToString());
+		PRINTF("6-PortRot:%s", *portConnect->GetComponentRotation().ToString());
+		//
+		m_CurrentHeadPin->Connect(portConnect);
+		portConnect->Connect(m_CurrentHeadPin);
 		//
 		if (!portConnect->m_bCantMoveOnConnected)
 		{
 			SetHeadTail(portConnect->GetParentSkMesh(), m_CurrentTail, portConnect, m_PortTailPrev);
 			AddTraceIgnoreActor(portConnect->GetOwner());
 			AddPhysicsBody(portConnect->GetParentSkMesh());
+			PRINTF("7-PinRot:%s", *m_CurrentHead->GetComponentRotation().ToString());
+			PRINTF("8-PortRot:%s", *portConnect->GetComponentRotation().ToString());
 		}
 		else
 		{
@@ -533,11 +543,12 @@ void AUSB_PlayerPawn::AdjustPinTransform(UPortSkMeshComponent * portConnect)
 
 			DisableUSBMove();
 		}
-		
+		PRINTF("9-PinRot:%s", *m_CurrentHead->GetComponentRotation().ToString());
+		PRINTF("10-PortRot:%s", *portConnect->GetComponentRotation().ToString());
 	}
 	);
-	m_ActionManager->RunAction(RotateAction);
-	m_ActionManager->RunAction(MoveAction);
+
+	m_ActionManager->RunAction(Seq);
 
 	//
 }
