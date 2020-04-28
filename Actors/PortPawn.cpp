@@ -11,7 +11,7 @@ FName APortPawn::MeshPortComponentName(TEXT("MeshPort00"));
 
 APortPawn::APortPawn(const FObjectInitializer& objInit):Super(objInit)
 {
-	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root00"));
+	//RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root00"));
 	CreateMesh();
 	CreatePhyCon();
 	CreatePort();
@@ -21,8 +21,8 @@ APortPawn::APortPawn(const FObjectInitializer& objInit):Super(objInit)
 void APortPawn::CreateMesh()
 {
 	m_Mesh = CreateDefaultSubobject<UPhysicsSkMeshComponent>(MeshComponentName);
-	m_Mesh->SetupAttachment(RootComponent);
-	//RootComponent = m_Mesh;
+	//m_Mesh->SetupAttachment(RootComponent);
+	RootComponent = m_Mesh;
 	m_Mesh->SetCollisionProfileName("PhysicsActor");
 	m_Mesh->SetSimulatePhysics(true);
 	m_Mesh->SetUseCCD(true);

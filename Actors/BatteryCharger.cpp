@@ -43,7 +43,7 @@ void ABatteryCharger::Tick(float DeltaTime)
 	{
 		m_fCurrentBattery = 0.f;
 		m_OnGiving.Broadcast(0.f);
-		m_OnFull.Broadcast();
+		m_OnEmpty.Broadcast();
 		SetActorTickEnabled(false);
 		return;
 	}
