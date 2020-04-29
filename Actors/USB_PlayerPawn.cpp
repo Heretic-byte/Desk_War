@@ -188,6 +188,9 @@ void AUSB_PlayerPawn::SetHeadTail(UPhysicsSkMeshComponent * headWant, UPhysicsSk
 	m_CurrentHead = headWant;
 	m_CurrentTail = tailWant;
 
+	m_CurrentHead->UpdateOverlaps();
+	m_CurrentTail->UpdateOverlaps();
+
 	m_PortHeadPrev = headPrevPort;
 	m_PortTailPrev = tailPrevPort;
 
@@ -472,14 +475,14 @@ void AUSB_PlayerPawn::SuccessConnection(UPortSkMeshComponent* portConnect)
 
 	portConnect->DisableColl();
 
-	auto* ReadyAction = UCActionFactory::MakeMoveComponentToFollow(m_CurrentHeadPin, portConnect, 0.3f, "ReadyPoint", true, ETimingFunction::EaseInCube);
+	auto* ReadyAction = UCActionFactory::MakeMoveComponentToFollow(m_CurrentHeadPin, portConnect, 0.3f, "ReadyPoint", true, ETimingFunction::Linear);
 	ReadyAction->m_OnComplete.AddLambda(
 		[=]()
 		{
-		for (auto* pp : GetPhysicsAry())
+	/*	for (auto* pp : GetPhysicsAry())
 		{
 			pp->SetPhysicsLinearVelocity(FVector::ZeroVector);
-		}
+		}*/
 
 			AdjustPinTransform(portConnect);
 		});
@@ -509,8 +512,8 @@ void AUSB_PlayerPawn::AdjustPinTransform(UPortSkMeshComponent * portConnect)
 	//레디포인트가 핀에 있으면 각도 오차만큼 이동 거리에 오차가 생긴다, 대각선으로
 	//레디포인트를 포트가 갖게해야한다.
 	
-	auto* RotateAction = UCActionFactory::MakeRotateComponentToFollowAction(m_CurrentHeadPin, portConnect, 0.2f);
-	auto* MoveAction = UCActionFactory::MakeMoveComponentToFollow(m_CurrentHeadPin, portConnect, 0.8f, "PinPoint", false , ETimingFunction::EaseInCube);
+	auto* RotateAction = UCActionFactory::MakeRotateComponentToFollowAction(m_CurrentHeadPin, portConnect, 0.5f);
+	auto* MoveAction = UCActionFactory::MakeMoveComponentToFollow(m_CurrentHeadPin, portConnect, 0.6f, "PinPoint", false , ETimingFunction::EaseInCube);
 	//값이 바뀌니까
 	MoveAction->m_OnComplete.AddLambda(
 	[=]()
@@ -524,7 +527,8 @@ void AUSB_PlayerPawn::AdjustPinTransform(UPortSkMeshComponent * portConnect)
 		 FVector ConnectPoint = PortPoint + (m_CurrentHeadPin->GetComponentLocation() - m_CurrentHeadPin->GetSocketLocation("PinPoint"));
 		 FRotator PortRot = portConnect->GetParentSkMesh()->GetComponentRotation();
 		 m_CurrentHeadPin->SetWorldLocationAndRotationNoPhysics(ConnectPoint, PortRot);
-		//
+
+
 		m_CurrentHeadPin->Connect(portConnect);
 		portConnect->Connect(m_CurrentHeadPin);
 		//
@@ -541,10 +545,7 @@ void AUSB_PlayerPawn::AdjustPinTransform(UPortSkMeshComponent * portConnect)
 			DisableUSBMove();
 		}
 
-		for (auto* pp : GetPhysicsAry())
-		{
-			pp->SetPhysicsLinearVelocity(FVector::ZeroVector);
-		}
+		
 
 	}
 	);
@@ -643,6 +644,7 @@ bool AUSB_PlayerPawn::TryDisconnect()
 	m_OnDisconnectedBP.Broadcast(TailPrev->GetSocketLocation("PinPoint"));
 
 	TailPrev->SetGenerateOverlapEvents(true);
+
 
 	m_PortTailPrev->Disconnect();
 	SetHeadTail(m_CurrentHead, TailPrev, m_PortHeadPrev, TailPrev->GetMyPort(), true);
