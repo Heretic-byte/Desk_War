@@ -120,7 +120,7 @@ void UUSB_SpringArm::UpdateDesiredArmLocation(bool bDoTrace, bool bDoLocationLag
 	PreviousDesiredRot = DesiredRot;
 
 	// Get the spring arm 'origin', the target we want to look at
-	FVector ArmOrigin = GetComponentLocation() + TargetOffset;
+	FVector ArmOrigin = GetComponentLocation() + WorldTargetOffset;
 	// We lag the target, not the actual camera position, so rotating the camera around does not have lag
 	FVector DesiredLoc = ArmOrigin;
 	if (bDoLocationLag)

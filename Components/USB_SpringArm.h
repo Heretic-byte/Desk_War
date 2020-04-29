@@ -36,7 +36,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera)
 	FVector SocketOffset;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera)
-	FVector TargetOffset;
+	FVector WorldTargetOffset;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = CameraCollision, meta = (editcondition = "bDoCollisionTest"))
 	float ProbeSize;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = CameraCollision, meta = (editcondition = "bDoCollisionTest"))

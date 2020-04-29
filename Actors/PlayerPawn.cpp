@@ -31,7 +31,7 @@ APlayerPawn::APlayerPawn()
 	m_MainSpringArm->SetupAttachment(m_CamRoot);
 	m_MainSpringArm->TargetArmLength = 600.f;
 	m_MainSpringArm->SocketOffset = FVector(0, 0, 0);
-	m_MainSpringArm->TargetOffset = FVector(0.f, 0.f, 0.f);
+	m_MainSpringArm->WorldTargetOffset = FVector(0.f, 0.f, 0.f);
 	m_MainSpringArm->m_RotOffset = FRotator(-30.f, 0.f, 0.f);
 	m_MainSpringArm->m_fMinimumArmLength = 33.f;
 	m_MainSpringArm->bUsePawnControlRotation = true;
