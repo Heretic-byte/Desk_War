@@ -47,8 +47,8 @@ public:
 	virtual void AddForce(FVector forceWant) override;
 	virtual void AddImpulse(FVector impulseWant) override;
 	virtual void BeginPlay() override;
-	void RequestConnectChargeMove(const FVector& normalHorizon,float timeWant);
-	void RequestAirConnectChargeMove(FRotator portRot,const FVector& normalHorizon, float timeWant);
+	void RequestConnectChargeMove(const FVector& normalHorizon,float timeWant,float speedM);
+	void RequestAirConnectChargeMove(FRotator portRot,const FVector& normalHorizon, float timeWant,float speedM);
 	void StopUSBMove();
 	void ClearAirRotation();
 

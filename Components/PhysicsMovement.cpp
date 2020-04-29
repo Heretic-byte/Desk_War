@@ -12,6 +12,7 @@
 
 UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 {
+	m_fSpeedMultiple = 1.f;
 	m_fMinLandHeight = 100.f;
 	m_bUseSweep = true;
 	m_NameSweepProfileName = "PhysicsActor";
@@ -659,7 +660,7 @@ void UPhysicsMovement::SetVelocity(FVector& velocity, FHitResult & sweep)
 	{
 		velocity *= m_fAirControl;
 	}
-
+	velocity *= m_fSpeedMultiple;
 	velocity.Z = CurrentV.Z;
 	m_MovingTarget->SetPhysicsLinearVelocity(velocity);
 }
@@ -1029,5 +1030,10 @@ FCollisionShape UPhysicsMovement::MakeMovingTargetBox(const UPrimitiveComponent*
 	}
 
 	return BoxShape;
+}
+
+void UPhysicsMovement::SetSpeedMultiple(float multiplePerOne)
+{
+	m_fSpeedMultiple = multiplePerOne;
 }
 

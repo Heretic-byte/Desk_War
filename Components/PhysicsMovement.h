@@ -127,6 +127,8 @@ public:
 
 	FCollisionShape MakeMovingTargetBox(const UPrimitiveComponent* wantPrim);
 
+	void SetSpeedMultiple(float multiplePerOne);
+
 protected:
 	virtual void PhysSceneStep(FPhysScene* PhysScene, float DeltaTime);
 
@@ -202,6 +204,7 @@ public:
 	bool m_bUseSweep;
 
 protected:
+	float m_fSpeedMultiple;
 	TArray<FHitResult> m_ArySweepHits;
 	TArray<TEnumAsByte<	EObjectTypeQuery>>  m_AryObjectTypes;
 	float m_fFallStartZ;

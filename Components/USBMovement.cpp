@@ -21,6 +21,7 @@ void UUSBMovement::BeginPlay()
 	m_fInitHeadMass = m_MovingTarget->GetBodyInstance()->GetBodyMass();
 }
 
+
 void UUSBMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -64,17 +65,18 @@ void UUSBMovement::AddImpulse(FVector impulseWant)
 	m_MovingTargetTail->AddImpulse(impulseWant);
 }
 
-void UUSBMovement::RequestConnectChargeMove(const FVector & normalHorizon, float timeWant)
+void UUSBMovement::RequestConnectChargeMove(const FVector & normalHorizon, float timeWant, float speedM)
 {
 	m_fAutoMoveInput = normalHorizon;
 	m_fAutoMoveTimeWant = timeWant;
 	m_fAutoMoveTimer = 0;
+	SetSpeedMultiple(speedM);
 }
 
-void UUSBMovement::RequestAirConnectChargeMove(FRotator portRot, const FVector & normalHorizon, float timeWant)
+void UUSBMovement::RequestAirConnectChargeMove(FRotator portRot, const FVector & normalHorizon, float timeWant, float speedM)
 {
 	m_OnAirTargetRot = portRot;
-	RequestConnectChargeMove(normalHorizon, timeWant);
+	RequestConnectChargeMove(normalHorizon, timeWant, speedM);
 }
 
 void UUSBMovement::StopUSBMove()
@@ -82,6 +84,14 @@ void UUSBMovement::StopUSBMove()
 	m_fAutoMoveTimeWant = 0.f;
 	m_fAutoMoveTimer = 0.f;
 	m_fAutoMoveInput = FVector::ZeroVector;
+	SetSpeedMultiple(1.f);
+
+	for (auto* pp : m_PlayerPawn->GetPhysicsAry())
+	{
+		pp->SetPhysicsLinearVelocity(FVector::ZeroVector);
+	}
+
+
 	PRINTF("StopAutoMove");
 
 	StopMovementImmediately();

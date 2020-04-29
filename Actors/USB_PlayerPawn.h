@@ -60,7 +60,9 @@ protected://component
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
 	UUSB_SpringArm* m_MainSpringArm;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "USB_Action")
-	UActionManagerComponent* m_ActionManager;
+	UActionManagerComponent* m_ReadyActionManager;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "USB_Action")
+	UActionManagerComponent* m_ConnectActionManager;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "USB_Body")
 	USkeletalMeshComponent* m_MeshFaceSk;
 	UPROPERTY(VisibleAnywhere, Category = "USB_Body")
@@ -190,5 +192,4 @@ public:
 		return m_AryPhysicsBody;
 	}
 
-	
 };
