@@ -49,7 +49,7 @@ void AConnectableActor::BeginPlay()
 {
 	Super::BeginPlay();
 	SetActorTickEnabled(false);
-	m_MeshPort->InitPort(m_PhysicsCons, m_Mesh, m_Sphere);
+	m_MeshPort->InitPort(m_PhysicsCons, m_Mesh, m_Sphere, m_PortType);
 	m_MeshPort->m_OnConnected.AddUObject(this, &AConnectableActor::OnConnected);
 	m_MeshPort->m_OnDisconnected.AddUObject(this, &AConnectableActor::OnDisconnected);
 }

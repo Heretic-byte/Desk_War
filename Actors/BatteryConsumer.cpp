@@ -37,11 +37,11 @@ void ABatteryConsumer::Tick(float DeltaTime)
 	Battery->UseBattery(GainBattery);
 	
 	m_fCollectedBattery += GainBattery;
-	m_OnGiving.Broadcast(m_fCollectedBattery / m_fMaxBattery);
+	m_OnGivingBP.Broadcast(m_fCollectedBattery / m_fMaxBattery);
 
 	if (!CheckNeedBattery())
 	{
-		m_OnFull.Broadcast();
+		m_OnFullBP.Broadcast();
 	}
 }
 
@@ -75,6 +75,7 @@ void ABatteryConsumer::OnDisconnected(UPinSkMeshComponent * skComp)
 {
 	SetActorTickEnabled(false);
 	m_PlayerPawn = nullptr;
+	m_Audio->Stop();
 }
 
 bool ABatteryConsumer::CheckNeedBattery()

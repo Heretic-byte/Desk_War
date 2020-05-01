@@ -42,12 +42,12 @@ void ABatteryCharger::Tick(float DeltaTime)
 	if (m_fCurrentBattery <= 0)
 	{
 		m_fCurrentBattery = 0.f;
-		m_OnGiving.Broadcast(0.f);
+		m_OnGivingBP.Broadcast(0.f);
 		m_OnEmpty.Broadcast();
 		SetActorTickEnabled(false);
 		return;
 	}
-	m_OnGiving.Broadcast(GetRemainBatteyPercentOne());
+	m_OnGivingBP.Broadcast(GetRemainBatteyPercentOne());
 	Battery->ChargeBattery(BatterySuck);
 }
 

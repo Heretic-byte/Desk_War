@@ -154,6 +154,7 @@ protected:
 	void InitTraceIgnoreAry();
 	void TickTracePortable();
 	bool IsImpulseVelocityLower();
+	bool CheckPortDot(UPortSkMeshComponent* port);
 public:
 	virtual void Tick(float DeltaTime) override;
 	void EnableUSBInput();

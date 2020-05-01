@@ -71,8 +71,8 @@ void ATwinDoor::OpenDoor()
 	FRotator RwantRot = m_InitRightRot;
 	RwantRot.Yaw += -135.f;
 
- 	m_ActionManager->AddAction( UCActionFactory::MakeRotateComponentToAction(m_MeshLeftDoor,LwantRot,3.f));
-	m_ActionManager->AddAction( UCActionFactory::MakeRotateComponentToAction(m_MeshRightDoor, RwantRot, 3.f));
+ 	m_ActionManager->AddAction(UCActionFactory::MakeRotateComponentToAction(m_MeshLeftDoor,LwantRot,3.f));
+	m_ActionManager->AddAction(UCActionFactory::MakeRotateComponentToAction(m_MeshRightDoor, RwantRot, 3.f));
 }
 
 void ATwinDoor::CloseDoor()

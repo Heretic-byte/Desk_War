@@ -21,6 +21,8 @@ public:
 	// Sets default values for this actor's properties
 	AConnectableActor();
 protected:
+	EPinPortType m_PortType;
+protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Physics")
 	UPhysicsConstraintComponent* m_PhysicsCons;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mesh")

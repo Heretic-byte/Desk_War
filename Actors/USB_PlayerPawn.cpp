@@ -465,11 +465,7 @@ void AUSB_PlayerPawn::ConnectChargingStart()
 void AUSB_PlayerPawn::SuccessConnection(UPortSkMeshComponent* portConnect)
 {
 	m_CurrentHead->OnComponentBeginOverlap.RemoveDynamic(this, &AUSB_PlayerPawn::TryConnect);
-	//PRINTF("SuccessConnection");
-	//m_OnConnectedBP.Broadcast(m_CurrentHead->GetSocketLocation("PinPoint"));
 
-	//m_CurrentHead->SetGenerateOverlapEvents(false);
-	//EnableUSBInput();
 	m_UsbMovement->StopUSBMove();
 	m_UsbMovement->m_bUseSweep = true;
 
@@ -479,32 +475,13 @@ void AUSB_PlayerPawn::SuccessConnection(UPortSkMeshComponent* portConnect)
 	ReadyAction->m_OnComplete.AddLambda(
 		[=]()
 		{
-	/*	for (auto* pp : GetPhysicsAry())
-		{
-			pp->SetPhysicsLinearVelocity(FVector::ZeroVector);
-		}*/
 
 			AdjustPinTransform(portConnect);
 		});
 
 	m_ReadyActionManager->RunAction(ReadyAction);
 	
-	//m_CurrentHeadPin->Connect(portConnect);
-	//portConnect->Connect(m_CurrentHeadPin);
 
-	//if (!portConnect->m_bCantMoveOnConnected)
-	//{
-	//	SetHeadTail(portConnect->GetParentSkMesh(), m_CurrentTail, portConnect, m_PortTailPrev);
-	//	AddTraceIgnoreActor(portConnect->GetOwner());
-	//	AddPhysicsBody(portConnect->GetParentSkMesh());
-	//}
-	//else
-	//{
-	//	//cantMove;
-	//	m_PortHeadPrev = portConnect;
-
-	//	DisableUSBMove();
-	//}
 }
 
 void AUSB_PlayerPawn::AdjustPinTransform(UPortSkMeshComponent * portConnect)
@@ -544,9 +521,6 @@ void AUSB_PlayerPawn::AdjustPinTransform(UPortSkMeshComponent * portConnect)
 			m_PortHeadPrev = portConnect;
 			DisableUSBMove();
 		}
-
-		
-
 	}
 	);
 	
@@ -730,7 +704,7 @@ void AUSB_PlayerPawn::TickTracePortable()
 
 		UPortSkMeshComponent* PortableCompo = Cast<UPortSkMeshComponent>(HitResult.GetComponent());
 
-		if (PortableCompo && !PortableCompo->GetPinConnected())// PortableCompo->CheckYawOnly(m_CurrentHeadPin)
+		if (PortableCompo && CheckPortDot(PortableCompo) && !PortableCompo->GetPinConnected())// PortableCompo->CheckYawOnly(m_CurrentHeadPin)
 		{
 			m_CurrentFocusedPort = PortableCompo;
 			m_CurrentFocusedPort->OnFocus(m_CurrentHeadPin, IsMovingOnGround());
@@ -746,6 +720,13 @@ bool AUSB_PlayerPawn::IsImpulseVelocityLower()//ÀÓÆÞ½ºÁß ¼Ó·ÂÀÌ ÀÎÇ²º¸´Ù ÀÛ¾ÆÁö¸
 	float CurrentSize= m_CurrentHead->GetPhysicsLinearVelocity().SizeSquared();
 
 	return CurrentSize < m_fMaxSpeedSqr * m_UsbMovement->m_fAirControl;
+}
+
+bool AUSB_PlayerPawn::CheckPortDot(UPortSkMeshComponent * port)
+{
+	float Dot = port->GetForwardVector() | m_CurrentHeadPin->GetForwardVector();
+
+	return Dot>0.f;
 }
 
 

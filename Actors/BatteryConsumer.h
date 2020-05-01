@@ -18,9 +18,9 @@ public:
 	ABatteryConsumer();
 public:
 	UPROPERTY(BlueprintAssignable, BlueprintReadOnly, Category = "Battery")
-	FVoidFloatBP m_OnGiving;
+	FVoidFloatBP m_OnGivingBP;
 	UPROPERTY(BlueprintAssignable, BlueprintReadOnly, Category = "Battery")
-	FVoidVoidBP m_OnFull;
+	FVoidVoidBP m_OnFullBP;
 protected:
 	UPROPERTY(EditAnywhere,BlueprintReadOnly,Category="Battery")
 	float m_fMaxBattery;

@@ -292,6 +292,7 @@ void UPhysicsMovement::TickMovement(float delta)
 		{
 			ResultVector = SlideAlongOnSurface(Delta, delta, 1.f - PercentTimeApplied, Hit.Normal, Hit, true);
 		}
+
 	}
 	m_OnGroundRampRot = ResultVector.GetSafeNormal().Rotation();
 	SetVelocity(ResultVector, Hit);

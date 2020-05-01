@@ -19,7 +19,7 @@ public:
 
 public:
 	UPROPERTY(BlueprintAssignable, BlueprintReadOnly, Category = "Battery")
-	FVoidFloatBP m_OnGiving;
+	FVoidFloatBP m_OnGivingBP;
 	UPROPERTY(BlueprintAssignable, BlueprintReadOnly, Category = "Battery")
 	FVoidVoidBP m_OnEmpty;
 protected:
