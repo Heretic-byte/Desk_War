@@ -4,7 +4,17 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "FuncLib/USBFunctionLib.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Components/PuzzleDoor.h"
+#include "Components/StaticMeshComponent.h"
+#include "Components/CamTimer.h"
+#include "EasyActionPlugin/Public/ActionManagerComponent.h"
+#include "Materials/MaterialInstanceDynamic.h"
+
 #include "SingleDoor.generated.h"
+
+
 
 UCLASS()
 class DESK_WAR_API ASingleDoor : public AActor
@@ -12,15 +22,52 @@ class DESK_WAR_API ASingleDoor : public AActor
 	GENERATED_BODY()
 	
 public:	
-	// Sets default values for this actor's properties
 	ASingleDoor();
 
 protected:
-	// Called when the game starts or when spawned
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Door")
+	float m_fOpenTime;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Door")
+	TArray<UMaterialInstanceDynamic*> m_AryDoorMat;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "Door")
+	USkeletalMeshComponent* m_MeshDoor;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Door")
+	FRotator m_DoorOpenRot;
+	UPROPERTY()
+	FRotator m_InitDoorRot;
+
+protected:
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Door")
+	float m_fCamShowTime;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "Door")
+	UPuzzleDoor* m_PuzzleDoor;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "Door")
+	UCamTimer* m_CamTimer;
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "Door")
+	UActionManagerComponent* m_ActionManager;
+
+protected:
+	UPROPERTY()
+	bool m_bDidShow;
+
+protected:
 	virtual void BeginPlay() override;
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+	virtual void OpenDoor();
+
+	virtual void CloseDoor();
+
+	void SetMaterialAry(USkeletalMeshComponent* meshDoor, TArray<UMaterialInstanceDynamic*>& meshDoorMatAry);
+
+public:
+	UFUNCTION(BlueprintCallable, Category = "Door")
+	void SetGauge(int matIndexFromAry,float gaugePerOne);
+
+	UFUNCTION(BlueprintCallable, Category = "Door")
+	void SetBrightness(int matIndexFromAry, float perOne);
 
 };
+//졷까자
+//상속가능하게
+//문열릴때 콜리전 카메라 없애기
+//닫힐때콜리전 카메라 생기기

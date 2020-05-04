@@ -13,13 +13,14 @@ AInsertBattery::AInsertBattery()
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FoundSkMesh(TEXT("SkeletalMesh'/Game/Meshes/Prop_205/Tutorial/Gate/SK_Port_Gate.SK_Port_Gate'"));
 	check(FoundSkMesh.Object);
 	m_Mesh->SetSkeletalMesh(FoundSkMesh.Object);
+	m_Mesh->SetCollisionProfileName("BlockAll");
 	//
 	m_PortType = EPinPortType::E5Pin;
 	//
 	m_MeshPort->m_bCantMoveOnConnected = true;
 	m_MeshPort->RelativeLocation = FVector(-27.000000,0.000000,-41.000000);
 	//SkeletalMesh'/Game/Meshes/Prop_205/Tutorial/Gate/SK_Port_Gate.SK_Port_Gate'
-
+	m_nMatGaugeIndex = 0;
 	m_PuzzleKey = CreateDefaultSubobject<UPuzzleKey>("PuzzleKey00");
 }
 
@@ -33,7 +34,13 @@ void AInsertBattery::BeginPlay()
 
 void AInsertBattery::SetGaugeToDoor(float gauge)
 {
-	Cast<ATwinDoor>( m_PuzzleKey->GetLinkedDoor()->GetOwner())->SetGauge(gauge);
+	auto* Door = Cast<ATwinDoor>(m_PuzzleKey->GetLinkedDoor()->GetOwner());
+
+	if (!Door)
+	{
+		PRINTF("InsertBattery - ERROR - No Door Linked");
+	}
+	Door->SetGauge(m_nMatGaugeIndex,gauge);
 }
 
 void AInsertBattery::OnFull()

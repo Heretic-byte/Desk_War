@@ -61,8 +61,14 @@ void UUSBMovement::AddForce(FVector forceWant)
 
 void UUSBMovement::AddImpulse(FVector impulseWant)
 {
-	Super::AddImpulse(impulseWant);
-	m_MovingTargetTail->AddImpulse(impulseWant);
+	if (impulseWant.IsNearlyZero())
+	{
+		return;
+	}
+	for (auto Phy : m_PlayerPawn->GetPhysicsAry())
+	{
+		Phy->AddImpulse(impulseWant*Phy->GetBodyInstance()->GetBodyMass());//전체에게 전체의 질량이 곱해짐
+	}
 }
 
 void UUSBMovement::RequestConnectChargeMove(const FVector & normalHorizon, float timeWant, float speedM)

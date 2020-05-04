@@ -116,4 +116,9 @@ public:
 	{
 		return m_fCollMass;
 	}
+
+	FORCEINLINE const TArray<USphereComponent*>& GetSpineSphereAry()
+	{
+		return m_ArySpineColls;
+	}
 };

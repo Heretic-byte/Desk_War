@@ -500,11 +500,17 @@ void AUSB_PlayerPawn::AdjustPinTransform(UPortSkMeshComponent * portConnect)
 		m_CurrentHead->SetGenerateOverlapEvents(false);
 		EnableUSBInput();
 		//
-		 FVector PortPoint = portConnect->GetComponentLocation();
-		 FVector ConnectPoint = PortPoint + (m_CurrentHeadPin->GetComponentLocation() - m_CurrentHeadPin->GetSocketLocation("PinPoint"));
-		 FRotator PortRot = portConnect->GetParentSkMesh()->GetComponentRotation();
-		 m_CurrentHeadPin->SetWorldLocationAndRotationNoPhysics(ConnectPoint, PortRot);
+		FVector PinLocation = m_CurrentHeadPin->GetComponentLocation();
+		FVector PortPoint = portConnect->GetComponentLocation();
+		FVector ConnectPoint = PortPoint + (PinLocation - m_CurrentHeadPin->GetSocketLocation("PinPoint"));
+		FRotator PortRot = portConnect->GetParentSkMesh()->GetComponentRotation();
+		FVector MoveDelta = PinLocation - ConnectPoint;
 
+		for (auto Sph : GetSpineSphereAry())
+		{
+			Sph->MoveComponent(MoveDelta,Sph->GetComponentRotation(),false,nullptr,MOVECOMP_NoFlags,ETeleportType::TeleportPhysics);
+		}
+		m_CurrentHeadPin->SetWorldLocationAndRotationNoPhysics(ConnectPoint, PortRot);
 
 		m_CurrentHeadPin->Connect(portConnect);
 		portConnect->Connect(m_CurrentHeadPin);
@@ -618,15 +624,17 @@ bool AUSB_PlayerPawn::TryDisconnect()
 	m_OnDisconnectedBP.Broadcast(TailPrev->GetSocketLocation("PinPoint"));
 
 	TailPrev->SetGenerateOverlapEvents(true);
-
+	TailPrev->UpdateOverlaps();
 
 	m_PortTailPrev->Disconnect();
+	m_PortTailPrev->UpdateOverlaps();
+
 	SetHeadTail(m_CurrentHead, TailPrev, m_PortHeadPrev, TailPrev->GetMyPort(), true);
 
 	EnableUSBMove();
 
 	DisableUSBInput(m_fBlockMoveTimeWhenEject);//이부분을 바꿔서 임펄스에 비례해 오래 못건드리게
-	FVector ImpulseDir = GetTail()->GetForwardVector()*-1.f * EjectPowerFromPort *GetTotalMass();
+	FVector ImpulseDir = GetTail()->GetForwardVector()*-1.f * EjectPowerFromPort;// *GetTotalMass();
 	m_UsbMovement->AddImpulse(ImpulseDir);
 	
 	m_PlayerCon->PlayerCameraManager->PlayCameraShake(UEjectionCamShake::StaticClass(), 1.0f);

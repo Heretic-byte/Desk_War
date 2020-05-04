@@ -10,7 +10,7 @@
 #include "Components/PinSkMeshComponent.h"
 #include "Datas/USB_Enum.h"
 #include "Materials/MaterialInstanceDynamic.h"
-
+#include "PhysicalMaterials/PhysicalMaterial.h"
 #include "PortSkMeshComponent.generated.h"
 
 
@@ -71,6 +71,11 @@ protected:
 	UPhysicsSkMeshComponent* m_MeshParentActor;
 	UPROPERTY()
 	USphereComponent* m_CollSphere;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Physics")
+	UPhysicalMaterial* m_MatPhyDefaultFriction;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Physics")
+	UPhysicalMaterial* m_MatPhysNoFrictionForUSB;
 protected:
 	FLinearColor m_MatInitColor;
 	FName m_NameParentBonePortPoint;
@@ -80,6 +85,7 @@ protected:
 	bool m_bIsBlinkStart;
 	float m_fBlinkInterpCache;
 	float m_fMatBrightness;
+	float m_fInitMass;
 private:
 	void ConstraintPinPort();
 public:

@@ -19,7 +19,7 @@ AUSB_PhysicsPawn::AUSB_PhysicsPawn(const FObjectInitializer& objInit):Super(objI
 	m_ArySpineColls.Empty();
 	m_ArySplineMeshCompos.Empty();
 	m_bEnableSpineGravity = true;
-	static ConstructorHelpers::FObjectFinder<UPhysicalMaterial> FoundPhyMat(TEXT("PhysicalMaterial'/Game/PhysicsMaterial/PM_LowFriction.PM_LowFriction'"));
+	static ConstructorHelpers::FObjectFinder<UPhysicalMaterial> FoundPhyMat(TEXT("PhysicalMaterial'/Game/PhysicsMaterial/PM_USB_Main.PM_USB_Main'"));
 	if (FoundPhyMat.Succeeded())
 	{
 		m_SpineFriction = FoundPhyMat.Object;

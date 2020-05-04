@@ -25,6 +25,8 @@ protected:
 	USoundBase* m_PuzzleUnlockSound;
 	UPROPERTY(VisibleAnywhere,Category="Puzzle")
 	UPuzzleKey* m_PuzzleKey;
+	UPROPERTY(EditDefaultsOnly, Category = "Puzzle")
+	int m_nMatGaugeIndex;
 
 protected:
 	virtual void BeginPlay() override;

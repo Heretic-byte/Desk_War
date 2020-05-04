@@ -974,7 +974,7 @@ UPrimitiveComponent * UPhysicsMovement::GetMovingTargetComponent() const
 void UPhysicsMovement::ShowVelocityAccel()
 {
 	PRINTF("Velo:%s,:%f, Accel:%s,:%f", *Velocity.ToString(), Velocity.Size(), *m_Acceleration.ToString(), m_Acceleration.Size());
-	PRINTF("Physcs: %s,%f", *m_MovingTarget->GetPhysicsLinearVelocity().ToString(), m_MovingTarget->GetPhysicsLinearVelocity().Size())
+	PRINTF("Physcs: %s,%f", *m_MovingTarget->GetPhysicsLinearVelocity().ToString(), m_MovingTarget->GetPhysicsLinearVelocity().Size());
 }
 
 void UPhysicsMovement::StopActiveMovement()

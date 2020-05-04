@@ -24,12 +24,12 @@ UPortSkMeshComponent::UPortSkMeshComponent(const FObjectInitializer & objInit)
 	m_NameMatVectorParam = "Color";
 	m_fMatBrightness = 0.9f;
 	m_fFailImpulsePower = 2000.f;
-	m_ConnectableRotation.Yaw = 15.f;
-	m_ConnectableRotation.Roll = 5.f;
-	m_ConnectableRotation.Pitch = 5.f;
+	m_ConnectableRotation.Yaw = 11.f;
+	m_ConnectableRotation.Roll = 15.f;
+	m_ConnectableRotation.Pitch = 15.f;
 	m_NameParentBonePortPoint = "PortPoint";
 	m_PortType = EPinPortType::ENoneType;
-	m_fEjectPowerSelf = 1000.f;
+	m_fEjectPowerSelf = 400.f;
 	m_fEjectPowerToPin = 400;
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FoundMesh(TEXT("SkeletalMesh'/Game/Meshes/Characters/Port/SK_PortPoint.SK_PortPoint'"));
 
@@ -40,6 +40,18 @@ UPortSkMeshComponent::UPortSkMeshComponent(const FObjectInitializer & objInit)
 
 	SetCollisionProfileName("Port");
 	SetGenerateOverlapEvents(true);
+
+	static ConstructorHelpers::FObjectFinder<UPhysicalMaterial> FoundPhysMatForUSB(TEXT("PhysicalMaterial'/Game/PhysicsMaterial/PM_USB_Main.PM_USB_Main'"));
+	if (FoundPhysMatForUSB.Succeeded())
+	{
+		m_MatPhysNoFrictionForUSB = FoundPhysMatForUSB.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UPhysicalMaterial> FoundPhysMatForDefault(TEXT("PhysicalMaterial'/Game/PhysicsMaterial/PM_SimulatePort.PM_SimulatePort'"));
+	if (FoundPhysMatForDefault.Succeeded())
+	{
+		m_MatPhyDefaultFriction = FoundPhysMatForDefault.Object;
+	}
 }
 
 void UPortSkMeshComponent::BeginPlay()
@@ -47,6 +59,7 @@ void UPortSkMeshComponent::BeginPlay()
 	Super::BeginPlay();
 	
 	m_BlinkMatDynamic = UUSBFunctionLib::CreateSetDynamicMaterial(this, 0);
+	
 }
 
 void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, UPhysicsSkMeshComponent* parentMesh,
@@ -65,6 +78,10 @@ void UPortSkMeshComponent::InitPort(UPhysicsConstraintComponent * physicsJoint, 
 	}
 
 	m_NameInitCollProfile = m_MeshParentActor->GetCollisionProfileName();
+
+	m_fInitMass = m_MeshParentActor->GetBodyInstance()->GetBodyMass();
+
+	m_MeshParentActor->GetBodyInstance()->SetPhysMaterialOverride(m_MatPhyDefaultFriction);
 }
 
 void UPortSkMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction)
@@ -190,6 +207,8 @@ void UPortSkMeshComponent::Connect(UPinSkMeshComponent * connector)//should call
 	GetParentSkMesh()->SetCollisionProfileName(m_NameInitCollProfile);
 	EndBlink();
 	SetPortMatColor(m_NameMatVectorParam, m_MatInitColor);
+
+	m_MeshParentActor->GetBodyInstance()->SetPhysMaterialOverride(m_MatPhysNoFrictionForUSB);
 }
 
 void UPortSkMeshComponent::DisableColl()
@@ -211,10 +230,11 @@ bool UPortSkMeshComponent::Disconnect()
 	m_ParentPhysicsConst->BreakConstraint();
 	m_ConnectedPin = nullptr;
 
-	if(m_MeshParentActor->IsSimulatingPhysics())
-		m_MeshParentActor->AddImpulse(GetForwardVector()*m_fEjectPowerSelf);
+	if(m_MeshParentActor->IsSimulatingPhysics()&&!m_bCantMoveOnConnected)
+		m_MeshParentActor->AddImpulse(GetForwardVector()*m_fEjectPowerSelf*m_fInitMass);
 
 	//blink의 시작과끝은 범위 들어오는것으로 처리해줘야함
+	m_MeshParentActor->GetBodyInstance()->SetPhysMaterialOverride(m_MatPhyDefaultFriction);
 	return true;
 }
 
@@ -264,7 +284,7 @@ void UPortSkMeshComponent::OnPlayerExit(UPrimitiveComponent * OverlappedComponen
 void UPortSkMeshComponent::FailConnection(const FHitResult & hitResult)
 {
 	if(m_MeshParentActor->IsSimulatingPhysics())
-	m_MeshParentActor->AddImpulseAtLocation((GetUpVector() + GetForwardVector())*m_fFailImpulsePower, hitResult.ImpactPoint);
+	m_MeshParentActor->AddImpulseAtLocation((GetUpVector() + GetForwardVector())*m_fFailImpulsePower*m_fInitMass, hitResult.ImpactPoint);
 }
 
 
