@@ -12,6 +12,7 @@
 
 UPhysicsMovement::UPhysicsMovement(const FObjectInitializer& objInit)
 {
+	m_fSteeringExponent = 1.f;
 	m_fSpeedMultiple = 1.f;
 	m_fMinLandHeight = 100.f;
 	m_bUseSweep = true;
@@ -87,6 +88,8 @@ void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 
 	TickRotate(SelectTargetRotation(DeltaTime), DeltaTime);//¾ê´Ù
 	ClearJumpInput(DeltaTime);
+
+	ShowVelocityAccel();
 }
 
 void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
@@ -265,8 +268,10 @@ void UPhysicsMovement::TickMovement(float delta)
 	FVector RampVector = ComputeGroundMovementDelta(Delta, m_GroundHitResult);
 	FVector ResultVector;
 
-	SetCruiseVelocity(delta,RampVector);
+	SetCruiseVelocity(delta, RampVector);
+
 	return;
+
 	if (SweepCanMove(RampVector, delta, Hit))
 	{
 		SetVelocity(RampVector, Hit);
@@ -378,12 +383,24 @@ void UPhysicsMovement::CollectHeight()
 void UPhysicsMovement::SetCruiseVelocity(float deltaTime, const FVector & targetVelocity)
 {
 	FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
+	CurrentV.Z = 0.f;
+
 	float CurrentW = targetVelocity.Size();
+
 	float CurrentL = CurrentV.Size();
-	FVector WantForce= targetVelocity.GetSafeNormal() *((CurrentW - CurrentL) / FMath::Max<float>(0.01f, deltaTime));
+
+	FVector WantForce = CurrentV.GetSafeNormal() * ((CurrentW - CurrentL) / FMath::Max<float>(0.01f, deltaTime));
 
 	m_MovingTarget->AddForce(WantForce);
+}
 
+void UPhysicsMovement::SetSteeringForce(FVector forceWant)
+{
+	float Result= FMath::Abs(m_MovingTarget->GetPhysicsLinearVelocity().GetSafeNormal() | forceWant.GetSafeNormal());
+
+	FVector ForceResult = forceWant * (1.0f - FMath::Pow(Result, m_fSteeringExponent));
+
+	m_MovingTarget->AddForce(ForceResult);
 }
 
 
@@ -692,6 +709,7 @@ void UPhysicsMovement::SetVelocity(FVector& velocity, FHitResult & sweep)
 	velocity *= m_fSpeedMultiple;
 	velocity.Z = CurrentV.Z;
 	m_MovingTarget->SetPhysicsLinearVelocity(velocity);
+	
 }
 
 FVector UPhysicsMovement::SlideAlongOnSurface(const FVector& velocity, float deltaTime, float Time, const FVector & InNormal, FHitResult & Hit, bool bHandleImpact)

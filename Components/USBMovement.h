@@ -62,4 +62,6 @@ protected:
 	virtual void CollectHeight() override;
 
 	virtual void SetCruiseVelocity(float deltaTime, const FVector& targetVelocity) override;
+
+	virtual void SetSteeringForce(FVector forceWant) override;
 };

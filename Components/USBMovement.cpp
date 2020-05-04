@@ -216,12 +216,29 @@ void UUSBMovement::CollectHeight()
 void UUSBMovement::SetCruiseVelocity(float deltaTime, const FVector & targetVelocity)
 {
 	FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
+	CurrentV.Z = 0.f;
 	float CurrentW = targetVelocity.Size();
 	float CurrentL = CurrentV.Size();
 	FVector WantForce = targetVelocity.GetSafeNormal() *((CurrentW - CurrentL) / FMath::Max<float>(0.01f, deltaTime));
 
-	m_MovingTarget->AddForce(WantForce* m_MovingTarget->GetBodyInstance()->GetBodyMass());
+	float TotalMass = Cast<AUSB_PlayerPawn>( GetOwner())->GetTotalMass();
+	WantForce *= TotalMass;
 
-	ShowVelocityAccel();
+	if(CurrentW - CurrentL>0.f)
+	m_MovingTarget->AddForce(WantForce);
+	//PRINTF("Was:%f", CurrentW - CurrentL);
+	//PRINTF("Force:%f",WantForce.Size())
+	
+}
+
+void UUSBMovement::SetSteeringForce(FVector forceWant)
+{
+	float Result = FMath::Abs(m_MovingTarget->GetPhysicsLinearVelocity().GetSafeNormal() | forceWant.GetSafeNormal());
+
+	FVector ForceResult = forceWant * (1.0f - FMath::Pow(Result, m_fSteeringExponent));
+	float TotalMass = Cast<AUSB_PlayerPawn>(GetOwner())->GetTotalMass();
+	ForceResult *= TotalMass;
+
+	m_MovingTarget->AddForce(ForceResult);
 }
 

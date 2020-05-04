@@ -89,6 +89,8 @@ public:
 	float m_fGroundFriction;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PhysicsMovement", meta = (ClampMin = "0", UIMin = "0"))
 	float m_fMinLandHeight;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PhysicsMovement", meta = (ClampMin = "1", UIMin = "1"))
+	float m_fSteeringExponent;
 
 public:
 	UFUNCTION(BlueprintCallable,Category="PhysicsMovement_Jump")
@@ -211,4 +213,5 @@ protected:
 	virtual void CollectHeight();
 	//new physics
 	virtual void SetCruiseVelocity(float deltaTime,const FVector& targetVelocity);
+	virtual void SetSteeringForce(FVector forceWant);
 };
