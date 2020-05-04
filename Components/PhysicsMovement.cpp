@@ -87,6 +87,7 @@ void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
 		TickMovement(DeltaTime);
 
 	UpdateComponentVelocity();
+	//asd
 }
 
 void UPhysicsMovement::CalcVelocity(float DeltaTime, float Friction)
