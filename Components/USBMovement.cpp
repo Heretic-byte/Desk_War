@@ -213,3 +213,15 @@ void UUSBMovement::CollectHeight()
 	}
 }
 
+void UUSBMovement::SetCruiseVelocity(float deltaTime, const FVector & targetVelocity)
+{
+	FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
+	float CurrentW = targetVelocity.Size();
+	float CurrentL = CurrentV.Size();
+	FVector WantForce = targetVelocity.GetSafeNormal() *((CurrentW - CurrentL) / FMath::Max<float>(0.01f, deltaTime));
+
+	m_MovingTarget->AddForce(WantForce* m_MovingTarget->GetBodyInstance()->GetBodyMass());
+
+	ShowVelocityAccel();
+}
+
