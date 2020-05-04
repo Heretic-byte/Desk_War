@@ -60,6 +60,4 @@ protected:
 	void TailLanding();
 	
 	virtual void CollectHeight() override;
-
-	virtual void SetCruiseVelocity(float deltaTime, const FVector& targetVelocity) override;
 };

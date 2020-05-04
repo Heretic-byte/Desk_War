@@ -209,6 +209,4 @@ protected:
 	TArray<TEnumAsByte<	EObjectTypeQuery>>  m_AryObjectTypes;
 	float m_fFallStartZ;
 	virtual void CollectHeight();
-	//new physics
-	virtual void SetCruiseVelocity(float deltaTime,const FVector& targetVelocity);
 };

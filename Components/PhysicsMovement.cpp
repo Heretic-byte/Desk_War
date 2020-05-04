@@ -66,25 +66,11 @@ void UPhysicsMovement::BeginPlay()
 void UPhysicsMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	if (!UpdatedComponent)
-	{
-		return;
-	}
-
 	CheckJumpInput(DeltaTime);
 	CollectHeight();
 	TickCastGround();
 	SetAccel(DeltaTime);
 	m_fAnalogInputModifier = ComputeAnalogInputModifier();
-
-	CalcVelocity(DeltaTime, m_fGroundFriction);
-
-	if (!m_Acceleration.IsNearlyZero())//이거있으면 팅겨나가는데,땅을 기준으로 하면 공중에서 못움직이잔아
-		TickMovement(DeltaTime);
-
-	UpdateComponentVelocity();
-
 	TickRotate(SelectTargetRotation(DeltaTime), DeltaTime);//얘다
 	ClearJumpInput(DeltaTime);
 }
@@ -95,12 +81,12 @@ void UPhysicsMovement::PhysSceneStep(FPhysScene * PhysScene, float DeltaTime)
 	{
 		return;
 	}
-	//CalcVelocity(DeltaTime, m_fGroundFriction);
+	CalcVelocity(DeltaTime, m_fGroundFriction);
 
-	//if(!m_Acceleration.IsNearlyZero())//이거있으면 팅겨나가는데,땅을 기준으로 하면 공중에서 못움직이잔아
-	//	TickMovement(DeltaTime);
+	if(!m_Acceleration.IsNearlyZero())//이거있으면 팅겨나가는데,땅을 기준으로 하면 공중에서 못움직이잔아
+		TickMovement(DeltaTime);
 
-	//UpdateComponentVelocity();
+	UpdateComponentVelocity();
 }
 
 void UPhysicsMovement::CalcVelocity(float DeltaTime, float Friction)
@@ -248,7 +234,6 @@ bool UPhysicsMovement::SetAccel(float DeltaTime)
 float UPhysicsMovement::ComputeAnalogInputModifier() const
 {
 	const float MaxAccel = GetMaxForce();
-
 	if (m_Acceleration.SizeSquared() > 0.f && MaxAccel > SMALL_NUMBER)
 	{
 		return FMath::Clamp(m_Acceleration.Size() / MaxAccel, 0.f, 1.f);
@@ -265,8 +250,6 @@ void UPhysicsMovement::TickMovement(float delta)
 	FVector RampVector = ComputeGroundMovementDelta(Delta, m_GroundHitResult);
 	FVector ResultVector;
 
-	SetCruiseVelocity(delta,RampVector);
-	return;
 	if (SweepCanMove(RampVector, delta, Hit))
 	{
 		SetVelocity(RampVector, Hit);
@@ -373,17 +356,6 @@ void UPhysicsMovement::CollectHeight()
 	{
 		m_fFallStartZ = FMath::Max<float>(m_fFallStartZ, m_MovingTarget->GetComponentLocation().Z);
 	}
-}
-
-void UPhysicsMovement::SetCruiseVelocity(float deltaTime, const FVector & targetVelocity)
-{
-	FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
-	float CurrentW = targetVelocity.Size();
-	float CurrentL = CurrentV.Size();
-	FVector WantForce= targetVelocity.GetSafeNormal() *((CurrentW - CurrentL) / FMath::Max<float>(0.01f, deltaTime));
-
-	m_MovingTarget->AddForce(WantForce);
-
 }
 
 
