@@ -1,6 +1,7 @@
 #include "PuzzleKey.h"
 #include "Components/PuzzleDoor.h"
 #include "Datas/USB_Macros.h"
+#include "Actors/SingleDoor.h"
 // Sets default values for this component's properties
 
 
@@ -8,12 +9,12 @@
 UPuzzleKey::UPuzzleKey()
 {
 	PrimaryComponentTick.bCanEverTick = false;
-
+	m_nPuzzleIndex = -1;
 	m_LinkedDoor = nullptr;
 }
 
 
-void UPuzzleKey::InitPuzzleKey(UPuzzleDoor * door)
+void UPuzzleKey::InitPuzzleKey(UPuzzleDoor * door, int index)
 {
 	m_LinkedDoor = door;
 
@@ -23,6 +24,8 @@ void UPuzzleKey::InitPuzzleKey(UPuzzleDoor * door)
 	{
 		PRINTF("%s Doesnt Have Linked Door ! 1", *GetName());
 	}
+
+	m_nPuzzleIndex = index;
 }
 
 void UPuzzleKey::UnlockPuzzle()
@@ -55,5 +58,15 @@ bool UPuzzleKey::IsKeyUnlocked()
 UPuzzleDoor * UPuzzleKey::GetLinkedDoor()
 {
 	return m_LinkedDoor;
+}
+
+void UPuzzleKey::SetPuzzleDoorBrightness(float v)
+{
+	Cast<ASingleDoor>(GetLinkedDoor()->GetOwner())->SetBrightness(m_nPuzzleIndex,v);
+}
+
+void UPuzzleKey::SetPuzzleDoorGauge(float v)
+{
+	Cast<ASingleDoor>(GetLinkedDoor()->GetOwner())->SetGauge(m_nPuzzleIndex, v);
 }
 

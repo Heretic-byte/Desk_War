@@ -24,6 +24,7 @@ void UPuzzleDoor::BeginPlay()
 	{
 		PRINTF("%s - Set Key Actor for Puzzle Door !!!!", *GetName());
 	}
+	int PuzzleIndex = 0;
 	for (auto PuzzleKeyActor : m_AryKeyActor)
 	{
 		auto* PuzzleKeyComp=  Cast<UPuzzleKey>(PuzzleKeyActor->GetComponentByClass(UPuzzleKey::StaticClass()));
@@ -34,7 +35,9 @@ void UPuzzleDoor::BeginPlay()
 		}
 
 		m_AryKeyComponent.Add(PuzzleKeyComp);
-		PuzzleKeyComp->InitPuzzleKey(this);
+		PuzzleKeyComp->InitPuzzleKey(this,PuzzleIndex);
+
+		PuzzleIndex++;
 	}
 
 }
@@ -86,3 +89,5 @@ void UPuzzleDoor::LockDoor()
 	m_OnDoorLockedBP.Broadcast();
 	m_OnDoorLocked.Broadcast();
 }
+
+//가상함수 메테리얼 셋 만들것.꼭여기?

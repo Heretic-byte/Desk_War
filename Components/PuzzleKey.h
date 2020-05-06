@@ -21,10 +21,12 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "Puzzle")
 	int m_bPuzzleUnlocked;
 
+public:
+	int m_nPuzzleIndex;
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "Puzzle")
-	void InitPuzzleKey(UPuzzleDoor* door);
+	void InitPuzzleKey(UPuzzleDoor* door,int index);
 	UFUNCTION(BlueprintCallable, Category = "Puzzle")
 	void UnlockPuzzle();
 	UFUNCTION(BlueprintCallable, Category = "Puzzle")
@@ -34,4 +36,8 @@ public:
 	bool IsKeyUnlocked();
 	UFUNCTION(BlueprintCallable, Category = "Puzzle")
 	UPuzzleDoor* GetLinkedDoor();
+
+	void SetPuzzleDoorBrightness(float v);
+
+	void SetPuzzleDoorGauge(float v);
 };

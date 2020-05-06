@@ -16,7 +16,9 @@ public:
 	ATwinDoor();
 protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Door")
-	TArray<UMaterialInstanceDynamic*> m_AryDoorMatSecond;
+	TArray<UMaterialInstanceDynamic*> m_AryMatBrightnessSecond;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Door")
+	TArray<UMaterialInstanceDynamic*> m_AryMatGaugeSecond;
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "Door")
 	USkeletalMeshComponent* m_MeshSecondDoor;
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Door")

@@ -1,5 +1,7 @@
 #include "ObjectGiver.h"
 #include "Engine/World.h"
+#include "Datas/USB_Macros.h"
+#include "UObjects/IPoolingObj.h"
 // Sets default values
 AObjectGiver::AObjectGiver()
 {
@@ -16,9 +18,6 @@ void AObjectGiver::BeginPlay()
 void AObjectGiver::CreatePoolObject()
 {
 	int Count = m_nPoolCount;
-
-	m_AryCreateActor.Reserve(Count);
-
 	FVector MyPos = GetActorLocation();
 	FRotator MyRot = GetActorRotation();
 
@@ -26,13 +25,32 @@ void AObjectGiver::CreatePoolObject()
 	{
 		auto* Created=GetWorld()->SpawnActor<AActor>(m_cActorWantSpawn, MyPos, MyRot);
 		Created->SetActorHiddenInGame(true);
-		m_AryCreateActor.Emplace(Created);
+		Cast<IIPoolingObj>(Created)->OnInit(this);
+		m_QPoolObj.Enqueue(Created);
 	}
 }
 
-void AObjectGiver::ShowActor(FVector pos)
+AActor* AObjectGiver::ShowActor(FVector pos)
 {
-	m_AryCreateActor[m_nCurrentIndex]->SetActorLocation(pos);
-	m_AryCreateActor[m_nCurrentIndex]->SetActorHiddenInGame(false);
+	AActor* WantActor;
+
+	if (!m_QPoolObj.Dequeue(WantActor))
+	{
+		//que is empty
+		PRINTF("ObjIs Empty! - %s", *m_cActorWantSpawn.GetDefaultObject()->GetName());
+		return nullptr;
+	}
+
+	WantActor->SetActorLocation(pos);
+	WantActor->SetActorHiddenInGame(false);
+	Cast<IIPoolingObj>(WantActor)->OnPullEnque();
+
+	return WantActor;
+}
+
+void AObjectGiver::PullBackActor(AActor * obj)
+{
+	m_QPoolObj.Enqueue(obj);
+	//이함수만 안부르면 이소속아님
 }
 

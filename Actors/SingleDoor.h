@@ -28,7 +28,9 @@ protected:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Door")
 	float m_fOpenTime;
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Door")
-	TArray<UMaterialInstanceDynamic*> m_AryDoorMat;
+	TArray<UMaterialInstanceDynamic*> m_AryMatBrightness;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Door")
+	TArray<UMaterialInstanceDynamic*> m_AryMatGauge;
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "Door")
 	USkeletalMeshComponent* m_MeshDoor;
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Door")
@@ -57,7 +59,7 @@ protected:
 
 	virtual void CloseDoor();
 
-	void SetMaterialAry(USkeletalMeshComponent* meshDoor, TArray<UMaterialInstanceDynamic*>& meshDoorMatAry);
+	void SetMaterialAry(USkeletalMeshComponent* meshDoor, TArray<UMaterialInstanceDynamic*>& brgtMatAry, TArray<UMaterialInstanceDynamic*>& gagMatAry);
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "Door")

@@ -32,15 +32,26 @@ void AInsertBattery::BeginPlay()
 	m_OnFullBP.AddDynamic(this,&AInsertBattery::OnFull);
 }
 
+void AInsertBattery::OnConnected(UPinSkMeshComponent * skComp)
+{
+	if (!m_PuzzleKey->GetLinkedDoor())
+	{
+		UUSBFunctionLib::SetAudioPlay(m_Audio, 1, 0.2f);
+		return;
+	}
+
+	Super::OnConnected(skComp);
+}
+
+void AInsertBattery::OnDisconnected(UPinSkMeshComponent * skComp)
+{
+	
+	Super::OnDisconnected(skComp);
+}
+
 void AInsertBattery::SetGaugeToDoor(float gauge)
 {
-	auto* Door = Cast<ATwinDoor>(m_PuzzleKey->GetLinkedDoor()->GetOwner());
-
-	if (!Door)
-	{
-		PRINTF("InsertBattery - ERROR - No Door Linked");
-	}
-	Door->SetGauge(m_nMatGaugeIndex,gauge);
+	m_PuzzleKey->SetPuzzleDoorGauge(gauge);
 }
 
 void AInsertBattery::OnFull()

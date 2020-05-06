@@ -1003,7 +1003,9 @@ void UPhysicsMovement::RemoveIgnoreTraceActor(AActor * actorWant)
 
 void UPhysicsMovement::Landing()
 {
-	if ((m_fFallStartZ - m_MovingTarget->GetComponentLocation().Z) >=m_fMinLandHeight)
+	float Dist = m_fFallStartZ - m_MovingTarget->GetComponentLocation().Z;
+
+	if(Dist>=m_fMinLandHeight)
 	{
 		PRINTF("Landing:max was :%f", m_fFallStartZ - m_MovingTarget->GetComponentLocation().Z);
 		m_OnLandingBP.Broadcast(m_GroundHitResult.ImpactPoint);

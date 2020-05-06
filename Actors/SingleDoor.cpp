@@ -26,7 +26,7 @@ ASingleDoor::ASingleDoor()
 	m_PuzzleDoor = CreateDefaultSubobject<UPuzzleDoor>("PuzzleDoor00");
 	m_ActionManager = CreateDefaultSubobject<UActionManagerComponent>("ActionManager00");
 
-	m_AryDoorMat.Reset();
+	m_AryMatBrightness.Reset();
 }
 
 void ASingleDoor::BeginPlay()
@@ -35,8 +35,7 @@ void ASingleDoor::BeginPlay()
 	m_PuzzleDoor->m_OnDoorUnlocked.AddUObject(this, &ASingleDoor::OpenDoor);
 	m_PuzzleDoor->m_OnDoorLocked.AddUObject(this, &ASingleDoor::CloseDoor);
 
-	SetMaterialAry(m_MeshDoor,m_AryDoorMat);
-	
+	SetMaterialAry(m_MeshDoor,m_AryMatBrightness,m_AryMatGauge);
 
 	m_InitDoorRot = m_MeshDoor->GetComponentRotation();
 }
@@ -70,41 +69,55 @@ void ASingleDoor::CloseDoor()
 	m_MeshDoor->SetCollisionProfileName("BlockAllDynamic");
 }
 
-void ASingleDoor::SetMaterialAry(USkeletalMeshComponent * meshDoor, TArray<UMaterialInstanceDynamic*>& meshDoorMatAry)
+void ASingleDoor::SetMaterialAry(USkeletalMeshComponent * meshDoor, TArray<UMaterialInstanceDynamic*>& brgtMatAry, TArray<UMaterialInstanceDynamic*>& gagMatAry)
 {
 	float NotUse;
 
 	TArray<UMaterialInterface*> MatAry = meshDoor->GetMaterials();
 
-	FMaterialParameterInfo InfoBright;
-	InfoBright.Name = "Brightness";
+	FMaterialParameterInfo InfoBrightness;
+	InfoBrightness.Name = "Brightness";
 
 	FMaterialParameterInfo InfoGauge;
 	InfoGauge.Name = "Gauge";
 
+	bool bHasBright = false;
+	bool bHasGauge = false;
+
 	for (int i = 0; i < MatAry.Num(); i++)
 	{
-		if (!MatAry[i]->GetScalarParameterValue(InfoBright, NotUse) && !MatAry[i]->GetScalarParameterValue(InfoGauge, NotUse))
+		bHasBright = MatAry[i]->GetScalarParameterValue(InfoBrightness, NotUse);
+		bHasGauge= MatAry[i]->GetScalarParameterValue(InfoGauge, NotUse);
+
+		if (!bHasBright && !bHasGauge)
 		{
 			continue;
 		}
 
 		auto* MatInstanceDynamic = UMaterialInstanceDynamic::Create(MatAry[i], meshDoor);
 
-		meshDoor->SetMaterial(i, MatInstanceDynamic);
+		if (bHasBright)
+		{
+			brgtMatAry.Add(MatInstanceDynamic);
+		}
 
-		meshDoorMatAry.Add(MatInstanceDynamic);
+		if (bHasGauge)
+		{
+			gagMatAry.Add(MatInstanceDynamic);
+		}
+
+		meshDoor->SetMaterial(i, MatInstanceDynamic);
 	}
 
 }
 
 void ASingleDoor::SetGauge(int matIndexFromAry, float gaugePerOne)
 {
-	m_AryDoorMat[matIndexFromAry]->SetScalarParameterValue("Gauge", gaugePerOne);
+	m_AryMatGauge[matIndexFromAry]->SetScalarParameterValue("Gauge", gaugePerOne);
 }
 
 void ASingleDoor::SetBrightness(int matIndexFromAry, float perOne)
 {
-	m_AryDoorMat[matIndexFromAry]->SetScalarParameterValue("Brightness", perOne);
+	m_AryMatBrightness[matIndexFromAry]->SetScalarParameterValue("Brightness", perOne);
 }
 

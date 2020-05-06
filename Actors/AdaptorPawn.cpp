@@ -28,6 +28,8 @@ void AAdaptorPawn::BeginPlay()
 	}
 
 	m_Movement->SetMovingComponent(m_Mesh,false);
+
+	m_Movement->SetActive(false);
 }
 
 void AAdaptorPawn::PortConnected(UPinSkMeshComponent * pinConnect)

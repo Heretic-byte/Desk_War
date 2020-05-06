@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+
+#include "Containers/Queue.h"
 #include "ObjectGiver.generated.h"
 
 UCLASS()
@@ -19,8 +21,8 @@ protected:
 	TSubclassOf<AActor> m_cActorWantSpawn;
 	UPROPERTY(EditAnywhere,Category="Object")
 	int m_nPoolCount;
-	UPROPERTY()
-	TArray<AActor*> m_AryCreateActor;
+
+	TQueue<AActor*> m_QPoolObj;
 protected:
 	int m_nCurrentIndex;
 protected:
@@ -30,6 +32,7 @@ protected:
 	void CreatePoolObject();
 public:	
 	UFUNCTION(BlueprintCallable,Category="Object")
-	void ShowActor(FVector pos);
+	AActor* ShowActor(FVector pos);
 
+	void PullBackActor(AActor* obj);
 };

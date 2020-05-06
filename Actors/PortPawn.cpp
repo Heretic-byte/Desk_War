@@ -78,3 +78,13 @@ void APortPawn::BeginPlay()
 
 
 }
+
+void APortPawn::OnInit(AObjectGiver * objGiver)
+{
+	m_Spawner = objGiver;
+}
+
+void APortPawn::OnPullEnque()
+{
+}
+

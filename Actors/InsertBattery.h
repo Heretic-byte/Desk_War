@@ -31,6 +31,8 @@ protected:
 protected:
 	virtual void BeginPlay() override;
 
+	virtual void OnConnected(UPinSkMeshComponent* skComp) override;
+	virtual void OnDisconnected(UPinSkMeshComponent* skComp) override;
 public:
 	UFUNCTION()
 	void SetGaugeToDoor(float gauge);

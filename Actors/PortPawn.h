@@ -9,10 +9,12 @@
 #include "Components/PortSkMeshComponent.h"
 #include "Components/PinSkMeshComponent.h"
 #include "Components/SphereComponent.h"
+#include "UObjects/IPoolingObj.h"
+#include "Actors/ObjectGiver.h"
 #include "PortPawn.generated.h"
 
 UCLASS()
-class DESK_WAR_API APortPawn : public APawn
+class DESK_WAR_API APortPawn : public APawn,public IIPoolingObj
 {
 	GENERATED_UCLASS_BODY()
 public:
@@ -28,6 +30,8 @@ protected:
 	UPortSkMeshComponent* m_MeshPort;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly,Category = "Connect")
 	UPhysicsConstraintComponent* m_PhyConPort;
+	UPROPERTY()
+	AObjectGiver* m_Spawner;
 private:
 	void CreateMesh();
 	void CreatePort();
@@ -38,4 +42,7 @@ protected:
 	virtual void PortDisConnected(UPinSkMeshComponent* pinConnect);
 protected:
 	virtual void BeginPlay() override;
+public:
+	virtual void OnInit(AObjectGiver* objGiver) override;
+	virtual void OnPullEnque()override;
 };
