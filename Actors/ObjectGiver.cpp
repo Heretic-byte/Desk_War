@@ -21,9 +21,11 @@ void AObjectGiver::CreatePoolObject()
 	FVector MyPos = GetActorLocation();
 	FRotator MyRot = GetActorRotation();
 
+	FActorSpawnParameters SpawnParam;
+	SpawnParam.bNoFail = true;
 	while (Count--)//순서풀이랑 비순서 풀 생각
 	{
-		auto* Created=GetWorld()->SpawnActor<AActor>(m_cActorWantSpawn, MyPos, MyRot);
+		auto* Created=GetWorld()->SpawnActor<AActor>(m_cActorWantSpawn, MyPos, MyRot, SpawnParam);
 		Created->SetActorHiddenInGame(true);
 		Cast<IIPoolingObj>(Created)->OnInit(this);
 		m_QPoolObj.Enqueue(Created);

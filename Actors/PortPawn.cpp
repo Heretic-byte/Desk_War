@@ -3,7 +3,7 @@
 
 #include "PortPawn.h"
 #include "ConstructorHelpers.h"
-
+#include "AIController.h"
 
 
 FName APortPawn::MeshComponentName(TEXT("MeshPawn00"));
@@ -16,6 +16,8 @@ APortPawn::APortPawn(const FObjectInitializer& objInit):Super(objInit)
 	CreatePhyCon();
 	CreatePort();
 	CreateSphereColl();
+
+	AIControllerClass = nullptr;
 }
 
 void APortPawn::CreateMesh()
