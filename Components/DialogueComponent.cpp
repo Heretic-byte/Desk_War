@@ -3,3 +3,10 @@
 
 #include "DialogueComponent.h"
 
+void UDialogueComponent::BeginPlay()
+{
+}
+
+void UDialogueComponent::StartDialogue()
+{
+}

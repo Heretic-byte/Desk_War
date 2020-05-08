@@ -160,17 +160,17 @@ void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent
 			return;
 		}
 	}
-
+	if (!m_MovingTarget->IsSimulatingPhysics())
+	{
+		PRINTF("Target is not SimulPhysics");
+		return;
+	}
 
 
 	UMovementComponent::SetUpdatedComponent(NewUpdatedComponent);
 	PawnOwner = NewUpdatedComponent ? CastChecked<APawn>(NewUpdatedComponent->GetOwner()) : NULL;
 
-	if (!m_MovingTarget->IsSimulatingPhysics())
-	{
-		m_MovingTarget->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-		m_MovingTarget->SetSimulatePhysics(true);
-	}
+	
 
 
 }

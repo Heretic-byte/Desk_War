@@ -21,13 +21,16 @@ public class Desk_War : ModuleRules
             "AIModule",
             "OnlineSubsystem",
             "﻿OnlineSubsystemSteam﻿",
-            "VirtualCamera"
+            "VirtualCamera",
+             "OnlineSubsystemUtils",
+            "Steamworks"
+
         });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {
         "DialoguePlugin",
         "EasyActionPlugin"
         });
-
-	}
+        DynamicallyLoadedModuleNames.Add("OnlineSubsystemSteam");
+    }
 }

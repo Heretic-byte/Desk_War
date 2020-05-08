@@ -9,6 +9,9 @@
  */
 class DESK_WAR_API LevelManager
 {
+public:
+	LevelManager();
+	~LevelManager();
 protected:
 	FName m_NameCurrentActiveLevel;
 	UPROPERTY()

@@ -95,16 +95,17 @@ void ASingleDoor::SetMaterialAry(USkeletalMeshComponent * meshDoor, TArray<UMate
 		}
 
 		auto* MatInstanceDynamic = UMaterialInstanceDynamic::Create(MatAry[i], meshDoor);
-
 		if (bHasBright)
 		{
 			brgtMatAry.Add(MatInstanceDynamic);
 		}
-
 		if (bHasGauge)
 		{
 			gagMatAry.Add(MatInstanceDynamic);
 		}
+	
+		//게이지가 먼저오기떔에 Bright가 효과가 없음
+	
 
 		meshDoor->SetMaterial(i, MatInstanceDynamic);
 	}

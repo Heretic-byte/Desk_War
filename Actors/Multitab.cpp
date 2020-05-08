@@ -26,6 +26,8 @@ AMultitab::AMultitab(const FObjectInitializer& objInit)
 	m_MeshMultitabBody->SetStaticMesh(FoundStaticMesh.Object);
 
 	m_MeshMultitabBody->SetCollisionProfileName("IgnoreCamStatic");
+
+	RootComponent = m_MeshMultitabBody;
 	//
 	m_MeshPowerButton = CreateDefaultSubobject<USkeletalMeshComponent>("Mesh01");
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FoundSkMesh(TEXT("SkeletalMesh'/Game/Meshes/Prop_205/Tutorial/Gate/SK_Multitap_Button.SK_Multitap_Button'"));
@@ -36,6 +38,7 @@ AMultitab::AMultitab(const FObjectInitializer& objInit)
 	m_MeshPowerButton->RelativeLocation = FVector(163.f,-176.f,-177.f);
 	m_MeshPowerButton->RelativeRotation = FRotator(0.f,0.f,15.f);
 	m_MeshPowerButton->RelativeScale3D = FVector(1.33f, 1.33f, 1.33f);
+	m_MeshPowerButton->SetupAttachment(RootComponent);
 	//
 	m_AudioComp = CreateDefaultSubobject<UAudioComponent>("Audio00");
 	m_AudioComp->SetAutoActivate(false);
@@ -49,12 +52,14 @@ AMultitab::AMultitab(const FObjectInitializer& objInit)
 	m_CollButtonDown->RelativeLocation = FVector(163.f,-194.f,-198.f);
 	m_CollButtonDown->SetBoxExtent(FVector(32.f, 32.f, 10.f), false);
 	m_CollButtonDown->SetCollisionProfileName("USBOverlap");
+	m_CollButtonDown->SetupAttachment(RootComponent);
 	//
 	m_CollButtonUp = CreateDefaultSubobject<UBoxComponent>("Box01");
 	m_CollButtonUp->RelativeLocation = FVector(163.f, -194.f, -155.f);
 	m_CollButtonUp->SetBoxExtent(FVector(32.f,32.f,10.f),false);
 	m_CollButtonUp->SetCollisionProfileName("USBOverlap");
-
+	m_CollButtonUp->SetupAttachment(RootComponent);
+	//
 	m_bButtonOff = true;
 }//down is open
 
@@ -82,6 +87,7 @@ void AMultitab::OpenSwitch()
 
 	m_MatForSwitch->SetScalarParameterValue("Brightness",0.4f);
 
+	m_PuzzleKey->SetPuzzleDoorGauge(1.0f);
 	m_PuzzleKey->SetPuzzleDoorBrightness(4.f);
 
 	m_AudioComp->Play();
@@ -105,6 +111,7 @@ void AMultitab::CloseSwitch()
 	m_MatForSwitch->SetScalarParameterValue("Brightness", 0.f);
 
 	m_PuzzleKey->SetPuzzleDoorBrightness(0.f);
+	m_PuzzleKey->SetPuzzleDoorGauge(0.f);
 
 	m_AudioComp->Play();
 

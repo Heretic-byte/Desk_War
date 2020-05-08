@@ -98,6 +98,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Interact")
 	virtual void Connect(UPinSkMeshComponent* connector);
 	void DisableColl();
+	void EnableColl();
 	UFUNCTION(BlueprintCallable, Category = "Interact")
 	virtual bool Disconnect();
 	UFUNCTION(BlueprintCallable, Category = "Interact")

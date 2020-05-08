@@ -3,7 +3,7 @@
 #include "Datas/USB_Macros.h"
 #include "UObjects/IPoolingObj.h"
 // Sets default values
-AObjectGiver::AObjectGiver()
+AObjectGiver::AObjectGiver(const FObjectInitializer& objInit):Super(objInit)
 {
 	PrimaryActorTick.bCanEverTick = false;
 	m_nCurrentIndex = 0;
@@ -32,9 +32,14 @@ void AObjectGiver::CreatePoolObject()
 	}
 }
 
-AActor* AObjectGiver::ShowActor(FVector pos)
+AActor* AObjectGiver::ShowActor(const FVector& pos)
 {
 	AActor* WantActor;
+
+	if (m_QPoolObj.IsEmpty())
+	{
+		return nullptr;
+	}
 
 	if (!m_QPoolObj.Dequeue(WantActor))
 	{

@@ -17,10 +17,10 @@ class DESK_WAR_API AAdaptorPawn : public APortPawn
 	GENERATED_UCLASS_BODY()
 	
 protected:
-	virtual void BeginPlay() override;
-
 	virtual void PortConnected(UPinSkMeshComponent* pinConnect) override;
 	virtual void PortDisConnected(UPinSkMeshComponent* pinConnect) override;
+
+	virtual void InitPortPawn() override;
 protected:
 	UPROPERTY(VisibleAnywhere)
 	UNavPawnMovement* m_Movement;

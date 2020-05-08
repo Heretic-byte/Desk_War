@@ -15,7 +15,7 @@ class DESK_WAR_API AObjectGiver : public AActor
 	
 public:	
 	// Sets default values for this actor's properties
-	AObjectGiver();
+	AObjectGiver(const FObjectInitializer& objInit);
 protected:
 	UPROPERTY(EditAnywhere, Category = "Object")
 	TSubclassOf<AActor> m_cActorWantSpawn;
@@ -32,7 +32,7 @@ protected:
 	void CreatePoolObject();
 public:	
 	UFUNCTION(BlueprintCallable,Category="Object")
-	AActor* ShowActor(FVector pos);
+	AActor* ShowActor(const FVector& pos);
 
 	void PullBackActor(AActor* obj);
 };

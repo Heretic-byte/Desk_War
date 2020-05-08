@@ -216,6 +216,11 @@ void UPortSkMeshComponent::DisableColl()
 	GetParentSkMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
 }
 
+void UPortSkMeshComponent::EnableColl()
+{
+	GetParentSkMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Block);
+}
+
 void UPortSkMeshComponent::ConstraintPinPort()
 {
 	m_ParentPhysicsConst->SetConstrainedComponents(m_MeshParentActor, NAME_None, m_ConnectedPin, NAME_None);
@@ -223,6 +228,7 @@ void UPortSkMeshComponent::ConstraintPinPort()
 
 bool UPortSkMeshComponent::Disconnect()
 {
+	EnableColl();
 	EnableOverlap();
 	m_ConnectedPin->Disconnect();
 	m_OnDisconnectedBP.Broadcast(m_ConnectedPin);

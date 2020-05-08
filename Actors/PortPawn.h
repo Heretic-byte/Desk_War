@@ -20,8 +20,8 @@ class DESK_WAR_API APortPawn : public APawn,public IIPoolingObj
 public:
 	static FName MeshComponentName;
 	static FName MeshPortComponentName;
+
 protected:
-	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mesh")
 	USphereComponent* m_Sphere;//for check player dist
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mesh")
@@ -32,17 +32,24 @@ protected:
 	UPhysicsConstraintComponent* m_PhyConPort;
 	UPROPERTY()
 	AObjectGiver* m_Spawner;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Connect")
+	bool m_bIsUsingSpawn;
 private:
 	void CreateMesh();
 	void CreatePort();
 	void CreatePhyCon();
 	void CreateSphereColl();
+
 protected:
 	virtual void PortConnected(UPinSkMeshComponent* pinConnect);
 	virtual void PortDisConnected(UPinSkMeshComponent* pinConnect);
+
 protected:
 	virtual void BeginPlay() override;
+
+	virtual void InitPortPawn();
+
 public:
 	virtual void OnInit(AObjectGiver* objGiver) override;
-	virtual void OnPullEnque()override;
+	virtual void OnPullEnque() override;
 };

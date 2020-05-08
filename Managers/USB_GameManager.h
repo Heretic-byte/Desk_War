@@ -8,6 +8,7 @@
 
 #include "Datas/USB_Macros.h"
 #include "Managers/LevelManager.h"
+#include "Managers/SteamManager.h"
 #include "USB_GameManager.generated.h"
 
 /**
@@ -19,6 +20,7 @@ class DESK_WAR_API UUSB_GameManager : public UGameInstance
 	GENERATED_BODY()
 protected:
 	LevelManager* m_LevelManager;
+	SteamManager* m_SteamManager;
 public:
 	void GameOver();
 

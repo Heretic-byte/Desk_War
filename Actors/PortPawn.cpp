@@ -11,6 +11,7 @@ FName APortPawn::MeshPortComponentName(TEXT("MeshPort00"));
 
 APortPawn::APortPawn(const FObjectInitializer& objInit):Super(objInit)
 {
+	m_bIsUsingSpawn = true;
 	//RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root00"));
 	CreateMesh();
 	CreatePhyCon();
@@ -26,8 +27,9 @@ void APortPawn::CreateMesh()
 	//m_Mesh->SetupAttachment(RootComponent);
 	RootComponent = m_Mesh;
 	m_Mesh->SetCollisionProfileName("PhysicsActor");
-	m_Mesh->SetSimulatePhysics(true);
-	m_Mesh->SetUseCCD(true);
+	m_Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	m_Mesh->SetSimulatePhysics(false);
+	m_Mesh->SetUseCCD(false);
 
 	
 }
@@ -74,11 +76,23 @@ void APortPawn::CreatePort()
 void APortPawn::BeginPlay()
 {
 	Super::BeginPlay();
-	m_MeshPort->InitPort(m_PhyConPort, m_Mesh,m_Sphere);
-	m_MeshPort->m_OnConnected.AddUObject(this,&APortPawn::PortConnected);
+
+	if (!m_bIsUsingSpawn)
+	{
+		InitPortPawn();
+	}
+
+}
+
+void APortPawn::InitPortPawn()
+{
+	m_Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	m_Mesh->SetSimulatePhysics(true);
+	m_Mesh->SetUseCCD(true);
+	//
+	m_MeshPort->InitPort(m_PhyConPort, m_Mesh, m_Sphere);
+	m_MeshPort->m_OnConnected.AddUObject(this, &APortPawn::PortConnected);
 	m_MeshPort->m_OnDisconnected.AddUObject(this, &APortPawn::PortDisConnected);
-
-
 }
 
 void APortPawn::OnInit(AObjectGiver * objGiver)
@@ -88,5 +102,6 @@ void APortPawn::OnInit(AObjectGiver * objGiver)
 
 void APortPawn::OnPullEnque()
 {
+	InitPortPawn();
 }
 

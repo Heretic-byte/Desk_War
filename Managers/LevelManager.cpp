@@ -8,6 +8,16 @@
 
 
 
+LevelManager::LevelManager()
+{
+	m_WorldObj = nullptr;
+}
+
+LevelManager::~LevelManager()
+{
+	m_WorldObj = nullptr;
+}
+
 void LevelManager::Init(UObject * worldContext)
 {
 	m_WorldObj = worldContext;
