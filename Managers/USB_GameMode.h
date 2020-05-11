@@ -7,6 +7,9 @@
 #include "USB_GameMode.generated.h"
 
 
+class ConnectablePawnManager;
+class UDataTable;
+struct FConnectablePawn_Data;
 
 UCLASS()
 class DESK_WAR_API AUSB_GameMode : public AGameModeBase
@@ -16,4 +19,18 @@ class DESK_WAR_API AUSB_GameMode : public AGameModeBase
 public:
 	AUSB_GameMode(const FObjectInitializer& ObjectInitializer);
 
+protected:
+	UPROPERTY(EditDefaultsOnly,Category="Manager")
+	UDataTable* m_PawnDataTable;
+
+	ConnectablePawnManager* m_ConnectPawnManager;
+protected:
+	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)override;
+
+	virtual void StartPlay() override;
+
+	virtual void EndPlay(const EEndPlayReason::Type endReason) override;
+
+public:
+	const FConnectablePawn_Data & GetConnectPawnData(FName id);
 };

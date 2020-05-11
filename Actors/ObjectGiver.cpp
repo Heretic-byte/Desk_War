@@ -1,7 +1,6 @@
 #include "ObjectGiver.h"
 #include "Engine/World.h"
 #include "Datas/USB_Macros.h"
-#include "UObjects/IPoolingObj.h"
 // Sets default values
 AObjectGiver::AObjectGiver(const FObjectInitializer& objInit):Super(objInit)
 {
@@ -27,7 +26,7 @@ void AObjectGiver::CreatePoolObject()
 	{
 		auto* Created=GetWorld()->SpawnActor<AActor>(m_cActorWantSpawn, MyPos, MyRot, SpawnParam);
 		Created->SetActorHiddenInGame(true);
-		Cast<IIPoolingObj>(Created)->OnInit(this);
+		//Cast<IIPoolingObj>(Created)->OnInit(this);
 		m_QPoolObj.Enqueue(Created);
 	}
 }
@@ -50,7 +49,7 @@ AActor* AObjectGiver::ShowActor(const FVector& pos)
 
 	WantActor->SetActorLocation(pos);
 	WantActor->SetActorHiddenInGame(false);
-	Cast<IIPoolingObj>(WantActor)->OnPullEnque();
+	//Cast<IIPoolingObj>(WantActor)->OnPullEnque();
 
 	return WantActor;
 }

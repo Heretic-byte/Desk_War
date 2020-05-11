@@ -9,12 +9,11 @@
 #include "Components/PortSkMeshComponent.h"
 #include "Components/PinSkMeshComponent.h"
 #include "Components/SphereComponent.h"
-#include "UObjects/IPoolingObj.h"
 #include "Actors/ObjectGiver.h"
 #include "PortPawn.generated.h"
 
 UCLASS()
-class DESK_WAR_API APortPawn : public APawn,public IIPoolingObj
+class DESK_WAR_API APortPawn : public APawn
 {
 	GENERATED_UCLASS_BODY()
 public:
@@ -49,7 +48,4 @@ protected:
 
 	virtual void InitPortPawn();
 
-public:
-	virtual void OnInit(AObjectGiver* objGiver) override;
-	virtual void OnPullEnque() override;
 };

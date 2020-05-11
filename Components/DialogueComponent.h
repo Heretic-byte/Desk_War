@@ -12,12 +12,14 @@
  * 
  */
 
-
+class UDialogueUserWidget;
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class DESK_WAR_API UDialogueComponent : public UActorComponent
 {
 	GENERATED_BODY()
 	
+public:
+	UDialogueComponent(const FObjectInitializer& ObjectInitializer);
 public:
 	UPROPERTY(EditAnywhere,BlueprintReadOnly, Category = "Dialogue")
 	UDialogue* m_DialogueModData;
@@ -27,6 +29,11 @@ public:
 	FVoidVoidBP m_OnDialogueStart;
 	UPROPERTY(BlueprintAssignable, BlueprintReadWrite, Category = "Dialogue")
 	FVoidVoidBP m_OnDialogueEnd;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player, HUD and UI")
+	TSubclassOf<UDialogueUserWidget> m_ClassDial;
+
+	UPROPERTY()
+	UDialogueUserWidget* m_Widget;
 protected:
 	virtual void BeginPlay() override;
 public:

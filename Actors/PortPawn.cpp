@@ -95,13 +95,3 @@ void APortPawn::InitPortPawn()
 	m_MeshPort->m_OnDisconnected.AddUObject(this, &APortPawn::PortDisConnected);
 }
 
-void APortPawn::OnInit(AObjectGiver * objGiver)
-{
-	m_Spawner = objGiver;
-}
-
-void APortPawn::OnPullEnque()
-{
-	InitPortPawn();
-}
-

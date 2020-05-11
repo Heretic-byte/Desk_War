@@ -519,7 +519,7 @@ void AUSB_PlayerPawn::AdjustPinTransform(UPortSkMeshComponent * portConnect)
 		FRotator PortRot = portConnect->GetParentSkMesh()->GetComponentRotation();
 		FVector MoveDelta = PinLocation - ConnectPoint;
 
-		for (auto Sph : GetSpineSphereAry())
+		for (auto Sph : GetPhysicsAry())
 		{
 			Sph->MoveComponent(MoveDelta, Sph->GetComponentRotation(), false, nullptr, MOVECOMP_NoFlags, ETeleportType::TeleportPhysics);
 		}
@@ -647,6 +647,7 @@ bool AUSB_PlayerPawn::TryDisconnect()
 	EnableUSBMove();
 
 	DisableUSBInput(m_fBlockMoveTimeWhenEject);//이부분을 바꿔서 임펄스에 비례해 오래 못건드리게
+	m_bBlockHeadChange = false;//머리는 바꿀수 있게
 	FVector ImpulseDir = GetTail()->GetForwardVector()*-1.f * EjectPowerFromPort;// *GetTotalMass();
 	m_UsbMovement->AddImpulse(ImpulseDir);
 
@@ -745,6 +746,10 @@ void AUSB_PlayerPawn::TickTracePortable()
 		}
 	}
 
+	if (m_CurrentFocusedPort)
+	{
+		m_CurrentFocusedPort->OnFocusEnd(m_CurrentHeadPin);
+	}
 	m_CurrentFocusedPort = nullptr;
 }
 
@@ -787,6 +792,11 @@ void AUSB_PlayerPawn::TickTraceInteractable()//통합으로 최적화시킬것
 		return;
 	}
 
+
+	if (m_CurrentFocusedInteract)
+	{
+		m_CurrentFocusedInteract->SetFocusOut();
+	}
 	m_CurrentFocusedInteract = nullptr;
 }
 
