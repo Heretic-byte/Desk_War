@@ -3,6 +3,8 @@
 #include "Managers/USB_GameMode.h"
 #include "Datas/ConnectablePawnData.h"
 #include "UObjects/ConnectionBehavior.h"
+#include "ConstructorHelpers.h"
+
 // Sets default values
 AConnectablePawn::AConnectablePawn()
 {
@@ -10,6 +12,55 @@ AConnectablePawn::AConnectablePawn()
 	PrimaryActorTick.bCanEverTick = true;
 	m_PawnID = NAME_None;
 	
+	m_MeshMainBody = CreateDefaultSubobject<USkeletalMeshComponent>("Mesh00");
+	RootComponent = m_MeshMainBody;
+	m_MeshMainBody->SetCollisionProfileName("PhysicsActor");
+	m_MeshMainBody->SetSimulatePhysics(true);
+	m_MeshMainBody->SetUseCCD(false);
+	m_MeshMainBody->CastShadow = false;
+//
+	m_MeshPort = CreateDefaultSubobject<USkeletalMeshComponent>("Mesh01");
+	m_MeshPort->SetupAttachment(RootComponent);
+	m_MeshPort->CastShadow = false;
+	m_MeshPort->SetGenerateOverlapEvents(true);
+	m_MeshPort->SetCollisionProfileName("Port");
+	//
+	m_PhysicsCons = CreateDefaultSubobject<UPhysicsConstraintComponent>("PhyCon02");
+	m_PhysicsCons->SetupAttachment(RootComponent);
+	m_PhysicsCons->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Locked, 0.f);
+	m_PhysicsCons->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Locked, 0.f);
+	m_PhysicsCons->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Locked, 0.f);
+	m_PhysicsCons->SetLinearXLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
+	m_PhysicsCons->SetLinearYLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
+	m_PhysicsCons->SetLinearZLimit(ELinearConstraintMotion::LCM_Locked, 0.f);
+	m_PhysicsCons->SetDisableCollision(true);
+	//
+	m_Sphere = CreateDefaultSubobject<USphereComponent>("Sphere03");
+	m_Sphere->SetupAttachment(RootComponent);
+	m_Sphere->SetSphereRadius(300.f);
+	m_Sphere->SetCollisionProfileName("USBOverlap");
+	//
+	m_Audio = CreateDefaultSubobject<UAudioComponent>("Audio04");
+	m_Audio->SetupAttachment(RootComponent);
+	m_Audio->SetAutoActivate(false);
+	static ConstructorHelpers::FObjectFinder<USoundBase> FoundSound(TEXT("SoundWave'/Game/SFX/USB/Put_in/SE_SFX_BUTTON_PUSH.SE_SFX_BUTTON_PUSH'"));
+
+	if (FoundSound.Succeeded())
+		m_Audio->SetSound(FoundSound.Object);
+	else
+		check(FoundSound.Object);
+}
+
+void AConnectablePawn::SetUpSceneComponent(USceneComponent * compo, USceneComponent * parent, FTransform trans)
+{
+	compo->SetupAttachment(parent);
+	SetUpActorComponent(compo);
+}
+
+void AConnectablePawn::SetUpActorComponent(UActorComponent * compo)
+{
+	compo->RegisterComponent();
+	AddInstanceComponent(compo);
 }
 
 // Called when the game starts or when spawned
@@ -26,10 +77,12 @@ void AConnectablePawn::BeginPlay()
 
 void AConnectablePawn::OnConnected(IConnectable * portTarget)
 {
+
 }
 
 void AConnectablePawn::OnDisconnected(IConnectable * pinTarget)
 {
+
 }
 
 void AConnectablePawn::SetConnectPawn(FName pawnID)
@@ -62,8 +115,9 @@ void AConnectablePawn::SetConnectPawn(FName pawnID)
 
 	SetActorTickEnabled(true);
 	//pawn sensing
-
+	//각도
 	//movement
+	//이속 점프력
 
 	//얘네 스텟은 어디서?
 
