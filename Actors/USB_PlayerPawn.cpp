@@ -17,6 +17,8 @@
 #include "UObjects/EjectionCamShake.h"
 #include "Components/Battery.h"
 
+#include "Components/InteractableComponent.h"
+
 
 //누구이든간 스켈메쉬를 머리꼬리로 바꿔버리니까
 //어댑터가 꼬리면 어댑터를 분리해야하고
@@ -24,6 +26,7 @@
 //분리해야한다
 AUSB_PlayerPawn::AUSB_PlayerPawn(const FObjectInitializer& objInit) :Super(objInit)
 {
+	m_CurrentFocusedInteract = nullptr;
 	m_PortHeadPrev = nullptr;
 	m_PortTailPrev = nullptr;
 	m_fBlockMoveTimeWhenEjectTimer = 0.f;
@@ -90,7 +93,7 @@ UBattery * AUSB_PlayerPawn::GetBattery()
 {
 	for (auto Bat : m_AryBatteries)
 	{
-		if(Bat)
+		if (Bat)
 			return Bat;
 	}
 
@@ -227,11 +230,20 @@ void AUSB_PlayerPawn::SetupPlayerInputComponent(UInputComponent * PlayerInputCom
 	PlayerInputComponent->BindAction("ZoomOut", EInputEvent::IE_Pressed, this, &AUSB_PlayerPawn::ZoomOut);
 	//
 	PlayerInputComponent->BindAction("ExitGame", EInputEvent::IE_Released, this, &AUSB_PlayerPawn::ExitGame);
+	PlayerInputComponent->BindAction("Interaction", EInputEvent::IE_Pressed, this, &AUSB_PlayerPawn::Interact);
 }
 void AUSB_PlayerPawn::ExitGame()
 {
-	PRINTF("Exot");
+	PRINTF("Exit Game");
 	UKismetSystemLibrary::QuitGame(GetWorld(), m_PlayerCon, EQuitPreference::Quit, true);
+}
+
+void AUSB_PlayerPawn::Interact()
+{
+	if (m_CurrentFocusedInteract)
+	{
+		m_CurrentFocusedInteract->Interact( this);
+	}
 }
 
 
@@ -248,7 +260,7 @@ void AUSB_PlayerPawn::Tick(float DeltaTime)
 
 	m_fHeadChangeCDTimer += DeltaTime;
 
-	if (m_fBlockMoveTimeWhenEjectTimer > 0 && m_fBlockMoveTimeWhenEjectTimer !=-1.f)//0
+	if (m_fBlockMoveTimeWhenEjectTimer > 0 && m_fBlockMoveTimeWhenEjectTimer != -1.f)//0
 	{
 		m_fBlockMoveTimeWhenEjectTimer -= DeltaTime;
 
@@ -259,6 +271,7 @@ void AUSB_PlayerPawn::Tick(float DeltaTime)
 		}
 	}
 
+	TickTraceInteractable();
 	TickTracePortable();
 
 	if (!m_CurrentFocusedPort)
@@ -270,7 +283,7 @@ void AUSB_PlayerPawn::Tick(float DeltaTime)
 	FVector PortPst = m_CurrentFocusedPort->GetComponentLocation();
 	DrawDebugLine(GetWorld(), HeadPos, PortPst, FColor::Cyan, false, -1, 0.1f);
 	//
-	
+
 }
 
 void AUSB_PlayerPawn::EnableUSBInput()
@@ -388,7 +401,7 @@ void AUSB_PlayerPawn::ConnectShot()
 
 void AUSB_PlayerPawn::TryConnect(UPrimitiveComponent * OverlappedComponent, AActor * OtherActor, UPrimitiveComponent * OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult)
 {
-	PRINTF("TryConnect - Called : %s",*m_CurrentHead->GetOwner()->GetName());
+	PRINTF("TryConnect - Called : %s", *m_CurrentHead->GetOwner()->GetName());
 
 	auto* PortCompo = Cast<UPortSkMeshComponent>(OtherComp);
 
@@ -428,8 +441,8 @@ void AUSB_PlayerPawn::ConnectChargingStart()
 	//딱붙어있을때 스윕 필요
 	FHitResult Hit;
 	FVector TraceStart = m_CurrentHeadPin->GetComponentLocation();
-	FVector TraceEnd = TraceStart+For * 3.f;
-	
+	FVector TraceEnd = TraceStart + For * 3.f;
+
 	FCollisionQueryParams Param;
 
 	AddIgnoreActorsToQuery(Param);
@@ -456,10 +469,10 @@ void AUSB_PlayerPawn::ConnectChargingStart()
 	if (!m_UsbMovement->IsMovingOnGround())//sky connect
 	{
 		PRINTF("AirCharging Start");
-		m_UsbMovement->RequestAirConnectChargeMove(m_CurrentFocusedPort->GetComponentRotation(), For, 3.f,2.f);
+		m_UsbMovement->RequestAirConnectChargeMove(m_CurrentFocusedPort->GetComponentRotation(), For, 3.f, 2.f);
 		return;
 	}
-	m_UsbMovement->RequestConnectChargeMove(For, 1.7f,2.f);
+	m_UsbMovement->RequestConnectChargeMove(For, 1.7f, 2.f);
 }
 
 void AUSB_PlayerPawn::SuccessConnection(UPortSkMeshComponent* portConnect)
@@ -474,13 +487,13 @@ void AUSB_PlayerPawn::SuccessConnection(UPortSkMeshComponent* portConnect)
 	auto* ReadyAction = UCActionFactory::MakeMoveComponentToFollow(m_CurrentHeadPin, portConnect, 0.3f, "ReadyPoint", true, ETimingFunction::Linear);
 	ReadyAction->m_OnComplete.AddLambda(
 		[=]()
-		{
+	{
 
-			AdjustPinTransform(portConnect);
-		});
+		AdjustPinTransform(portConnect);
+	});
 
 	m_ReadyActionManager->RunAction(ReadyAction);
-	
+
 
 }
 
@@ -488,12 +501,12 @@ void AUSB_PlayerPawn::AdjustPinTransform(UPortSkMeshComponent * portConnect)
 {
 	//레디포인트가 핀에 있으면 각도 오차만큼 이동 거리에 오차가 생긴다, 대각선으로
 	//레디포인트를 포트가 갖게해야한다.
-	
+
 	auto* RotateAction = UCActionFactory::MakeRotateComponentToFollowAction(m_CurrentHeadPin, portConnect, 0.5f);
-	auto* MoveAction = UCActionFactory::MakeMoveComponentToFollow(m_CurrentHeadPin, portConnect, 0.6f, "PinPoint", false , ETimingFunction::EaseInCube);
+	auto* MoveAction = UCActionFactory::MakeMoveComponentToFollow(m_CurrentHeadPin, portConnect, 0.6f, "PinPoint", false, ETimingFunction::EaseInCube);
 	//값이 바뀌니까
 	MoveAction->m_OnComplete.AddLambda(
-	[=]()
+		[=]()
 	{
 		PRINTF("SuccessConnection");
 		m_OnConnectedBP.Broadcast(m_CurrentHead->GetSocketLocation("PinPoint"));
@@ -508,7 +521,7 @@ void AUSB_PlayerPawn::AdjustPinTransform(UPortSkMeshComponent * portConnect)
 
 		for (auto Sph : GetSpineSphereAry())
 		{
-			Sph->MoveComponent(MoveDelta,Sph->GetComponentRotation(),false,nullptr,MOVECOMP_NoFlags,ETeleportType::TeleportPhysics);
+			Sph->MoveComponent(MoveDelta, Sph->GetComponentRotation(), false, nullptr, MOVECOMP_NoFlags, ETeleportType::TeleportPhysics);
 		}
 		m_CurrentHeadPin->SetWorldLocationAndRotationNoPhysics(ConnectPoint, PortRot);
 
@@ -529,7 +542,7 @@ void AUSB_PlayerPawn::AdjustPinTransform(UPortSkMeshComponent * portConnect)
 		}
 	}
 	);
-	
+
 	m_ConnectActionManager->RunAction(RotateAction);
 	m_ConnectActionManager->RunAction(MoveAction);
 }
@@ -618,7 +631,7 @@ bool AUSB_PlayerPawn::TryDisconnect()
 	{
 		RemovePhysicsBody(m_CurrentTail);//여기가 안나와준다면,해당 포트는 움직일수 없던 포트
 	}
-	
+
 	auto* TailPrev = m_PortTailPrev->GetPinConnected();
 
 	m_OnDisconnectedBP.Broadcast(TailPrev->GetSocketLocation("PinPoint"));
@@ -636,7 +649,7 @@ bool AUSB_PlayerPawn::TryDisconnect()
 	DisableUSBInput(m_fBlockMoveTimeWhenEject);//이부분을 바꿔서 임펄스에 비례해 오래 못건드리게
 	FVector ImpulseDir = GetTail()->GetForwardVector()*-1.f * EjectPowerFromPort;// *GetTotalMass();
 	m_UsbMovement->AddImpulse(ImpulseDir);
-	
+
 	m_PlayerCon->PlayerCameraManager->PlayCameraShake(UEjectionCamShake::StaticClass(), 1.0f);
 	return true;
 }
@@ -687,7 +700,7 @@ void AUSB_PlayerPawn::TickTracePortable()
 	FHitResult HitResult;
 	FVector StartTrace = GetHead()->GetComponentLocation();
 	FVector Forward = GetHead()->GetForwardVector();
-	FVector EndTrace = (GetHead()->GetForwardVector()* m_fPortTraceRange) + StartTrace;
+	FVector EndTrace = (Forward* m_fPortTraceRange) + StartTrace;
 
 	FCollisionQueryParams QueryParams;
 	AddIgnoreActorsToQuery(QueryParams);
@@ -697,10 +710,7 @@ void AUSB_PlayerPawn::TickTracePortable()
 		return;
 	}
 
-	if (m_CurrentFocusedPort)
-	{
-		m_CurrentFocusedPort->OnFocusEnd(m_CurrentHeadPin);
-	}
+
 
 
 	if (GetWorld()->SweepSingleByChannel(HitResult, StartTrace, EndTrace, FQuat::Identity, ECC_GameTraceChannel9, FCollisionShape::MakeSphere(10.f), QueryParams))
@@ -712,8 +722,23 @@ void AUSB_PlayerPawn::TickTracePortable()
 
 		UPortSkMeshComponent* PortableCompo = Cast<UPortSkMeshComponent>(HitResult.GetComponent());
 
-		if (PortableCompo && CheckPortDot(PortableCompo) && !PortableCompo->GetPinConnected())// PortableCompo->CheckYawOnly(m_CurrentHeadPin)
+		if (!PortableCompo)
 		{
+			return;
+		}
+
+		if (m_CurrentFocusedPort)
+		{
+			if (m_CurrentFocusedPort == PortableCompo)
+			{
+				return;//똑같은거
+			}
+			m_CurrentFocusedPort->OnFocusEnd(m_CurrentHeadPin);
+		}
+
+		if (CheckPortDot(PortableCompo) && !PortableCompo->GetPinConnected())// PortableCompo->CheckYawOnly(m_CurrentHeadPin)
+		{
+
 			m_CurrentFocusedPort = PortableCompo;
 			m_CurrentFocusedPort->OnFocus(m_CurrentHeadPin, IsMovingOnGround());
 			return;
@@ -723,9 +748,51 @@ void AUSB_PlayerPawn::TickTracePortable()
 	m_CurrentFocusedPort = nullptr;
 }
 
+void AUSB_PlayerPawn::TickTraceInteractable()//통합으로 최적화시킬것
+{
+	FHitResult HitResult;
+	FVector StartTrace = GetHead()->GetComponentLocation();
+	FVector Forward = GetHead()->GetForwardVector();
+	FVector EndTrace = (Forward* m_fPortTraceRange) + StartTrace;
+
+	FCollisionQueryParams QueryParams;
+	AddIgnoreActorsToQuery(QueryParams);
+
+	if (GetWorld()->SweepSingleByChannel(HitResult, StartTrace, EndTrace, FQuat::Identity, ECC_GameTraceChannel4, FCollisionShape::MakeSphere(10.f), QueryParams))
+	{
+		if (!HitResult.GetActor())
+		{
+			return;
+		}
+
+		UInteractableComponent* InterCompo = Cast<UInteractableComponent>(HitResult.GetActor()->GetComponentByClass(UInteractableComponent::StaticClass()));
+
+		if (!InterCompo)
+		{
+			return;
+		}
+
+		if (m_CurrentFocusedInteract)
+		{
+			if (m_CurrentFocusedInteract == InterCompo)
+			{
+				return;
+			}
+
+			m_CurrentFocusedInteract->SetFocusOut();
+		}
+
+		m_CurrentFocusedInteract = InterCompo;
+		m_CurrentFocusedInteract->SetFocusIn();
+		return;
+	}
+
+	m_CurrentFocusedInteract = nullptr;
+}
+
 bool AUSB_PlayerPawn::IsImpulseVelocityLower()//임펄스중 속력이 인풋보다 작아지면 움직일수 있게됨
 {
-	float CurrentSize= m_CurrentHead->GetPhysicsLinearVelocity().SizeSquared();
+	float CurrentSize = m_CurrentHead->GetPhysicsLinearVelocity().SizeSquared();
 
 	return CurrentSize < m_fMaxSpeedSqr * m_UsbMovement->m_fAirControl;
 }
@@ -734,7 +801,7 @@ bool AUSB_PlayerPawn::CheckPortDot(UPortSkMeshComponent * port)
 {
 	float Dot = port->GetForwardVector() | m_CurrentHeadPin->GetForwardVector();
 
-	return Dot>0.f;
+	return Dot > 0.f;
 }
 
 

@@ -15,7 +15,7 @@ class UPhysicsSkMeshComponent;
 class APlayerController;
 class UPortSkMeshComponent;
 class UBattery;
-
+class UInteractableComponent;
 
 UCLASS(BlueprintType, Blueprintable)
 class DESK_WAR_API AUSB_PlayerPawn : public AUSB_PhysicsPawn
@@ -79,6 +79,8 @@ private:
 	UPROPERTY()
 	UPortSkMeshComponent* m_CurrentFocusedPort;
 	UPROPERTY()
+	UInteractableComponent* m_CurrentFocusedInteract;
+	UPROPERTY()
 	UPinSkMeshComponent* m_CurrentHeadPin;
 	UPROPERTY()
 	UPinSkMeshComponent* m_BaseHeadPin;
@@ -139,6 +141,7 @@ private:
 	void AddPhysicsBody(UPrimitiveComponent* wantP);
 	void RemovePhysicsBody(UPrimitiveComponent* wantP);
 	void ExitGame();
+	void Interact();
 protected:
 	void ConnectChargingStart();
 	void SuccessConnection(UPortSkMeshComponent* portConnect);
@@ -153,6 +156,7 @@ protected:
 	virtual void BeginPlay() override;
 	void InitTraceIgnoreAry();
 	void TickTracePortable();
+	void TickTraceInteractable();
 	bool IsImpulseVelocityLower();
 	bool CheckPortDot(UPortSkMeshComponent* port);
 public:

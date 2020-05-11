@@ -20,7 +20,9 @@ class DESK_WAR_API UDialogueComponent : public UActorComponent
 	
 public:
 	UPROPERTY(EditAnywhere,BlueprintReadOnly, Category = "Dialogue")
-	UDialogue* m_DialogueData;
+	UDialogue* m_DialogueModData;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dialogue")
+	UDialogue* m_SelfTalkData;
 	UPROPERTY(BlueprintAssignable, BlueprintReadWrite ,Category = "Dialogue")
 	FVoidVoidBP m_OnDialogueStart;
 	UPROPERTY(BlueprintAssignable, BlueprintReadWrite, Category = "Dialogue")
@@ -31,6 +33,8 @@ public:
 	UFUNCTION(BlueprintCallable,Category="Dialogue")
 	void StartDialogue();
 	
-
+	//UFUNCTION(BlueprintCallable, Category = "Dialogue")
+	//void SelfTalk();
 	//혼잣말 있어야함
+	//혼잣말을 일반 다얄로그 에셋으로 쓴다면?
 };
