@@ -84,6 +84,11 @@ void APawnSpawner::PostInitProperties()
 	NewOffset.Z += 130.f;
 	m_BilboardForSpawnOffset->SetRelativeLocation(NewOffset);
 
+	if (m_NameConnectorID == NAME_None)
+	{
+		m_MeshSpawnPwnProxy->SetSkeletalMesh(nullptr);
+	}
+
 	if (m_ClassPawnToSpawn == nullptr && m_NameConnectorID==NAME_None)
 	{
 		return;
@@ -128,6 +133,10 @@ void APawnSpawner::PostEditChangeProperty(FPropertyChangedEvent & PropertyChange
 	NewOffset.Z += 130.f;
 	m_BilboardForSpawnOffset->SetRelativeLocation(NewOffset);
 
+	if (m_NameConnectorID == NAME_None)
+	{
+		m_MeshSpawnPwnProxy->SetSkeletalMesh(nullptr);
+	}
 
 	if (m_ClassPawnToSpawn == nullptr && m_NameConnectorID == NAME_None)
 	{
