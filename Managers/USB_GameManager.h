@@ -14,13 +14,20 @@
 /**
  * 
  */
+
+class ConnectablePawnManager;
+class UDataTable;
+struct FConnectablePawn_Data;
 UCLASS()
 class DESK_WAR_API UUSB_GameManager : public UGameInstance
 {
 	GENERATED_BODY()
+public:
+	UUSB_GameManager();
 protected:
 	LevelManager* m_LevelManager;
 	SteamManager* m_SteamManager;
+	ConnectablePawnManager* m_ConnectPawnManager;
 public:
 	void GameOver();
 
@@ -34,5 +41,12 @@ public:
 
 	void UnloadLevel(FName wantLevel);
 
+protected:
+	UPROPERTY(EditDefaultsOnly, Category = "Manager")
+	UDataTable* m_PawnDataTable;
 
+	
+
+public:
+	const FConnectablePawn_Data & GetConnectPawnData(FName id);
 };

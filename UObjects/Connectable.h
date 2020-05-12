@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
+#include "Components/PrimitiveComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Connectable.generated.h"
 
 // This class does not need to be modified.
@@ -24,4 +26,6 @@ class DESK_WAR_API IConnectable
 public:
 	virtual void OnConnected(IConnectable* portTarget) {};
 	virtual void OnDisconnected(IConnectable* pinTarget) {};
+	virtual void OnFocusStart(USkeletalMeshComponent* skMesh) {};
+	virtual void OnFocusEnd(USkeletalMeshComponent* skMesh) {};
 };

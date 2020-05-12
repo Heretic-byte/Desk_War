@@ -16,6 +16,7 @@ class APlayerController;
 class UPortSkMeshComponent;
 class UBattery;
 class UInteractableComponent;
+class IConnectable;
 
 UCLASS(BlueprintType, Blueprintable)
 class DESK_WAR_API AUSB_PlayerPawn : public AUSB_PhysicsPawn
@@ -24,11 +25,13 @@ class DESK_WAR_API AUSB_PlayerPawn : public AUSB_PhysicsPawn
 public:
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnConnectVectorBP, const FVector&, pinLoc);
 	AUSB_PlayerPawn(const FObjectInitializer& objInit);
+
 public:
 	UPROPERTY(BlueprintAssignable, Category = "Interact")
 	FOnConnectVectorBP m_OnConnectedBP;
 	UPROPERTY(BlueprintAssignable, Category = "Interact")
 	FOnConnectVectorBP m_OnDisconnectedBP;
+
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "USB_Action")
 	float m_fDefaultFailImpulsePower;
@@ -45,11 +48,13 @@ protected:
 	
 	float m_fTotalMass;
 	float m_fMaxSpeedSqr;
+
 private:
 	bool m_bBlockHeadChange;
 	bool m_bBlockJump;
 	bool m_bBlockChargeClick;
 	bool m_bBlockInputMove;
+
 protected://component
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly,Category="Movement")
 	UUSBMovement* m_UsbMovement;
@@ -67,6 +72,7 @@ protected://component
 	USkeletalMeshComponent* m_MeshFaceSk;
 	UPROPERTY(VisibleAnywhere, Category = "USB_Body")
 	APlayerController* m_PlayerCon;
+
 private:
 	UPROPERTY()
 	TArray<UBattery*> m_AryBatteries;
@@ -90,8 +96,12 @@ private:
 	UPortSkMeshComponent* m_PortTailPrev;
 	UPROPERTY()
 	UPortSkMeshComponent* m_PortHeadPrev;
+	//
+	IConnectable* m_FocusedConnectable;
+
 private:
 	FDelegateHandle m_ConnectChargingHandle;
+
 public:
 	UFUNCTION(BlueprintCallable, Category = "Connection")
 	void TryConnect(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult &SweepResult);
@@ -124,11 +134,13 @@ public:
 	UBattery* GetBattery();
 	UFUNCTION(BlueprintCallable, Category = "USB_Action")
 	void Kill();
+
 private://construct
 	void InitPlayerPawn();
 	void CreatePhysicMovement();
 	void CreateCameraFamily();
 	void CreateSkFaceMesh();
+
 private:
 	void SetHeadTail(UPhysicsSkMeshComponent* headWant, UPhysicsSkMeshComponent* tailWant,
 		UPortSkMeshComponent* headPrevPort, UPortSkMeshComponent* tailPrevPort,
@@ -137,17 +149,21 @@ private:
 	void MoveRight(float v);
 	void RotateYaw(float v);
 	void RotatePitch(float v);
+
 private:
 	void AddPhysicsBody(UPrimitiveComponent* wantP);
 	void RemovePhysicsBody(UPrimitiveComponent* wantP);
 	void ExitGame();
 	void Interact();
+
 protected:
 	void ConnectChargingStart();
 	void SuccessConnection(UPortSkMeshComponent* portConnect);
 	void AdjustPinTransform(UPortSkMeshComponent * portConnect);
+
 public:
 	void FailConnection(UPortSkMeshComponent* portConnect,const FHitResult * hitResult, EFailConnectionReason reason);
+
 protected:
 	void SetPhysicsVelocityAllBody(FVector linearV);
 	bool TryDisconnect();
@@ -155,12 +171,14 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void BeginPlay() override;
 	void InitTraceIgnoreAry();
-	void TickTracePortable();
-	void TickTraceInteractable();
+	void TickTraceConnectable(const FVector& startTrace, const FVector& endTrace);
+	void TickTraceInteractable(const FVector& startTrace, const FVector& endTrace);
 	bool IsImpulseVelocityLower();
 	bool CheckPortDot(UPortSkMeshComponent* port);
+
 public:
 	virtual void Tick(float DeltaTime) override;
+	void TimerCount(float DeltaTime);
 	void EnableUSBInput();
 	void DisableUSBInput(float dur=0.f);
 	UFUNCTION(BlueprintCallable,Category="Input")
@@ -169,6 +187,7 @@ public:
 	void DisableUSBMove(float dur = -1.f);
 	void AddBattery(UBattery* batt);
 	void RemoveBattery(UBattery* batt);
+
 public:
 	FORCEINLINE float GetTotalMass()
 	{

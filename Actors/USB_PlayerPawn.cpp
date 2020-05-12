@@ -19,6 +19,8 @@
 
 #include "Components/InteractableComponent.h"
 
+#include "UObjects/Connectable.h"
+
 
 //누구이든간 스켈메쉬를 머리꼬리로 바꿔버리니까
 //어댑터가 꼬리면 어댑터를 분리해야하고
@@ -258,6 +260,28 @@ void AUSB_PlayerPawn::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	TimerCount(DeltaTime);
+
+	FVector StartTrace = GetHead()->GetComponentLocation();
+	FVector EndTrace = (GetHead()->GetForwardVector()* m_fPortTraceRange) + StartTrace;
+
+	TickTraceInteractable(StartTrace,EndTrace);
+	TickTraceConnectable(StartTrace, EndTrace);
+
+	if (!m_CurrentFocusedPort)
+	{
+		return;
+	}
+
+	FVector HeadPos = GetHead()->GetComponentLocation();
+	FVector PortPst = m_CurrentFocusedPort->GetComponentLocation();
+	DrawDebugLine(GetWorld(), HeadPos, PortPst, FColor::Cyan, false, -1, 0.1f);
+	//
+
+}
+
+void AUSB_PlayerPawn::TimerCount(float DeltaTime)
+{
 	m_fHeadChangeCDTimer += DeltaTime;
 
 	if (m_fBlockMoveTimeWhenEjectTimer > 0 && m_fBlockMoveTimeWhenEjectTimer != -1.f)//0
@@ -270,20 +294,6 @@ void AUSB_PlayerPawn::Tick(float DeltaTime)
 			m_fBlockMoveTimeWhenEjectTimer = 0.f;
 		}
 	}
-
-	TickTraceInteractable();
-	TickTracePortable();
-
-	if (!m_CurrentFocusedPort)
-	{
-		return;
-	}
-
-	FVector HeadPos = GetHead()->GetComponentLocation();
-	FVector PortPst = m_CurrentFocusedPort->GetComponentLocation();
-	DrawDebugLine(GetWorld(), HeadPos, PortPst, FColor::Cyan, false, -1, 0.1f);
-	//
-
 }
 
 void AUSB_PlayerPawn::EnableUSBInput()
@@ -696,74 +706,51 @@ void AUSB_PlayerPawn::StopJumping()
 	m_UsbMovement->StopJumping();
 }
 
-void AUSB_PlayerPawn::TickTracePortable()
+void AUSB_PlayerPawn::TickTraceConnectable(const FVector& startTrace, const FVector& endTrace)
 {
 	FHitResult HitResult;
-	FVector StartTrace = GetHead()->GetComponentLocation();
-	FVector Forward = GetHead()->GetForwardVector();
-	FVector EndTrace = (Forward* m_fPortTraceRange) + StartTrace;
 
-	FCollisionQueryParams QueryParams;
-	AddIgnoreActorsToQuery(QueryParams);
+	TArray<TEnumAsByte<EObjectTypeQuery>> AryObjectTypes;
+	AryObjectTypes.Init(EObjectTypeQuery::ObjectTypeQuery8,1);
 
-	if (!m_CurrentHeadPin)
-	{//꽂힌 머리가 핀기능이 없음
-		return;
-	}
-
-
-
-
-	if (GetWorld()->SweepSingleByChannel(HitResult, StartTrace, EndTrace, FQuat::Identity, ECC_GameTraceChannel9, FCollisionShape::MakeSphere(10.f), QueryParams))
+	if (UKismetSystemLibrary::SphereTraceSingleForObjects(
+		GetWorld(),
+		startTrace, endTrace, 15.f,
+		AryObjectTypes, false, m_AryTraceIgnoreActors, EDrawDebugTrace::ForOneFrame, HitResult, true))
 	{
-		if (!HitResult.GetActor())
+		IConnectable* Connectable = Cast<IConnectable>( HitResult.GetActor());
+
+		if (!Connectable)
 		{
 			return;
 		}
 
-		UPortSkMeshComponent* PortableCompo = Cast<UPortSkMeshComponent>(HitResult.GetComponent());
-
-		if (!PortableCompo)
+		if (m_FocusedConnectable && m_FocusedConnectable == Connectable)
 		{
 			return;
 		}
 
-		if (m_CurrentFocusedPort)
-		{
-			if (m_CurrentFocusedPort == PortableCompo)
-			{
-				return;//똑같은거
-			}
-			m_CurrentFocusedPort->OnFocusEnd(m_CurrentHeadPin);
-		}
+		m_FocusedConnectable = Connectable;
 
-		if (CheckPortDot(PortableCompo) && !PortableCompo->GetPinConnected())// PortableCompo->CheckYawOnly(m_CurrentHeadPin)
-		{
-
-			m_CurrentFocusedPort = PortableCompo;
-			m_CurrentFocusedPort->OnFocus(m_CurrentHeadPin, IsMovingOnGround());
-			return;
-		}
+		m_FocusedConnectable->OnFocusStart(m_CurrentHeadPin);
 	}
 
-	if (m_CurrentFocusedPort)
+	if (m_FocusedConnectable)
 	{
-		m_CurrentFocusedPort->OnFocusEnd(m_CurrentHeadPin);
+		m_FocusedConnectable->OnFocusEnd(m_CurrentHeadPin);
 	}
-	m_CurrentFocusedPort = nullptr;
+
+	m_FocusedConnectable = nullptr;
 }
 
-void AUSB_PlayerPawn::TickTraceInteractable()//통합으로 최적화시킬것
+void AUSB_PlayerPawn::TickTraceInteractable(const FVector& startTrace, const FVector& endTrace)//통합으로 최적화시킬것
 {
 	FHitResult HitResult;
-	FVector StartTrace = GetHead()->GetComponentLocation();
-	FVector Forward = GetHead()->GetForwardVector();
-	FVector EndTrace = (Forward* m_fPortTraceRange) + StartTrace;
 
 	FCollisionQueryParams QueryParams;
 	AddIgnoreActorsToQuery(QueryParams);
 
-	if (GetWorld()->SweepSingleByChannel(HitResult, StartTrace, EndTrace, FQuat::Identity, ECC_GameTraceChannel4, FCollisionShape::MakeSphere(10.f), QueryParams))
+	if (GetWorld()->SweepSingleByChannel(HitResult, startTrace, endTrace, FQuat::Identity, ECC_GameTraceChannel4, FCollisionShape::MakeSphere(10.f), QueryParams))
 	{
 		if (!HitResult.GetActor())
 		{

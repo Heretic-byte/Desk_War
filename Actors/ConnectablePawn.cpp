@@ -1,10 +1,10 @@
 #include "ConnectablePawn.h"
 #include "Kismet/GameplayStatics.h"
-#include "Managers/USB_GameMode.h"
 #include "Datas/ConnectablePawnData.h"
 #include "UObjects/ConnectionBehavior.h"
 #include "ConstructorHelpers.h"
-
+#include "Datas/USB_Macros.h"
+#include "Managers/USB_GameManager.h"
 // Sets default values
 AConnectablePawn::AConnectablePawn()
 {
@@ -15,9 +15,16 @@ AConnectablePawn::AConnectablePawn()
 	m_MeshMainBody = CreateDefaultSubobject<USkeletalMeshComponent>("Mesh00");
 	RootComponent = m_MeshMainBody;
 	m_MeshMainBody->SetCollisionProfileName("PhysicsActor");
-	m_MeshMainBody->SetSimulatePhysics(true);
+	m_MeshMainBody->SetSimulatePhysics(false);
 	m_MeshMainBody->SetUseCCD(false);
 	m_MeshMainBody->CastShadow = false;
+
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FoundMesh(TEXT("SkeletalMesh'/Game/Meshes/Characters/Player_USB/SK_USB_Head.SK_USB_Head'"));
+
+	if (FoundMesh.Succeeded())
+		m_MeshMainBody->SetSkeletalMesh(FoundMesh.Object);
+	else
+		check(FoundMesh.Object);
 //
 	m_MeshPort = CreateDefaultSubobject<USkeletalMeshComponent>("Mesh01");
 	m_MeshPort->SetupAttachment(RootComponent);
@@ -43,6 +50,7 @@ AConnectablePawn::AConnectablePawn()
 	m_Audio = CreateDefaultSubobject<UAudioComponent>("Audio04");
 	m_Audio->SetupAttachment(RootComponent);
 	m_Audio->SetAutoActivate(false);
+	//
 	static ConstructorHelpers::FObjectFinder<USoundBase> FoundSound(TEXT("SoundWave'/Game/SFX/USB/Put_in/SE_SFX_BUTTON_PUSH.SE_SFX_BUTTON_PUSH'"));
 
 	if (FoundSound.Succeeded())
@@ -87,9 +95,14 @@ void AConnectablePawn::OnDisconnected(IConnectable * pinTarget)
 
 void AConnectablePawn::SetConnectPawn(FName pawnID)
 {
-	AUSB_GameMode* GameMode=Cast<AUSB_GameMode>( UGameplayStatics::GetGameMode(GetWorld()));
+	auto* USBManager = GetGameInstance<UUSB_GameManager>();
+	const auto& PawnData= USBManager->GetConnectPawnData(pawnID);
 
-	const auto& PawnData= GameMode->GetConnectPawnData(pawnID);
+	if (!&PawnData)
+	{
+		PRINTF("Failed Find Data - PawnConnect");
+		return;
+	}
 
 	m_PinType = PawnData.m_PinType;
 	m_PortType = PawnData.m_PortType;
@@ -104,9 +117,16 @@ void AConnectablePawn::SetConnectPawn(FName pawnID)
 
 	m_Sphere->SetSphereRadius(PawnData.m_fInteractRadius);
 
-	m_ConnectionBehav = NewObject<UConnectionBehavior>( PawnData.m_ConnectBehav->GetDefaultObject(), PawnData.m_ConnectBehav);
-	//배터리가 여기 포함,그밖에 주는것들
 	m_StartLocation = GetActorLocation();
+
+	m_MeshMainBody->SetSimulatePhysics(true);
+
+	//
+	if (PawnData.m_ConnectBehav != nullptr)
+	{
+		m_ConnectionBehav = NewObject<UConnectionBehavior>( PawnData.m_ConnectBehav->GetDefaultObject(), PawnData.m_ConnectBehav);
+	}
+	//배터리가 여기 포함,그밖에 주는것들
 
 	if (!PawnData.m_bIsAI)
 	{
