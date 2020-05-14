@@ -5,6 +5,7 @@
 #include "Datas/ConnectablePawnData.h"
 #include "Actors/ConnectablePawn.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "AIController.h"
 // Sets default values
 APawnSpawner::APawnSpawner()
 {
@@ -80,55 +81,16 @@ APawnSpawner::APawnSpawner()
 void APawnSpawner::PostInitProperties()
 {
 	Super::PostInitProperties();
-	FVector NewOffset = m_SpawnOffset;
-	NewOffset.Z += 130.f;
-	m_BilboardForSpawnOffset->SetRelativeLocation(NewOffset);
-
-	if (m_NameConnectorID == NAME_None)
-	{
-		m_MeshSpawnPwnProxy->SetSkeletalMesh(nullptr);
-	}
-
-	if (m_ClassPawnToSpawn == nullptr && m_NameConnectorID==NAME_None)
-	{
-		return;
-	}
-
-	if (m_NameConnectorID != NAME_None)
-	{
-		const FConnectablePawn_Data& Data= *m_DataTable->FindRow<FConnectablePawn_Data>(m_NameConnectorID, "");
-
-		if (!&Data)
-		{
-			PRINTF("NameID Wrong !");
-			return;
-		}
-
-		m_MeshSpawnPwnProxy->SetSkeletalMesh(Data.m_MeshPawnMainBody);
-	}
-	else
-	{
-
-
-		USkeletalMeshComponent* Compo = Cast<USkeletalMeshComponent>(m_ClassPawnToSpawn->GetDefaultObject<AActor>()->GetComponentByClass(USkeletalMeshComponent::StaticClass()));
-
-		if (!Compo->SkeletalMesh)
-		{
-			return;
-		}
-
-		m_MeshSpawnPwnProxy->SetSkeletalMesh(Compo->SkeletalMesh);
-	}
-
-
-	m_MeshSpawnPwnProxy->SetRelativeRotation(m_SpawnRotateOffset);
-
-	m_MeshSpawnPwnProxy->SetRelativeLocation(m_SpawnOffset);
+	SetTablePawnProperty();
 }
-
 void APawnSpawner::PostEditChangeProperty(FPropertyChangedEvent & PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
+	SetTablePawnProperty();
+}
+
+void APawnSpawner::SetTablePawnProperty()
+{
 	FVector NewOffset = m_SpawnOffset;
 	NewOffset.Z += 130.f;
 	m_BilboardForSpawnOffset->SetRelativeLocation(NewOffset);
@@ -136,10 +98,12 @@ void APawnSpawner::PostEditChangeProperty(FPropertyChangedEvent & PropertyChange
 	if (m_NameConnectorID == NAME_None)
 	{
 		m_MeshSpawnPwnProxy->SetSkeletalMesh(nullptr);
+		m_bCanSpawn = false;
 	}
 
 	if (m_ClassPawnToSpawn == nullptr && m_NameConnectorID == NAME_None)
 	{
+		m_bCanSpawn = false;
 		return;
 	}
 
@@ -150,33 +114,36 @@ void APawnSpawner::PostEditChangeProperty(FPropertyChangedEvent & PropertyChange
 		if (!&Data)
 		{
 			PRINTF("NameID Wrong !");
+			m_MeshSpawnPwnProxy->SetSkeletalMesh(nullptr);
+			m_bCanSpawn = false;
 			return;
 		}
 
 		m_MeshSpawnPwnProxy->SetSkeletalMesh(Data.m_MeshPawnMainBody);
-
+		m_bCanSpawn = true;
 	}
 	else
 	{
-
-
 		USkeletalMeshComponent* Compo = Cast<USkeletalMeshComponent>(m_ClassPawnToSpawn->GetDefaultObject<AActor>()->GetComponentByClass(USkeletalMeshComponent::StaticClass()));
 
 		if (!Compo->SkeletalMesh)
 		{
+			m_MeshSpawnPwnProxy->SetSkeletalMesh(nullptr);
+			m_bCanSpawn = false;
 			return;
 		}
 
 		m_MeshSpawnPwnProxy->SetSkeletalMesh(Compo->SkeletalMesh);
+		m_bCanSpawn = true;
 	}
+
 
 	m_MeshSpawnPwnProxy->SetRelativeRotation(m_SpawnRotateOffset);
 
 	m_MeshSpawnPwnProxy->SetRelativeLocation(m_SpawnOffset);
-
-
-	
 }
+
+
 #endif
 
 // Called when the game starts or when spawned
@@ -205,14 +172,14 @@ void APawnSpawner::SpawnPawn()
 	}
 	FActorSpawnParameters Param;
 	Param.bNoFail = true;
+	Param.Owner = this;
 	if (m_NameConnectorID == NAME_None)
 	{
 		m_SpawnedPawn = GetWorld()->SpawnActor<APawn>(m_ClassPawnToSpawn, GetActorLocation() + m_SpawnOffset, GetActorRotation() + m_SpawnRotateOffset, Param);
 	}
 	else
 	{
-		m_SpawnedPawn = GetWorld()->SpawnActor<APawn>(AConnectablePawn::StaticClass(), GetActorLocation() + m_SpawnOffset, GetActorRotation() + m_SpawnRotateOffset, Param);
+		m_SpawnedPawn = GetWorld()->SpawnActor<AConnectablePawn>(AConnectablePawn::StaticClass(),GetActorLocation() + m_SpawnOffset, GetActorRotation() + m_SpawnRotateOffset, Param);
 		Cast<AConnectablePawn>(m_SpawnedPawn)->SetConnectPawn(m_NameConnectorID);
-		//GetGameInstance<UUSB_GameManager>()->GetConnectPawnData()
 	}
 }

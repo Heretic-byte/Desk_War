@@ -5,10 +5,27 @@
 #include "ConstructorHelpers.h"
 #include "Datas/USB_Macros.h"
 #include "Managers/USB_GameManager.h"
+#include "Components/PhysicsMovement.h"
+#include "Perception/PawnSensingComponent.h"
+#include "NavigationPath.h"
+#include "NavigationData.h"
+#include "NavigationSystem.h"
+#include "NavigationSystemTypes.h"
+
+#include "AIController.h"
+#include "UObjects/IdleBehavior.h"
+#include "UObjects/SawPlayerBehavior.h"
+#include "UObjects/ReturnBehavior.h"
+#include "Kismet/GameplayStatics.h"
+#include "Actors/USB_PlayerPawn.h"
+#include "UObjects/Connectable.h"
+
 // Sets default values
 AConnectablePawn::AConnectablePawn()
 {
- 	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	AutoPossessAI = EAutoPossessAI::Spawned;
+	m_CurrentState = EFSM::Idle;
+
 	PrimaryActorTick.bCanEverTick = true;
 	m_PawnID = NAME_None;
 	
@@ -57,7 +74,45 @@ AConnectablePawn::AConnectablePawn()
 		m_Audio->SetSound(FoundSound.Object);
 	else
 		check(FoundSound.Object);
+
+
+	m_AryStateFunction[(int)EFSM::Idle] = &AConnectablePawn::OnIdle;
+	m_AryStateFunction[(int)EFSM::Detect] = &AConnectablePawn::OnDetectPlayer;
+	m_AryStateFunction[(int)EFSM::Return] = &AConnectablePawn::OnReturn;
 }
+
+void AConnectablePawn::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	if (m_PawnID != NAME_None)
+	{
+		SetConnectPawn(m_PawnID);
+		//SetActorTickEnabled(true);
+	}
+}
+
+void AConnectablePawn::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+	m_fDeltaTime = DeltaTime;
+
+	if (!GetNav())
+	{
+		SetActorTickEnabled(false);
+		return;
+	}
+
+	CountingTimer();
+	ExecuteFSM();
+
+}
+
+AUSB_PlayerPawn * AConnectablePawn::GetPlayer() const
+{
+	return Cast<AUSB_PlayerPawn>(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
+}
+
 
 void AConnectablePawn::SetUpSceneComponent(USceneComponent * compo, USceneComponent * parent, FTransform trans)
 {
@@ -67,25 +122,64 @@ void AConnectablePawn::SetUpSceneComponent(USceneComponent * compo, USceneCompon
 
 void AConnectablePawn::SetUpActorComponent(UActorComponent * compo)
 {
-	compo->RegisterComponent();
 	AddInstanceComponent(compo);
+	compo->RegisterComponent();
 }
 
-// Called when the game starts or when spawned
-void AConnectablePawn::BeginPlay()
+void AConnectablePawn::CountingTimer()
 {
-	Super::BeginPlay();
-	SetActorTickEnabled(false);
+}
 
-	if (m_PawnID != NAME_None)
+void AConnectablePawn::ExecuteFSM()
+{
+	if (!m_bUseFSM)
 	{
-		SetConnectPawn(m_PawnID);
+		return;
 	}
+
+	(this->*m_AryStateFunction[(int)m_CurrentState])();
+}
+
+void AConnectablePawn::OnIdle()
+{
+	m_IdleBehavior->Execute(this,m_fDeltaTime);
+}
+
+void AConnectablePawn::OnDetectPlayer()
+{
+	m_DetectBehavior->Execute(this, m_fDeltaTime);
+}
+
+void AConnectablePawn::OnReturn()
+{
+	m_ReturnToPosBehavior->Execute(this, m_fDeltaTime);
+}
+
+void AConnectablePawn::OnSeePlayer(APawn * player)
+{
+	m_FoundPlayerPawn = player;
+}
+
+AAIController * AConnectablePawn::GetAICon()
+{
+	return m_AiController;
+}
+
+UNavigationSystemV1 * AConnectablePawn::GetNav()
+{
+	UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+
+	if (!NavSys)
+	{
+		PRINTF("NoNav");
+		return nullptr;
+	}
+	return NavSys;
 }
 
 void AConnectablePawn::OnConnected(IConnectable * portTarget)
 {
-
+	m_ConnectionBehav->ExecuteConnection(GetPlayer(),this);
 }
 
 void AConnectablePawn::OnDisconnected(IConnectable * pinTarget)
@@ -120,7 +214,8 @@ void AConnectablePawn::SetConnectPawn(FName pawnID)
 	m_StartLocation = GetActorLocation();
 
 	m_MeshMainBody->SetSimulatePhysics(true);
-
+	//m_MeshMainBody->GetBodyInstance()->bLockYRotation = true;
+	//m_MeshMainBody->GetBodyInstance()->bLockXRotation = true;
 	//
 	if (PawnData.m_ConnectBehav != nullptr)
 	{
@@ -128,27 +223,66 @@ void AConnectablePawn::SetConnectPawn(FName pawnID)
 	}
 	//배터리가 여기 포함,그밖에 주는것들
 
+	m_AiController = Cast<AAIController>(GetController());
+
 	if (!PawnData.m_bIsAI)
 	{
 		return;
 	}
 
-	SetActorTickEnabled(true);
-	//pawn sensing
-	//각도
-	//movement
-	//이속 점프력
+	m_bUseFSM = true;
 
-	//얘네 스텟은 어디서?
+	//
+	m_Movement = AddActorComponent<UPhysicsMovement>(UPhysicsMovement::StaticClass());
+	m_Movement->m_fMovingForce = PawnData.m_fMovingForce;
+	m_Movement->m_fMaxSpeed = PawnData.m_fMaxSpeed;
+	m_Movement->m_fMaxBrakingDeceleration = PawnData.m_fMaxBrakingDeceleration;
+	m_Movement->m_nJumpMaxCount = PawnData.m_nJumpMaxCount;
+	m_Movement->m_fJumpHeight = PawnData.m_fJumpHeight;
+	m_Movement->SetMovingComponent(m_MeshMainBody, false);
 
-	//생각해보면 배터리말고는 전부 어댑터아닌가
+	m_PawnSensing = AddActorComponent<UPawnSensingComponent>(UPawnSensingComponent::StaticClass());
+	m_PawnSensing->OnSeePawn.AddDynamic(this, &AConnectablePawn::OnSeePlayer);
 
-	//일단은 만들자
+	m_PawnSensing->HearingThreshold = PawnData.m_fHearingThreshold;
+	m_PawnSensing->LOSHearingThreshold = PawnData.m_fLOSHearingThreshold;
+	m_PawnSensing->SightRadius = PawnData.m_fSightRadius;
+	m_PawnSensing->SetPeripheralVisionAngle(PawnData.m_fAngle);	
+	//
+	m_IdleBehavior = NewObject<UIdleBehavior>(PawnData.m_IdleBehav->GetDefaultObject(), PawnData.m_IdleBehav);
 
-	//지금 만드는 시스템ㅇ;
+	m_DetectBehavior = NewObject<USawPlayerBehavior>(PawnData.m_SawPlayerBehav->GetDefaultObject(), PawnData.m_SawPlayerBehav);
 
-	//커넥션 인터페이스 및 맵을 통한 커넥터 저장
+	m_ReturnToPosBehavior = NewObject<UReturnBehavior>(PawnData.m_ReturnPlayerBehav->GetDefaultObject(), PawnData.m_ReturnPlayerBehav);
+	//
 
-	//커넥션 디커넥션 모든 시전 주체는 플레이어다.
 }
+
+EPathFollowingRequestResult::Type AConnectablePawn::MoveToLocation(FVector loc)
+{
+	return GetAICon()->MoveToLocation(loc,10.f);
+}
+
+EPathFollowingRequestResult::Type AConnectablePawn::MoveToActor(AActor * target)
+{
+return	GetAICon()->MoveToActor(target, 10.f);
+}
+
+float AConnectablePawn::GetRadius()
+{
+	return m_Sphere->GetScaledSphereRadius();
+}
+
+void AConnectablePawn::SetFSM(EFSM fsm)
+{
+	m_CurrentState = fsm;
+}
+
+//무브먼트타겟을 바꿀것인가
+
+//빙의를 시킬것인가
+
+//배터리는 빙의되선 안되고
+
+//로봇과 자동차는 빙의되야한다.
 

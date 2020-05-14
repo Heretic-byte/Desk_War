@@ -29,7 +29,9 @@ public class Desk_War : ModuleRules
 
 		PrivateDependencyModuleNames.AddRange(new string[] {
         "DialoguePlugin",
-        "EasyActionPlugin"
+        "EasyActionPlugin",
+        "AIModule",
+            "NavigationSystem"
         });
         DynamicallyLoadedModuleNames.Add("OnlineSubsystemSteam");
     }

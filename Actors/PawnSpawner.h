@@ -35,6 +35,7 @@ private:
 #if WITH_EDITOR
 	UDataTable* m_DataTable;
 	virtual void PostInitProperties() override;
+	void SetTablePawnProperty();
 	virtual void PostEditChangeProperty(FPropertyChangedEvent & PropertyChangedEvent) override;
 #endif
 protected:

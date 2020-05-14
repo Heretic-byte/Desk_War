@@ -153,10 +153,10 @@ void UPhysicsMovement::SetUpdatedComponent(USceneComponent * NewUpdatedComponent
 {
 	if (NewUpdatedComponent)
 	{
-		m_MovingTarget = Cast<UPhysicsSkMeshComponent>(NewUpdatedComponent);
+		m_MovingTarget = Cast<UPrimitiveComponent>(NewUpdatedComponent);
 		if (!m_MovingTarget)
 		{
-			PRINTF("Target is not USkeletalMesh");
+			PRINTF("Target is not Primitive");
 			return;
 		}
 	}
@@ -501,10 +501,11 @@ bool UPhysicsMovement::DoJump()
 {
 	if (CanJump())
 	{
-		
 		FVector CurrentV = m_MovingTarget->GetPhysicsLinearVelocity();
 		float ZVelo = FMath::Sqrt(-2.f * GetGravityZ()* m_fJumpHeight);
 		CurrentV.Z = FMath::Max(ZVelo, CurrentV.Z);
+
+		m_MovingTarget->SetPhysicsLinearVelocity(CurrentV);
 
 		m_nJumpCurrentCount++;
 		PRINTF("JumpCount:%d", m_nJumpCurrentCount);

@@ -12,7 +12,12 @@
 #include "Datas/USB_Enum.h"
 #include "UObjects/SawPlayerBehavior.h"
 #include "UObjects/IdleBehavior.h"
+#include "UObjects/ReturnBehavior.h"
 #include "UObjects/ConnectionBehavior.h"
+
+
+
+
 #include "ConnectablePawnData.generated.h"
 
 /**
@@ -37,6 +42,7 @@ public:
 		m_bIsAI = false;
 		m_IdleBehav = UIdleBehavior::StaticClass();
 		m_SawPlayerBehav = USawPlayerBehavior::StaticClass();
+		m_ReturnPlayerBehav = UReturnBehavior::StaticClass();
 		m_fInteractRadius=250.f;
 	}
 
@@ -64,9 +70,29 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	bool m_bIsAI;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	float m_fMovingForce = 600.f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	float m_fMaxSpeed = 370.f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	float m_fMaxBrakingDeceleration = 240.f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	int m_nJumpMaxCount = 0;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	float m_fJumpHeight = 100.f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	float m_fHearingThreshold = 900.f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	float m_fLOSHearingThreshold = 1800.f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	float m_fSightRadius = 900.f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	float m_fAngle = 80.f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TSubclassOf<UIdleBehavior> m_IdleBehav;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TSubclassOf<USawPlayerBehavior> m_SawPlayerBehav;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TSubclassOf<UReturnBehavior> m_ReturnPlayerBehav;
 };
 
 //ai

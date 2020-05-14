@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Datas/USB_Macros.h"
-#include "Components/PhysicsSkMeshComponent.h"
+#include "Components/PrimitiveComponent.h"
 #include "GameFramework/PawnMovementComponent.h"
 #include "CollisionQueryParams.h"
 #include "PhysicsMovement.generated.h"
@@ -56,10 +56,11 @@ protected:
 
 protected:
 	UPROPERTY()
-	UPhysicsSkMeshComponent* m_MovingTarget;
+	UPrimitiveComponent* m_MovingTarget;
 
 public:
 	FCollisionShape m_Shape;
+
 public:
 	UPROPERTY(BlueprintAssignable, Category = "Interact")
 	FOnLandingBP m_OnLandingBP;
