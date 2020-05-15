@@ -20,9 +20,10 @@
 
 #include "ConnectablePawnData.generated.h"
 
-/**
- * 
- */
+class UPhysicalMaterial;
+
+
+
 UCLASS()
 class DESK_WAR_API UConnectablePawnData : public UObject
 {
@@ -62,6 +63,8 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	USkeletalMesh* m_MeshPortBody;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	UPhysicalMaterial* m_FrictionMat;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	FVector m_PortRelativeLoc;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	FRotator m_PortRelativeRot;
@@ -86,6 +89,8 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float m_fSightRadius = 900.f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	float m_fPawnSensingTick = 0.5f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float m_fAngle = 80.f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TSubclassOf<UIdleBehavior> m_IdleBehav;
@@ -93,6 +98,10 @@ public:
 	TSubclassOf<USawPlayerBehavior> m_SawPlayerBehav;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TSubclassOf<UReturnBehavior> m_ReturnPlayerBehav;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	UAnimationAsset* m_IdleAnim;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	UAnimationAsset* m_JumpAnim;
 };
 
 //ai

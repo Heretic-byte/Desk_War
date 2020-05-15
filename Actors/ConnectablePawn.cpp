@@ -19,11 +19,14 @@
 #include "Kismet/GameplayStatics.h"
 #include "Actors/USB_PlayerPawn.h"
 #include "UObjects/Connectable.h"
+#include "Datas/ConnectablePawnData.h"
+
 
 // Sets default values
 AConnectablePawn::AConnectablePawn()
 {
-	AutoPossessAI = EAutoPossessAI::Spawned;
+	AIControllerClass = AAIController::StaticClass();
+	AutoPossessAI = EAutoPossessAI::Disabled;
 	m_CurrentState = EFSM::Idle;
 
 	PrimaryActorTick.bCanEverTick = true;
@@ -90,6 +93,7 @@ void AConnectablePawn::BeginPlay()
 		SetConnectPawn(m_PawnID);
 		//SetActorTickEnabled(true);
 	}
+
 }
 
 void AConnectablePawn::Tick(float DeltaTime)
@@ -160,6 +164,11 @@ void AConnectablePawn::OnSeePlayer(APawn * player)
 	m_FoundPlayerPawn = player;
 }
 
+bool AConnectablePawn::IsOutFromStartArea()
+{
+	return m_fAreaRadiusSqr < FVector::DistSquared(GetActorLocation(),m_StartLocation);
+}
+
 AAIController * AConnectablePawn::GetAICon()
 {
 	return m_AiController;
@@ -190,82 +199,98 @@ void AConnectablePawn::OnDisconnected(IConnectable * pinTarget)
 void AConnectablePawn::SetConnectPawn(FName pawnID)
 {
 	auto* USBManager = GetGameInstance<UUSB_GameManager>();
-	const auto& PawnData= USBManager->GetConnectPawnData(pawnID);
+	m_PawnData = &USBManager->GetConnectPawnData(pawnID);
 
-	if (!&PawnData)
+	if (!m_PawnData)
 	{
 		PRINTF("Failed Find Data - PawnConnect");
 		return;
 	}
 
-	m_PinType = PawnData.m_PinType;
-	m_PortType = PawnData.m_PortType;
-	m_PawnID = PawnData.m_NameID;
-	m_PawnName = PawnData.m_ShowingName;
+	m_PinType = m_PawnData->m_PinType;
+	m_PortType = m_PawnData->m_PortType;
+	m_PawnID = m_PawnData->m_NameID;
+	m_PawnName = m_PawnData->m_ShowingName;
+	int i = 0;
+	PRINTF("%d : Rot:%s", i++,*m_MeshMainBody->GetComponentRotation().ToString());
+	m_MeshMainBody->SetSkeletalMesh(m_PawnData->m_MeshPawnMainBody);
+	m_MeshPort->SetSkeletalMesh(m_PawnData->m_MeshPortBody);
+	PRINTF("%d : Rot:%s", i++, *m_MeshMainBody->GetComponentRotation().ToString());
+	m_MeshPort->SetRelativeLocation(m_PawnData->m_PortRelativeLoc);
+	m_MeshPort->SetRelativeRotation(m_PawnData->m_PortRelativeRot);
 
-	m_MeshMainBody->SetSkeletalMesh(PawnData.m_MeshPawnMainBody);
-	m_MeshPort->SetSkeletalMesh(PawnData.m_MeshPortBody);
-
-	m_MeshPort->SetRelativeLocation(PawnData.m_PortRelativeLoc);
-	m_MeshPort->SetRelativeRotation(PawnData.m_PortRelativeRot);
-
-	m_Sphere->SetSphereRadius(PawnData.m_fInteractRadius);
+	m_Sphere->SetSphereRadius(m_PawnData->m_fInteractRadius);
 
 	m_StartLocation = GetActorLocation();
-
+	//PhysicsVolumeChangedDelegate
+	//m_MeshMainBody->TransformUpdated
 	m_MeshMainBody->SetSimulatePhysics(true);
-	//m_MeshMainBody->GetBodyInstance()->bLockYRotation = true;
-	//m_MeshMainBody->GetBodyInstance()->bLockXRotation = true;
-	//
-	if (PawnData.m_ConnectBehav != nullptr)
+	PRINTF("%d : Rot:%s", i++, *m_MeshMainBody->GetComponentRotation().ToString());
+
+
+	if (m_MeshMainBody->RigidBodyIsAwake())
 	{
-		m_ConnectionBehav = NewObject<UConnectionBehavior>( PawnData.m_ConnectBehav->GetDefaultObject(), PawnData.m_ConnectBehav);
+		PRINTF("AWake");
+	}
+	//RigidBodyIsAwake
+
+	m_MeshMainBody->SetPhysMaterialOverride(m_PawnData->m_FrictionMat);
+
+	if (m_PawnData->m_ConnectBehav != nullptr)
+	{
+		m_ConnectionBehav = NewObject<UConnectionBehavior>(m_PawnData->m_ConnectBehav->GetDefaultObject(), m_PawnData->m_ConnectBehav);
 	}
 	//배터리가 여기 포함,그밖에 주는것들
-
-	m_AiController = Cast<AAIController>(GetController());
-
-	if (!PawnData.m_bIsAI)
+	//m_fAreaRadiusSqr = PawnData.m_fAreaRadius *PawnData.m_fAreaRadius;
+	
+	if (!m_PawnData->m_bIsAI)
 	{
 		return;
 	}
 
+	m_MeshMainBody->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+	m_MeshMainBody->SetAnimation(m_PawnData->m_IdleAnim);
+	m_MeshMainBody->PlayAnimation(m_PawnData->m_IdleAnim,true);
+	animJump = m_PawnData->m_JumpAnim;
 	m_bUseFSM = true;
 
+	SpawnDefaultController();
+	m_AiController = Cast<AAIController>(GetController());
 	//
 	m_Movement = AddActorComponent<UPhysicsMovement>(UPhysicsMovement::StaticClass());
-	m_Movement->m_fMovingForce = PawnData.m_fMovingForce;
-	m_Movement->m_fMaxSpeed = PawnData.m_fMaxSpeed;
-	m_Movement->m_fMaxBrakingDeceleration = PawnData.m_fMaxBrakingDeceleration;
-	m_Movement->m_nJumpMaxCount = PawnData.m_nJumpMaxCount;
-	m_Movement->m_fJumpHeight = PawnData.m_fJumpHeight;
+	m_Movement->m_fMovingForce = m_PawnData->m_fMovingForce;
+	m_Movement->m_fMaxSpeed = m_PawnData->m_fMaxSpeed;
+	m_Movement->m_fMaxBrakingDeceleration = m_PawnData->m_fMaxBrakingDeceleration;
+	m_Movement->m_nJumpMaxCount = m_PawnData->m_nJumpMaxCount;
+	m_Movement->m_fJumpHeight = m_PawnData->m_fJumpHeight;
 	m_Movement->SetMovingComponent(m_MeshMainBody, false);
 
 	m_PawnSensing = AddActorComponent<UPawnSensingComponent>(UPawnSensingComponent::StaticClass());
 	m_PawnSensing->OnSeePawn.AddDynamic(this, &AConnectablePawn::OnSeePlayer);
 
-	m_PawnSensing->HearingThreshold = PawnData.m_fHearingThreshold;
-	m_PawnSensing->LOSHearingThreshold = PawnData.m_fLOSHearingThreshold;
-	m_PawnSensing->SightRadius = PawnData.m_fSightRadius;
-	m_PawnSensing->SetPeripheralVisionAngle(PawnData.m_fAngle);	
+	m_PawnSensing->HearingThreshold = m_PawnData->m_fHearingThreshold;
+	m_PawnSensing->LOSHearingThreshold = m_PawnData->m_fLOSHearingThreshold;
+	m_PawnSensing->SightRadius = m_PawnData->m_fSightRadius;
+	m_PawnSensing->SetPeripheralVisionAngle(m_PawnData->m_fAngle);
+	m_PawnSensing->SensingInterval = m_PawnData->m_fPawnSensingTick;
 	//
-	m_IdleBehavior = NewObject<UIdleBehavior>(PawnData.m_IdleBehav->GetDefaultObject(), PawnData.m_IdleBehav);
+	m_IdleBehavior = NewObject<UIdleBehavior>(this,m_PawnData->m_IdleBehav,"IdleFSM",RF_NoFlags, m_PawnData->m_IdleBehav->GetDefaultObject());
 
-	m_DetectBehavior = NewObject<USawPlayerBehavior>(PawnData.m_SawPlayerBehav->GetDefaultObject(), PawnData.m_SawPlayerBehav);
+	m_DetectBehavior = NewObject<USawPlayerBehavior>(this, m_PawnData->m_SawPlayerBehav, "DetectPlayerFSM", RF_NoFlags, m_PawnData->m_SawPlayerBehav->GetDefaultObject());
 
-	m_ReturnToPosBehavior = NewObject<UReturnBehavior>(PawnData.m_ReturnPlayerBehav->GetDefaultObject(), PawnData.m_ReturnPlayerBehav);
+	m_ReturnToPosBehavior = NewObject<UReturnBehavior>(this, m_PawnData->m_ReturnPlayerBehav, "ReturnFSM", RF_NoFlags, m_PawnData->m_ReturnPlayerBehav->GetDefaultObject());
 	//
-
+	PRINTF("%d : Rot:%s", i++, *m_MeshMainBody->GetComponentRotation().ToString());
 }
 
 EPathFollowingRequestResult::Type AConnectablePawn::MoveToLocation(FVector loc)
 {
-	return GetAICon()->MoveToLocation(loc,10.f);
+	return GetAICon()->MoveToLocation(loc,1.f);
 }
 
 EPathFollowingRequestResult::Type AConnectablePawn::MoveToActor(AActor * target)
 {
-return	GetAICon()->MoveToActor(target, 10.f);
+return	GetAICon()->MoveToActor(target, 1.f);
 }
 
 float AConnectablePawn::GetRadius()
@@ -276,6 +301,11 @@ float AConnectablePawn::GetRadius()
 void AConnectablePawn::SetFSM(EFSM fsm)
 {
 	m_CurrentState = fsm;
+}
+
+void AConnectablePawn::TestPlayAnimation()
+{
+	m_MeshMainBody->PlayAnimation(animJump,false);
 }
 
 //무브먼트타겟을 바꿀것인가

@@ -12,6 +12,11 @@
 #include "UObjects/PoolingObj.h"
 #include "UObjects/Connectable.h"
 #include "Navigation/PathFollowingComponent.h"
+//test
+
+#include "GameFramework/PhysicsVolume.h"
+
+
 #include "ConnectablePawn.generated.h"
 
 //
@@ -27,6 +32,7 @@ class AUSB_PlayerPawn;
 
 class UPhysicsMovement;
 class UPawnSensingComponent;
+struct FConnectablePawn_Data;
 //enum EPathFollowingRequestResult::Type;
 
 UCLASS()
@@ -50,7 +56,11 @@ public:
 	AConnectablePawn();
 
 protected:
+	const FConnectablePawn_Data* m_PawnData;
+
 	float m_fDeltaTime;
+
+
 
 	bool m_bUseFSM;
 
@@ -101,6 +111,7 @@ public:
 	UPROPERTY()
 	FVector m_StartLocation;
 
+	float m_fAreaRadiusSqr;
 private:
 	void SetUpSceneComponent(USceneComponent * compo, USceneComponent* parent, FTransform trans);
 
@@ -125,6 +136,8 @@ protected:
 public:
 	UFUNCTION()
 	void OnSeePlayer(APawn* player);
+
+	bool IsOutFromStartArea();
 
 	AAIController* GetAICon();
 
@@ -165,4 +178,12 @@ public:
 		return Created;
 	}
 
+	FORCEINLINE const FConnectablePawn_Data* GetPawnData() const
+	{
+		return m_PawnData;
+	}
+	UAnimationAsset* animJump;
+	void TestPlayAnimation();
+
+	//void PP(APhysicsVolume* pp);
 };

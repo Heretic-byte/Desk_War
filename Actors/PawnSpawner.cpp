@@ -22,6 +22,7 @@ APawnSpawner::APawnSpawner()
 	m_MeshBase->SetGenerateOverlapEvents(false);
 	//
 	//
+#if WITH_EDITOR
 	m_MeshSpawnPwnProxy = CreateDefaultSubobject<USkeletalMeshComponent>("Mesh01");
 	m_MeshSpawnPwnProxy->SetupAttachment(RootComponent);
 	m_MeshSpawnPwnProxy->SetEnableGravity(false);
@@ -60,7 +61,7 @@ APawnSpawner::APawnSpawner()
 
 	m_BilboardForSpawnOffset->RelativeLocation = m_SpawnOffset;
 
-#if WITH_EDITOR
+
 	//DataTable'/Game/Datas/ConnectPawnTable.ConnectPawnTable'
 	static ConstructorHelpers::FObjectFinder<UDataTable> FoundTable(TEXT("DataTable'/Game/Datas/ConnectPawnTable.ConnectPawnTable'"));
 	if (FoundTable.Succeeded())
@@ -72,6 +73,12 @@ APawnSpawner::APawnSpawner()
 		check(FoundTable.Object);
 	}
 #endif
+	m_PawnAreaProxy = CreateDefaultSubobject<USphereComponent>("Sphere04");
+	m_PawnAreaProxy->SetupAttachment(RootComponent);
+	m_PawnAreaProxy->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	m_PawnAreaProxy->SetHiddenInGame(true);
+	m_PawnAreaProxy->SetSphereRadius(300.f);
+
 }
 
 
@@ -121,6 +128,7 @@ void APawnSpawner::SetTablePawnProperty()
 
 		m_MeshSpawnPwnProxy->SetSkeletalMesh(Data.m_MeshPawnMainBody);
 		m_bCanSpawn = true;
+		//m_PawnAreaProxy->SetSphereRadius(Data.m_fAreaRadius);
 	}
 	else
 	{
@@ -170,16 +178,21 @@ void APawnSpawner::SpawnPawn()
 	{
 		return;
 	}
+
 	FActorSpawnParameters Param;
 	Param.bNoFail = true;
 	Param.Owner = this;
+
 	if (m_NameConnectorID == NAME_None)
 	{
 		m_SpawnedPawn = GetWorld()->SpawnActor<APawn>(m_ClassPawnToSpawn, GetActorLocation() + m_SpawnOffset, GetActorRotation() + m_SpawnRotateOffset, Param);
 	}
 	else
 	{
-		m_SpawnedPawn = GetWorld()->SpawnActor<AConnectablePawn>(AConnectablePawn::StaticClass(),GetActorLocation() + m_SpawnOffset, GetActorRotation() + m_SpawnRotateOffset, Param);
-		Cast<AConnectablePawn>(m_SpawnedPawn)->SetConnectPawn(m_NameConnectorID);
+		auto* CreatedPawn= GetWorld()->SpawnActor<AConnectablePawn>(AConnectablePawn::StaticClass(), GetActorLocation() + m_SpawnOffset, GetActorRotation() + m_SpawnRotateOffset, Param);
+		m_SpawnedPawn = CreatedPawn;
+		CreatedPawn->SetConnectPawn(m_NameConnectorID);
+		CreatedPawn->m_fAreaRadiusSqr = FMath::Square<float>(m_PawnAreaProxy->GetScaledSphereRadius());
+
 	}
 }

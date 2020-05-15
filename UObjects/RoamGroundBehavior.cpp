@@ -7,7 +7,7 @@
 
 void URoamGroundBehavior::Execute(AConnectablePawn* connectPawn, float deltaTime)
 {
-
+	//return;
 	if (m_fRoamCooldown > 0.f)
 	{
 		m_fRoamCooldown -= deltaTime;
@@ -20,16 +20,13 @@ void URoamGroundBehavior::Execute(AConnectablePawn* connectPawn, float deltaTime
 		return;
 	}
 
-
-
 	FNavLocation ResultLoc;
 	if (connectPawn->GetNav()->GetRandomReachablePointInRadius(connectPawn->m_StartLocation, connectPawn->GetRadius(), ResultLoc))
 	{
 		connectPawn->MoveToLocation(ResultLoc);
 
-		m_fRoamCooldown = 1.f;//FMath::FRandRange(3.f,8.f);
-		Cast<UPhysicsMovement>( connectPawn->GetMovementComponent())->Jump();
-		PRINTF("SetDest");
+		m_fRoamCooldown = 1.f;//FMath::FRandRange(3.f,5.f);
+		//Cast<UPhysicsMovement>( connectPawn->GetMovementComponent())->Jump();
 	}
 
 
@@ -37,6 +34,7 @@ void URoamGroundBehavior::Execute(AConnectablePawn* connectPawn, float deltaTime
 	{
 		connectPawn->GetMovementComponent()->StopMovementImmediately();
 		connectPawn->SetFSM(AConnectablePawn::EFSM::Detect);
+		PRINTF("Detect Player !!");
 	}
 
 	

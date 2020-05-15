@@ -8,6 +8,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/BillboardComponent.h"
+#include "Components/SphereComponent.h"
 #include "PawnSpawner.generated.h"
 
 
@@ -47,6 +48,8 @@ protected:
 	UStaticMeshComponent* m_MeshBase;
 	UPROPERTY(VisibleAnywhere, Category = "Spawner")
 	USkeletalMeshComponent* m_MeshSpawnPwnProxy;
+	UPROPERTY(VisibleAnywhere, Category = "Spawner")
+	USphereComponent* m_PawnAreaProxy;
 protected:
 	UPROPERTY(EditAnywhere, Category = "Spawner")
 	FName m_NameConnectorID;
