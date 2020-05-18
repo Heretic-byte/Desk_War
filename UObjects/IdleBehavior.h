@@ -15,4 +15,6 @@ class DESK_WAR_API UIdleBehavior : public UConnectPawnFSM
 {
 	GENERATED_BODY()
 	
+public:
+	virtual void Execute(AConnectablePawn* connectPawn, float deltaTime)override;
 };

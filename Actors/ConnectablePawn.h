@@ -60,7 +60,9 @@ protected:
 
 	float m_fDeltaTime;
 
+	float m_fSightRadiusSqr;
 
+	float m_fInteractRadiusSqr;
 
 	bool m_bUseFSM;
 
@@ -69,14 +71,14 @@ protected:
 	EFSM m_CurrentState;
 
 	EPinPortType m_PinType;
+
 	EPinPortType m_PortType;
 
+protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ConnectPawn")
 	FName m_PawnID;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ConnectPawn")
 	FText m_PawnName;
-
-protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ConnectPawn")
 	UPhysicsConstraintComponent* m_PhysicsCons;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ConnectPawn")
@@ -105,21 +107,21 @@ protected:
 	UPhysicsMovement* m_Movement;
 	UPROPERTY()
 	UPawnSensingComponent* m_PawnSensing;
+
 public:
 	UPROPERTY()
 	APawn* m_FoundPlayerPawn;
 	UPROPERTY()
 	FVector m_StartLocation;
 
-	float m_fAreaRadiusSqr;
+
+
 private:
 	void SetUpSceneComponent(USceneComponent * compo, USceneComponent* parent, FTransform trans);
 
 	void SetUpActorComponent(UActorComponent * compo);
 
 protected:
-	void CountingTimer();
-
 	void ExecuteFSM();
 
 	void OnIdle();
@@ -133,11 +135,14 @@ protected:
 	virtual void Tick(float DeltaTime) override;
 
 	AUSB_PlayerPawn* GetPlayer() const;
+
 public:
 	UFUNCTION()
 	void OnSeePlayer(APawn* player);
 
 	bool IsOutFromStartArea();
+
+	bool IsPlayerInInterRadius();
 
 	AAIController* GetAICon();
 
@@ -158,7 +163,6 @@ public:
 	void SetFSM(EFSM fsm);
 
 public:
-
 	template <typename component>
 	FORCEINLINE component* AddSceneComponent(TSubclassOf<component> templateWant, USceneComponent* parent, FTransform trans)
 	{
@@ -168,6 +172,7 @@ public:
 
 		return Created;
 	}
+
 	template <typename component>
 	FORCEINLINE component* AddActorComponent(TSubclassOf<component> templateWant)
 	{
@@ -182,8 +187,5 @@ public:
 	{
 		return m_PawnData;
 	}
-	UAnimationAsset* animJump;
-	void TestPlayAnimation();
 
-	//void PP(APhysicsVolume* pp);
 };

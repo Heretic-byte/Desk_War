@@ -192,7 +192,7 @@ void APawnSpawner::SpawnPawn()
 		auto* CreatedPawn= GetWorld()->SpawnActor<AConnectablePawn>(AConnectablePawn::StaticClass(), GetActorLocation() + m_SpawnOffset, GetActorRotation() + m_SpawnRotateOffset, Param);
 		m_SpawnedPawn = CreatedPawn;
 		CreatedPawn->SetConnectPawn(m_NameConnectorID);
-		CreatedPawn->m_fAreaRadiusSqr = FMath::Square<float>(m_PawnAreaProxy->GetScaledSphereRadius());
+		CreatedPawn->m_fSightRadiusSqr = FMath::Square<float>(m_PawnAreaProxy->GetScaledSphereRadius());
 
 	}
 }

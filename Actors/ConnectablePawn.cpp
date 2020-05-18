@@ -87,7 +87,6 @@ AConnectablePawn::AConnectablePawn()
 void AConnectablePawn::BeginPlay()
 {
 	Super::BeginPlay();
-	
 	if (m_PawnID != NAME_None)
 	{
 		SetConnectPawn(m_PawnID);
@@ -107,7 +106,6 @@ void AConnectablePawn::Tick(float DeltaTime)
 		return;
 	}
 
-	CountingTimer();
 	ExecuteFSM();
 
 }
@@ -128,10 +126,6 @@ void AConnectablePawn::SetUpActorComponent(UActorComponent * compo)
 {
 	AddInstanceComponent(compo);
 	compo->RegisterComponent();
-}
-
-void AConnectablePawn::CountingTimer()
-{
 }
 
 void AConnectablePawn::ExecuteFSM()
@@ -166,7 +160,12 @@ void AConnectablePawn::OnSeePlayer(APawn * player)
 
 bool AConnectablePawn::IsOutFromStartArea()
 {
-	return m_fAreaRadiusSqr < FVector::DistSquared(GetActorLocation(),m_StartLocation);
+	return m_fSightRadiusSqr < FVector::DistSquared(GetActorLocation(),m_StartLocation);
+}
+
+bool AConnectablePawn::IsPlayerInInterRadius()
+{
+	return m_fInteractRadiusSqr < FVector::DistSquared(GetActorLocation(), m_FoundPlayerPawn->GetActorLocation());
 }
 
 AAIController * AConnectablePawn::GetAICon()
@@ -211,28 +210,18 @@ void AConnectablePawn::SetConnectPawn(FName pawnID)
 	m_PortType = m_PawnData->m_PortType;
 	m_PawnID = m_PawnData->m_NameID;
 	m_PawnName = m_PawnData->m_ShowingName;
-	int i = 0;
-	PRINTF("%d : Rot:%s", i++,*m_MeshMainBody->GetComponentRotation().ToString());
 	m_MeshMainBody->SetSkeletalMesh(m_PawnData->m_MeshPawnMainBody);
 	m_MeshPort->SetSkeletalMesh(m_PawnData->m_MeshPortBody);
-	PRINTF("%d : Rot:%s", i++, *m_MeshMainBody->GetComponentRotation().ToString());
 	m_MeshPort->SetRelativeLocation(m_PawnData->m_PortRelativeLoc);
 	m_MeshPort->SetRelativeRotation(m_PawnData->m_PortRelativeRot);
 
 	m_Sphere->SetSphereRadius(m_PawnData->m_fInteractRadius);
 
+	m_fInteractRadiusSqr = m_PawnData->m_fInteractRadius* m_PawnData->m_fInteractRadius;
+
 	m_StartLocation = GetActorLocation();
-	//PhysicsVolumeChangedDelegate
-	//m_MeshMainBody->TransformUpdated
+
 	m_MeshMainBody->SetSimulatePhysics(true);
-	PRINTF("%d : Rot:%s", i++, *m_MeshMainBody->GetComponentRotation().ToString());
-
-
-	if (m_MeshMainBody->RigidBodyIsAwake())
-	{
-		PRINTF("AWake");
-	}
-	//RigidBodyIsAwake
 
 	m_MeshMainBody->SetPhysMaterialOverride(m_PawnData->m_FrictionMat);
 
@@ -241,17 +230,17 @@ void AConnectablePawn::SetConnectPawn(FName pawnID)
 		m_ConnectionBehav = NewObject<UConnectionBehavior>(m_PawnData->m_ConnectBehav->GetDefaultObject(), m_PawnData->m_ConnectBehav);
 	}
 	//배터리가 여기 포함,그밖에 주는것들
-	//m_fAreaRadiusSqr = PawnData.m_fAreaRadius *PawnData.m_fAreaRadius;
 	
 	if (!m_PawnData->m_bIsAI)
 	{
 		return;
 	}
 
+	m_fSightRadiusSqr = m_PawnData->m_fSightRadius * m_PawnData->m_fSightRadius;
+
 	m_MeshMainBody->SetAnimationMode(EAnimationMode::AnimationSingleNode);
 	m_MeshMainBody->SetAnimation(m_PawnData->m_IdleAnim);
-	m_MeshMainBody->PlayAnimation(m_PawnData->m_IdleAnim,true);
-	animJump = m_PawnData->m_JumpAnim;
+	m_MeshMainBody->PlayAnimation(m_PawnData->m_IdleAnim, true);
 	m_bUseFSM = true;
 
 	SpawnDefaultController();
@@ -274,13 +263,16 @@ void AConnectablePawn::SetConnectPawn(FName pawnID)
 	m_PawnSensing->SetPeripheralVisionAngle(m_PawnData->m_fAngle);
 	m_PawnSensing->SensingInterval = m_PawnData->m_fPawnSensingTick;
 	//
-	m_IdleBehavior = NewObject<UIdleBehavior>(this,m_PawnData->m_IdleBehav,"IdleFSM",RF_NoFlags, m_PawnData->m_IdleBehav->GetDefaultObject());
+	m_IdleBehavior = NewObject<UIdleBehavior>(this,m_PawnData->m_IdleBehav,"IdleFSM", RF_NoFlags, m_PawnData->m_IdleBehav->GetDefaultObject());
 
 	m_DetectBehavior = NewObject<USawPlayerBehavior>(this, m_PawnData->m_SawPlayerBehav, "DetectPlayerFSM", RF_NoFlags, m_PawnData->m_SawPlayerBehav->GetDefaultObject());
 
 	m_ReturnToPosBehavior = NewObject<UReturnBehavior>(this, m_PawnData->m_ReturnPlayerBehav, "ReturnFSM", RF_NoFlags, m_PawnData->m_ReturnPlayerBehav->GetDefaultObject());
 	//
-	PRINTF("%d : Rot:%s", i++, *m_MeshMainBody->GetComponentRotation().ToString());
+	UnregisterAllComponents();
+	RerunConstructionScripts();
+	ReregisterAllComponents();
+	//
 }
 
 EPathFollowingRequestResult::Type AConnectablePawn::MoveToLocation(FVector loc)
@@ -303,10 +295,7 @@ void AConnectablePawn::SetFSM(EFSM fsm)
 	m_CurrentState = fsm;
 }
 
-void AConnectablePawn::TestPlayAnimation()
-{
-	m_MeshMainBody->PlayAnimation(animJump,false);
-}
+
 
 //무브먼트타겟을 바꿀것인가
 

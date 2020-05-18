@@ -26,7 +26,6 @@ void URoamGroundBehavior::Execute(AConnectablePawn* connectPawn, float deltaTime
 		connectPawn->MoveToLocation(ResultLoc);
 
 		m_fRoamCooldown = 1.f;//FMath::FRandRange(3.f,5.f);
-		//Cast<UPhysicsMovement>( connectPawn->GetMovementComponent())->Jump();
 	}
 
 
